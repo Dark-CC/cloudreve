@@ -63,6 +63,22 @@ Please refer to [Slave Storage](./storage/remote).
 
 If users don't explicitly select a node when creating tasks and multiple nodes are available, Cloudreve will use a weighted round-robin strategy to select a node. You can set the weight value in `Node Settings` -> `Load balancing weight`. For example: if Node A has a weight of 3 and Node B has a weight of 2, then in every 5 task requests, Node A will be selected 3 times and Node B will be selected 2 times.
 
+## Upstream Compatibility {#upstream-compatibility}
+
+This fork shares the same slave wire protocol as upstream Cloudreve (open-source edition): the same `/api/v4/slave/*` routes, HMAC request signing, and session payload format. As a result:
+
+- An **upstream slave node** can serve this fork's master, and this fork's slave can serve an upstream master, as long as both sides speak the same protocol version. A version-number mismatch now produces a **warning** on the node communication test instead of a failure; the node remains fully operational.
+- Compatibility with upstream **Pro** slave internals is best-effort, since Pro is closed-source.
+
+### Migrating an upstream deployment {#migrating-upstream-deployment}
+
+Existing files stored on upstream slave nodes remain accessible after migrating to this fork, because `entity.source` records store the physical blob path verbatim and node/policies records are schema-compatible:
+
+1. **Back up** the upstream database and the slave node's blob directories first.
+2. Migrate or reuse the existing database — the `nodes`, `storage_policies` and `entities` records carry over unchanged. Keep each node's `slave_key` and server address the same as before.
+3. For blobs that exist on a node but have no database record (e.g. a partial migration), use the existing **Import** action (`Admin Dashboard` -> `Files` -> `Import`) with the corresponding remote storage policy. It lists files on the node via the slave protocol and creates file records pointing at the existing physical paths — no data is transferred.
+4. To keep new uploads in the original directory layout, adjust the storage policy's `dir_name_rule`/`file_name_rule` naming templates to match the old scheme.
+
 ## FAQ {#faq}
 
 ::: details Node communication failed `Failed to connect to node: Post "xxx": connect: xxx`
@@ -80,7 +96,7 @@ This means the master node can connect to the slave node, but the slave node ret
 - If it ends with `invalid sign`, the slave node's signature verification failed. Please check:
   - Whether the `Secret` configuration under `[Slave]` in the slave node's configuration file matches the `Slave Key` configuration for that node in the admin panel. After making them consistent, restart the slave node.
   - Whether there's a significant time difference between the slave node and the master node. If so, please synchronize the time.
-- If it ends with `Master: 4.x.x., Slave: 4.x.x.`, it means the Cloudreve versions on the slave and master nodes are inconsistent. Please change the slave's Cloudreve to the same version as the master node.
+- If it ends with `Master: 4.x.x., Slave: 4.x.x.`, it means the Cloudreve versions on the slave and master nodes are inconsistent. Please change the slave's Cloudreve to the same version as the master node. On this fork, a version mismatch is reported as a warning instead of a failure — see [Upstream Compatibility](#upstream-compatibility).
 - If it ends with `but slave returns: Get "xxx/api/v4/site/ping"` or `but slave returns: invalid character '<' looking for beginning of value`, it means the slave node cannot communicate with the master node. Please check:
   - Whether the `Main` site URL in the master node's `Settings` -> `Basic` -> `Site URL` is correct. The slave needs to be able to access this address.
   - Check the network communication between the slave and master for any firewall blocking.

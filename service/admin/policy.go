@@ -100,11 +100,15 @@ func (service *SingleStoragePolicyService) Delete(c *gin.Context) error {
 	return nil
 }
 
-// Test 从机响应ping
-func (service *SlavePingService) Test(c *gin.Context) error {
+// Test 从机响应ping. Returns a non-empty warning when the master's reported
+// version differs from the slave's own — version mismatch no longer fails
+// the test, since cross-fork deployments (e.g. upstream master + this fork's
+// slave) share the same wire protocol and work correctly despite different
+// release numbers.
+func (service *SlavePingService) Test(c *gin.Context) (string, error) {
 	master, err := url.Parse(service.Callback)
 	if err != nil {
-		return serializer.NewError(serializer.CodeParamErr, "Failed to parse callback url", err)
+		return "", serializer.NewError(serializer.CodeParamErr, "Failed to parse callback url", err)
 	}
 
 	dep := dependency.FromContext(c)
@@ -120,16 +124,24 @@ func (service *SlavePingService) Test(c *gin.Context) error {
 	).DecodeResponse()
 
 	if err != nil {
-		return serializer.NewError(serializer.CodeSlavePingMaster, err.Error(), nil)
+		return "", serializer.NewError(serializer.CodeSlavePingMaster, err.Error(), nil)
 	}
 
 	version := constants.BackendVersion
 
-	if strings.TrimSuffix(res.Data.(string), "-pro") != version {
-		return serializer.NewError(serializer.CodeVersionMismatch, "Master: "+res.Data.(string)+", Slave: "+version, nil)
+	masterVersion, ok := res.Data.(string)
+	if !ok {
+		return "", serializer.NewError(serializer.CodeSlavePingMaster,
+			fmt.Sprintf("unexpected version payload from master: %v", res.Data), nil)
 	}
 
-	return nil
+	if strings.TrimSuffix(masterVersion, "-pro") != version {
+		warning := fmt.Sprintf("Version mismatch (Master: %s, Slave: %s). The node can still be used if both sides speak the same slave protocol.", masterVersion, version)
+		logging.FromContext(c).Warning("Slave ping: %s", warning)
+		return warning, nil
+	}
+
+	return "", nil
 }
 
 // Test 测试从机通信

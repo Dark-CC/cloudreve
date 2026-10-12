@@ -91,7 +91,12 @@ func SlaveDelete(c *gin.Context) {
 // SlavePing 从机测试
 func SlavePing(c *gin.Context) {
 	service := ParametersFromContext[*admin.SlavePingService](c, admin.SlavePingParameterCtx{})
-	respond(c, service.Test(c), serializer.Response{})
+	warning, err := service.Test(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{Msg: warning})
 }
 
 // SlaveList 从机列出文件
