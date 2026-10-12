@@ -78,13 +78,15 @@ type (
 	TestNodeParamCtx struct{}
 )
 
-func (service *TestNodeService) Test(c *gin.Context) error {
+// Test sends a ping request to the slave node. Returns the slave's optional
+// warning message (e.g. version mismatch) — warnings do not fail the test.
+func (service *TestNodeService) Test(c *gin.Context) (string, error) {
 	dep := dependency.FromContext(c)
 	settings := dep.SettingProvider()
 
 	slave, err := url.Parse(service.Node.Server)
 	if err != nil {
-		return serializer.NewError(serializer.CodeParamErr, "Failed to parse node URL", err)
+		return "", serializer.NewError(serializer.CodeParamErr, "Failed to parse node URL", err)
 	}
 
 	primaryURL := settings.SiteURL(setting.UseFirstSiteUrl(c)).String()
@@ -109,14 +111,16 @@ func (service *TestNodeService) Test(c *gin.Context) error {
 	).CheckHTTPResponse(http.StatusOK).DecodeResponse()
 
 	if err != nil {
-		return serializer.NewError(serializer.CodeParamErr, "Failed to connect to node: "+err.Error(), nil)
+		return "", serializer.NewError(serializer.CodeParamErr, "Failed to connect to node: "+err.Error(), nil)
 	}
 
 	if res.Code != 0 {
-		return serializer.NewError(serializer.CodeParamErr, "Successfully connected to slave node, but slave returns: "+res.Msg, nil)
+		return "", serializer.NewError(serializer.CodeParamErr, "Successfully connected to slave node, but slave returns: "+res.Msg, nil)
 	}
 
-	return nil
+	// The slave may carry an advisory message (e.g. a version mismatch
+	// warning) in a successful response — relay it to the caller.
+	return res.Msg, nil
 }
 
 type (

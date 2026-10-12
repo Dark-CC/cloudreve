@@ -128,7 +128,16 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 		}
 	}
 
-	if uploadSession.Props != nil && uploadSession.Props.RapidUploaded {
+	// Sessions injected externally (slave RPC path, stateless uploads) skip
+	// PrepareUpload, so their required fields are validated here — a
+	// malformed payload must return an error rather than panic below.
+	if uploadSession.Props == nil || uploadSession.Props.Uri == nil ||
+		uploadSession.Policy == nil || uploadSession.Policy.Settings == nil {
+		return nil, serializer.NewError(serializer.CodeParamErr,
+			"invalid upload session: missing props, uri, policy or policy settings", nil)
+	}
+
+	if uploadSession.Props.RapidUploaded {
 		// File was materialized from an existing identical entity — no
 		// storage credential or session cache is needed. Still queue the
 		// same post-upload processing (media meta, full-text index) a
@@ -598,9 +607,13 @@ func (m *manager) OnUploadFailed(ctx context.Context, session *fs.UploadSession)
 			}
 		}
 	} else {
+		if session == nil || session.Props == nil {
+			return
+		}
 		d, err := m.GetStorageDriver(ctx, m.CastStoragePolicyOnSlave(ctx, session.Policy))
 		if err != nil {
 			m.l.Warning("OnUploadFailed hook failed: %s", err)
+			return
 		}
 
 		if failed, err := d.Delete(ctx, session.Props.SavePath); err != nil {

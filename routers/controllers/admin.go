@@ -467,11 +467,11 @@ func AdminDeleteGroup(c *gin.Context) {
 // AdminTestSlave 测试从机可用性
 func AdminTestSlave(c *gin.Context) {
 	service := ParametersFromContext[*admin.TestNodeService](c, admin.TestNodeParamCtx{})
-	err := service.Test(c)
+	warning, err := service.Test(c)
 	if respondErr(c, err) {
 		return
 	}
-	c.JSON(200, serializer.Response{})
+	c.JSON(200, serializer.Response{Msg: warning})
 }
 
 // AdminTestDownloader 测试下载器连接

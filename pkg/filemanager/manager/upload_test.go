@@ -2,11 +2,18 @@ package manager
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
+	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMergeByteRanges(t *testing.T) {
@@ -136,4 +143,65 @@ func TestMarkRangeUploadedMissingSession(t *testing.T) {
 	if all {
 		t.Fatal("missing session reported complete")
 	}
+}
+
+// TestCreateUploadSessionMalformedSession covers externally injected upload
+// sessions (slave RPC / stateless path): fields that PrepareUpload would
+// normally populate must be validated instead of nil-dereferenced.
+func TestCreateUploadSessionMalformedSession(t *testing.T) {
+	m := &manager{}
+	req := &fs.UploadRequest{Props: &fs.UploadProps{}}
+	uri, err := fs.NewUriFromString("cloudreve://0/f.txt")
+	require.NoError(t, err)
+
+	cases := map[string]*fs.UploadSession{
+		"empty session":    {},
+		"missing uri":      {Props: &fs.UploadProps{}, Policy: &ent.StoragePolicy{Settings: &types.PolicySetting{}}},
+		"missing policy":   {Props: &fs.UploadProps{Uri: uri}},
+		"missing settings": {Props: &fs.UploadProps{Uri: uri}, Policy: &ent.StoragePolicy{}},
+	}
+
+	for name, session := range cases {
+		t.Run(name, func(t *testing.T) {
+			require.NotPanics(t, func() {
+				_, err := m.CreateUploadSession(context.Background(), req, fs.WithUploadSession(session))
+				require.Error(t, err)
+				appErr, ok := err.(serializer.AppError)
+				require.True(t, ok, "expected serializer.AppError, got %T", err)
+				require.Equal(t, serializer.CodeParamErr, appErr.ErrCode())
+			})
+		})
+	}
+}
+
+// TestOnUploadFailedStatelessDriverError ensures the cleanup hook does not
+// dereference a nil driver when GetStorageDriver fails (previously panicked).
+func TestOnUploadFailedStatelessDriverError(t *testing.T) {
+	logger := logging.NewConsoleLogger(logging.LevelError)
+	cfg, err := conf.NewIniConfigProvider(filepath.Join(t.TempDir(), "conf.ini"), logger)
+	require.NoError(t, err)
+
+	m := &manager{l: logger, config: cfg, stateless: true}
+	session := &fs.UploadSession{
+		Props:  &fs.UploadProps{SavePath: "uploads/blob.bin", UploadSessionID: "s"},
+		Policy: &ent.StoragePolicy{Type: "bogus", Settings: &types.PolicySetting{}},
+	}
+
+	require.NotPanics(t, func() {
+		m.OnUploadFailed(context.Background(), session)
+	})
+}
+
+// TestOnUploadFailedStatelessNilProps guards the slave-side cleanup path
+// against sessions that never made it past validation.
+func TestOnUploadFailedStatelessNilProps(t *testing.T) {
+	logger := logging.NewConsoleLogger(logging.LevelError)
+	cfg, err := conf.NewIniConfigProvider(filepath.Join(t.TempDir(), "conf.ini"), logger)
+	require.NoError(t, err)
+
+	m := &manager{l: logger, config: cfg, stateless: true}
+	require.NotPanics(t, func() {
+		m.OnUploadFailed(context.Background(), &fs.UploadSession{})
+		m.OnUploadFailed(context.Background(), nil)
+	})
 }
