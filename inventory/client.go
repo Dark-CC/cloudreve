@@ -119,16 +119,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 
 	}
 	// Set connection pool
-	db := client.DB()
-	db.SetMaxIdleConns(50)
-	if confDBType == "sqlite" || confDBType == "UNSET" {
-		db.SetMaxOpenConns(1)
-	} else {
-		db.SetMaxOpenConns(100)
-	}
-
-	// Set timeout
-	db.SetConnMaxLifetime(time.Second * 30)
+	configureDBPool(client.DB(), confDBType)
 
 	driverOpt := ent.Driver(client)
 
@@ -141,6 +132,28 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	}
 
 	return ent.NewClient(driverOpt), nil
+}
+
+// sqliteMaxOpenConns bounds the SQLite pool. WAL lets readers proceed while a
+// writer holds a transaction; writers still serialize at the engine level and
+// surface SQLITE_BUSY after busy_timeout instead of queueing invisibly.
+const sqliteMaxOpenConns = 10
+
+// configureDBPool sizes the connection pool. SQLite used to be capped at a
+// single connection, which let one held or stuck transaction starve every
+// other query — including WebDAV auth — until the process was restarted
+// (cloudreve/cloudreve#3608). With WAL + busy_timeout (sqlite3Driver) more
+// connections are safe: readers never block behind the writer.
+func configureDBPool(db *rawsql.DB, dbType conf.DBType) {
+	db.SetMaxIdleConns(50)
+	if dbType == conf.SQLiteDB || dbType == "UNSET" {
+		db.SetMaxOpenConns(sqliteMaxOpenConns)
+	} else {
+		db.SetMaxOpenConns(100)
+	}
+
+	// Set timeout
+	db.SetConnMaxLifetime(time.Second * 30)
 }
 
 // ensureMySQLParseTime appends parseTime=True to a user-provided MySQL DSN
