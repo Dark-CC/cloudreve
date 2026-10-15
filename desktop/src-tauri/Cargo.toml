@@ -40,7 +40,10 @@ cloudreve-sync = { path = "../crates/cloudreve-sync" }
 
 tauri-plugin-http = "~2.6"
 tauri-plugin-opener = "2"
-tauri-plugin-deep-link = "2.4.9"
+# Pinned: 2.6.2 fails to compile against rust-ini 0.21.x (its ParseOption
+# literal lacks fields upstream added). Unpin once tauri ships a compatible
+# release. Cargo.lock is gitignored, so CI resolves fresh on every run.
+tauri-plugin-deep-link = "=2.6.1"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-prevent-default = "4"
 tauri-plugin-os = "2"
