@@ -52,6 +52,15 @@ type Torrent struct {
 	Upspeed           int64   `json:"upspeed"`
 }
 
+// AddResult is the torrents/add summary returned by WebAPI >= 2.14.0
+// (qBittorrent 5.2+). Older versions reply with the plain text "Ok.".
+type AddResult struct {
+	SuccessCount    int      `json:"success_count"`
+	PendingCount    int      `json:"pending_count"`
+	FailureCount    int      `json:"failure_count"`
+	AddedTorrentIDs []string `json:"added_torrent_ids"`
+}
+
 type File struct {
 	Index        int     `json:"index"`
 	IsSeed       bool    `json:"is_seed"`
