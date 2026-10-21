@@ -63,7 +63,9 @@ docker run -i -t -d -p 8080:80 -e WOPI_ENABLED=true onlyoffice/documentserver
 
 ::: warning
 
-OnlyOffice 不支持过滤 WOPI 请求来源，如果你有对公使用需求，请通过外部应用防火墙检查预览页面请求中 `wopisrc` 参数是否为预期的 Cloudreve 站点。
+OnlyOffice DocumentServer 10.0 及以上版本会拒绝连接到未列入出站 IP 过滤器的主机，并返回 `Access forbidden`。请将你的 Cloudreve 服务器 IP 地址加入 DocumentServer 配置中的 `services.CoAuthoring.ipfilter.rules`（例如 `/etc/onlyoffice/documentserver/local.json`，详见 [OnlyOffice 官方文档](https://helpcenter.onlyoffice.com/docs/installation/docs-developer-configuring.aspx)），然后重启 DocumentServer 服务。
+
+在旧版本中，OnlyOffice 不支持过滤 WOPI 请求来源。如果你有对公使用需求，请通过外部应用防火墙检查预览页面请求中 `wopisrc` 参数是否为预期的 Cloudreve 站点。
 
 :::
 

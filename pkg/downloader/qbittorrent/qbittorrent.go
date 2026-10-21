@@ -293,8 +293,13 @@ func (c *qbittorrentClient) CreateTask(ctx context.Context, url string, options 
 		return nil, fmt.Errorf("create task qbittorrent failed: %w", err)
 	}
 
+	// WebAPI >= 2.14.0 (qBittorrent 5.2+) returns a JSON summary instead of "Ok."
 	if resp != successResponse {
-		return nil, fmt.Errorf("create task qbittorrent failed: %s", resp)
+		var addRes AddResult
+		if err := json.Unmarshal([]byte(resp), &addRes); err != nil ||
+			addRes.SuccessCount+addRes.PendingCount == 0 {
+			return nil, fmt.Errorf("create task qbittorrent failed: %s", resp)
+		}
 	}
 
 	return &downloader.TaskHandle{
@@ -337,19 +342,35 @@ func (c *qbittorrentClient) login(ctx context.Context) error {
 	form := url.Values{}
 	form.Add("username", c.options.User)
 	form.Add("password", c.options.Password)
-	res, err := c.c.Request(http.MethodPost, "auth/login",
+	res := c.c.Request(http.MethodPost, "auth/login",
 		strings.NewReader(form.Encode()),
 		request.WithContext(ctx),
 		request.WithHeader(http.Header{
 			"Content-Type": []string{"application/x-www-form-urlencoded"},
 		}),
-	).CheckHTTPResponse(http.StatusOK).GetResponse()
-	if err != nil {
-		return fmt.Errorf("login failed with unexpected status code: %w", err)
+	)
+	if res.Err != nil {
+		return fmt.Errorf("login request failed: %w", res.Err)
 	}
 
-	if res != successResponse {
-		return fmt.Errorf("login failed with response: %s, possibly inccorrect credential is provided", res)
+	// WebAPI >= 2.14.0 (qBittorrent 5.2+) returns 401 on bad credentials
+	if res.Response.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("login failed: invalid username or password")
+	}
+
+	if res.Response.StatusCode != http.StatusOK {
+		content, _ := res.GetResponse()
+		return fmt.Errorf("login failed with unexpected status code: %d, content: %s", res.Response.StatusCode, content)
+	}
+
+	body, err := res.GetResponse()
+	if err != nil {
+		return fmt.Errorf("login failed reading response: %w", err)
+	}
+
+	// WebAPI >= 2.14.0 returns an empty body on success, older versions "Ok."
+	if body != "" && body != successResponse {
+		return fmt.Errorf("login failed with response: %s, possibly inccorrect credential is provided", body)
 	}
 
 	return nil
@@ -379,7 +400,8 @@ func (c *qbittorrentClient) request(ctx context.Context, method, path string, bo
 
 		return c.request(ctx, method, path, body, headers)
 
-	case http.StatusOK:
+	// WebAPI >= 2.14.0 uses 202 when torrents/add has pending entries
+	case http.StatusOK, http.StatusAccepted:
 		respContent, err := res.GetResponse()
 		if err != nil {
 			return "", fmt.Errorf("failed reading response: %w", err)
