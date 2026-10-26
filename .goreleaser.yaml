@@ -1,0 +1,147 @@
+version: 2
+
+project_name: cloudreve
+
+before:
+  hooks:
+    - go mod tidy
+    - chmod +x ./.build/build-assets.sh
+    - ./.build/build-assets.sh {{.Version}}
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+
+    binary: cloudreve
+
+    ldflags:
+      - -s -w
+      - -X 'github.com/cloudreve/Cloudreve/v4/application/constants.BackendVersion={{.Version}}' -X 'github.com/cloudreve/Cloudreve/v4/application/constants.LastCommit={{.ShortCommit}}'
+
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - loong64
+
+    goarm:
+      - 5
+      - 6
+      - 7
+
+    ignore:
+      - goos: windows
+        goarm: 5
+      - goos: windows
+        goarm: 6
+      - goos: windows
+        goarm: 7
+      - goos: windows
+        goarch: loong64
+      - goos: freebsd
+        goarch: loong64
+      - goos: freebsd
+        goarch: arm
+
+archives:
+  - formats: ["tar.gz"]
+    # this name template makes the OS and Arch compatible with the results of uname.
+    name_template: >-
+      cloudreve_{{.Tag}}_{{- .Os }}_{{ .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
+
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  draft: false
+  prerelease: auto
+  target_commitish: "{{ .Commit }}"
+  name_template: "{{.Version}}"
+
+dockers:
+  - dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--provenance=false"
+    goos: linux
+    goarch: amd64
+    goamd64: v1
+    extra_files:
+      - .build/aria2.supervisor.conf
+      - .build/entrypoint.sh
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+  - dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--provenance=false"
+    goos: linux
+    goarch: arm64
+    extra_files:
+      - .build/aria2.supervisor.conf
+      - .build/entrypoint.sh
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - dockerfile: Dockerfile.slim
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--provenance=false"
+    goos: linux
+    goarch: amd64
+    goamd64: v1
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+  - dockerfile: Dockerfile.slim
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--provenance=false"
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
+
+docker_manifests:
+  - name_template: "ghcr.io/dvorinka/cloudreve:latest"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:v4"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:slim"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"

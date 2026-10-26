@@ -1,0 +1,1477 @@
+package setting
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"math/rand/v2"
+	"net/http"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
+)
+
+type (
+	// Provider provides strong type setting access.
+	Provider interface {
+		// Site basic information
+		SiteBasic(ctx context.Context) *SiteBasic
+		// SiteBasicLocalized returns site basic info with Name, Title and
+		// Description resolved for the given language tag via sibling
+		// "<key>_i18n" settings.
+		SiteBasicLocalized(ctx context.Context, lang string) *SiteBasic
+		// Localized returns the value of a setting key translated for lang.
+		// A sibling "<key>_i18n" JSON object (language tag -> text) is
+		// consulted first; falls back to the plain "<key>" value.
+		Localized(ctx context.Context, key, lang string) string
+		// PWA related settings
+		PWA(ctx context.Context) *PWASetting
+		// RegisterEnabled returns true if public sign-up is enabled.
+		RegisterEnabled(ctx context.Context) bool
+		// InvitationCodeRequired returns true if registration requires an invitation code.
+		InvitationCodeRequired(ctx context.Context) bool
+		// AuthnEnabled returns true if Webauthn is enabled.
+		AuthnEnabled(ctx context.Context) bool
+		// RegCaptchaEnabled returns true if registration captcha is enabled.
+		RegCaptchaEnabled(ctx context.Context) bool
+		// LoginCaptchaEnabled returns true if login captcha is enabled.
+		LoginCaptchaEnabled(ctx context.Context) bool
+		// ForgotPasswordCaptchaEnabled returns true if forgot password captcha is enabled.
+		ForgotPasswordCaptchaEnabled(ctx context.Context) bool
+		// AbuseCaptchaEnabled returns true if abuse reports require captcha.
+		AbuseCaptchaEnabled(ctx context.Context) bool
+		// ShopNavEnabled returns true if the sidebar should show the Shop entry.
+		ShopNavEnabled(ctx context.Context) bool
+		// CaptchaType returns the type of captcha used.
+		CaptchaType(ctx context.Context) CaptchaType
+		// ReCaptcha returns the Google reCaptcha settings.
+		ReCaptcha(ctx context.Context) *ReCaptcha
+		// TcCaptcha returns the Tencent Cloud Captcha settings.
+		TcCaptcha(ctx context.Context) *TcCaptcha
+		// TurnstileCaptcha returns the Cloudflare Turnstile settings.
+		TurnstileCaptcha(ctx context.Context) *Turnstile
+		// CapCaptcha returns the Cap settings.
+		CapCaptcha(ctx context.Context) *Cap
+		// EmailActivationEnabled returns true if email activation is required.
+		EmailActivationEnabled(ctx context.Context) bool
+		// DefaultGroup returns the default group ID for new users.
+		DefaultGroup(ctx context.Context) int
+		// SMTP returns the SMTP settings.
+		SMTP(ctx context.Context) *SMTP
+		// MailDriver returns the configured outbound mail driver.
+		MailDriver(ctx context.Context) MailDriver
+		// HTTPMail returns the generic HTTP mail driver settings.
+		HTTPMail(ctx context.Context) *HTTPMail
+		// SiteURL returns the basic URL.
+		SiteURL(ctx context.Context) *url.URL
+		// SecretKey returns the secret key for general signature.
+		SecretKey(ctx context.Context) string
+		// OIDCSigningPrivateKey returns the private key used to sign OIDC ID tokens.
+		OIDCSigningPrivateKey(ctx context.Context) string
+		// ActivationEmailTemplate returns the email template for activation.
+		ActivationEmailTemplate(ctx context.Context) []EmailTemplate
+		// ResetEmailTemplate returns the email template for reset password.
+		ResetEmailTemplate(ctx context.Context) []EmailTemplate
+		// TokenAuth returns token based auth related settings.
+		TokenAuth(ctx context.Context) *TokenAuth
+		// HashIDSalt returns the salt used for hash ID generation.
+		HashIDSalt(ctx context.Context) string
+		// DBFS returns the DBFS related settings.
+		DBFS(ctx context.Context) *DBFS
+		// DefaultShares returns the share entity IDs seeded as share-shortcut
+		// entries in every newly initialized file system.
+		DefaultShares(ctx context.Context) []int
+		// MaxBatchedFile returns the maximum number of files in a batch operation.
+		MaxBatchedFile(ctx context.Context) int
+		// UploadSessionTTL returns the TTL of upload session.
+		UploadSessionTTL(ctx context.Context) time.Duration
+		// MaxOnlineEditSize returns the maximum size of online editing.
+		MaxOnlineEditSize(ctx context.Context) int64
+		// SlaveRequestSignTTL returns the TTL of slave request signature.
+		SlaveRequestSignTTL(ctx context.Context) int
+		// ChunkRetryLimit returns the maximum number of chunk retries.
+		ChunkRetryLimit(ctx context.Context) int
+		// UseChunkBuffer returns true if chunk buffer is enabled.
+		UseChunkBuffer(ctx context.Context) bool
+		// Queue returns the queue settings.
+		Queue(ctx context.Context, queueType QueueType) *QueueSetting
+		// EntityUrlCacheMargin returns the safe margin of entity URL cache. URL cache will
+		// expire in (EntityUrlValidDuration - EntityUrlCacheMargin).
+		EntityUrlCacheMargin(ctx context.Context) int
+		// EntityUrlValidDuration returns the valid duration of entity URL.
+		EntityUrlValidDuration(ctx context.Context) time.Duration
+		// PublicResourceMaxAge returns the max age of public resources.
+		PublicResourceMaxAge(ctx context.Context) int
+		// MediaMetaEnabled returns true if media meta is enabled.
+		MediaMetaEnabled(ctx context.Context) bool
+		// MediaMetaExifEnabled returns true if media meta exif is enabled.
+		MediaMetaExifEnabled(ctx context.Context) bool
+		// MediaMetaExifSizeLimit returns the size limit of media meta exif. first return value is for local sources;
+		// second return value is for remote sources.
+		MediaMetaExifSizeLimit(ctx context.Context) (int64, int64)
+		// MediaMetaExifBruteForce returns true if media meta exif brute force search is enabled.
+		MediaMetaExifBruteForce(ctx context.Context) bool
+		// MediaMetaMusicEnabled returns true if media meta audio is enabled.
+		MediaMetaMusicEnabled(ctx context.Context) bool
+		// MediaMetaMusicSizeLimit returns the size limit of media meta audio. first return value is for local sources;
+		MediaMetaMusicSizeLimit(ctx context.Context) (int64, int64)
+		// MediaMetaFFProbeEnabled returns true if media meta ffprobe is enabled.
+		MediaMetaFFProbeEnabled(ctx context.Context) bool
+		// MediaMetaFFProbeSizeLimit returns the size limit of media meta ffprobe. first return value is for local sources;
+		MediaMetaFFProbeSizeLimit(ctx context.Context) (int64, int64)
+		// MediaMetaFFProbePath returns the path of ffprobe executable.
+		MediaMetaFFProbePath(ctx context.Context) string
+		// MediaMetaGeocodingEnabled returns true if media meta geocoding is enabled.
+		MediaMetaGeocodingEnabled(ctx context.Context) bool
+		// MediaMetaGeocodingMapboxAK returns the Mapbox access token.
+		MediaMetaGeocodingMapboxAK(ctx context.Context) string
+		// ThumbSize returns the size limit of thumbnails.
+		ThumbSize(ctx context.Context) (int, int)
+		// ThumbEncode returns the thumbnail encoding settings.
+		ThumbEncode(ctx context.Context) *ThumbEncode
+		// BuiltinThumbGeneratorEnabled returns true if builtin thumb generator is enabled.
+		BuiltinThumbGeneratorEnabled(ctx context.Context) bool
+		// BuiltinThumbMaxSize returns the maximum size of builtin thumb generator.
+		BuiltinThumbMaxSize(ctx context.Context) int64
+		// TempPath returns the path of temporary directory.
+		TempPath(ctx context.Context) string
+		// ThumbEntitySuffix returns the suffix of entity thumbnails.
+		ThumbEntitySuffix(ctx context.Context) string
+		// ThumbSlaveSidecarSuffix returns the suffix of slave sidecar thumbnails.
+		ThumbSlaveSidecarSuffix(ctx context.Context) string
+		// ThumbGCAfterGen returns true if force GC is invoked after thumb generation.
+		ThumbGCAfterGen(ctx context.Context) bool
+		// FFMpegPath returns the path of ffmpeg executable.
+		FFMpegPath(ctx context.Context) string
+		// FFMpegThumbGeneratorEnabled returns true if ffmpeg thumb generator is enabled.
+		FFMpegThumbGeneratorEnabled(ctx context.Context) bool
+		// FFMpegThumbExts returns the supported extensions of ffmpeg thumb generator.
+		FFMpegThumbExts(ctx context.Context) []string
+		// FFMpegThumbSeek returns the seek time of ffmpeg thumb generator.
+		FFMpegThumbSeek(ctx context.Context) string
+		// FFMpegThumbMaxSize returns the maximum size of ffmpeg thumb generator.
+		FFMpegThumbMaxSize(ctx context.Context) int64
+		// VipsThumbGeneratorEnabled returns true if vips thumb generator is enabled.
+		VipsThumbGeneratorEnabled(ctx context.Context) bool
+		// VipsThumbExts returns the supported extensions of vips thumb generator.
+		VipsThumbExts(ctx context.Context) []string
+		// VipsThumbMaxSize returns the maximum size of vips thumb generator.
+		VipsThumbMaxSize(ctx context.Context) int64
+		// VipsPath returns the path of vips executable.
+		VipsPath(ctx context.Context) string
+		// LibreOfficeThumbGeneratorEnabled returns true if libreoffice thumb generator is enabled.
+		LibreOfficeThumbGeneratorEnabled(ctx context.Context) bool
+		// LibreOfficeThumbExts returns the supported extensions of libreoffice thumb generator.
+		LibreOfficeThumbExts(ctx context.Context) []string
+		// LibreOfficeThumbMaxSize returns the maximum size of libreoffice thumb generator.
+		LibreOfficeThumbMaxSize(ctx context.Context) int64
+		// LibreOfficePath returns the path of libreoffice executable.
+		LibreOfficePath(ctx context.Context) string
+		// MusicCoverThumbGeneratorEnabled returns true if music cover thumb generator is enabled.
+		MusicCoverThumbGeneratorEnabled(ctx context.Context) bool
+		// MusicCoverThumbMaxSize returns the maximum size of music cover thumb generator.
+		MusicCoverThumbMaxSize(ctx context.Context) int64
+		// MusicCoverThumbExts returns the supported extensions of music cover thumb generator.
+		MusicCoverThumbExts(ctx context.Context) []string
+		// Cron returns the crontab settings.
+		Cron(ctx context.Context, t CronType) string
+		// Theme returns the theme settings.
+		Theme(ctx context.Context) *Theme
+		// Logo returns the logo settings.
+		Logo(ctx context.Context) *Logo
+		// LegalDocuments returns the legal documents settings.
+		LegalDocuments(ctx context.Context) *LegalDocuments
+		// Captcha returns the captcha settings.
+		Captcha(ctx context.Context) *Captcha
+		// ExplorerFrontendSettings returns the explorer frontend settings.
+		ExplorerFrontendSettings(ctx context.Context) *ExplorerFrontendSettings
+		// SearchCategoryQuery returns the search category query.
+		SearchCategoryQuery(ctx context.Context, category SearchCategory) string
+		// EmojiPresets returns the emoji presets used in file icon customization.
+		EmojiPresets(ctx context.Context) string
+		// MapSetting returns the EXIF GPS map related settings.
+		MapSetting(ctx context.Context) *MapSetting
+		// FolderPropsCacheTTL returns the cache TTL of folder summary.
+		FolderPropsCacheTTL(ctx context.Context) int
+		// FileViewers returns the file viewers settings.
+		FileViewers(ctx context.Context) []types.ViewerGroup
+		// ViewerSessionTTL returns the TTL of viewer session.
+		ViewerSessionTTL(ctx context.Context) int
+		// MimeMapping returns the extension to MIME mapping settings.
+		MimeMapping(ctx context.Context) string
+		// MaxParallelTransfer returns the maximum parallel transfer in workflows.
+		MaxParallelTransfer(ctx context.Context) int
+		// ArchiveDownloadSessionTTL returns the TTL of archive download session.
+		ArchiveDownloadSessionTTL(ctx context.Context) int
+		// AppSetting returns the app related settings.
+		AppSetting(ctx context.Context) *AppSetting
+		// Avatar returns the avatar settings.
+		Avatar(ctx context.Context) *Avatar
+		// AvatarProcess returns the avatar process settings.
+		AvatarProcess(ctx context.Context) *AvatarProcess
+		// UseFirstSiteUrl returns the first site URL.
+		AllSiteURLs(ctx context.Context) []*url.URL
+		// LibRawThumbGeneratorEnabled returns true if libraw thumb generator is enabled.
+		LibRawThumbGeneratorEnabled(ctx context.Context) bool
+		// LibRawThumbMaxSize returns the maximum size of libraw thumb generator.
+		LibRawThumbMaxSize(ctx context.Context) int64
+		// LibRawThumbExts returns the supported extensions of libraw thumb generator.
+		LibRawThumbExts(ctx context.Context) []string
+		// LibRawThumbPath returns the path of libraw executable.
+		LibRawThumbPath(ctx context.Context) string
+		// CustomProps returns the custom props settings.
+		CustomProps(ctx context.Context) []types.CustomProps
+		// CustomNavItems returns the custom nav items settings.
+		CustomNavItems(ctx context.Context) []CustomNavItem
+		// CustomHTML returns the custom HTML settings.
+		CustomHTML(ctx context.Context) *CustomHTML
+		// FFMpegExtraArgs returns the extra arguments of ffmpeg thumb generator.
+		FFMpegExtraArgs(ctx context.Context) string
+		// MasterEncryptKey returns the master encrypt key.
+		MasterEncryptKey(ctx context.Context) []byte
+		// MasterEncryptKeyVault returns the master encrypt key vault type.
+		MasterEncryptKeyVault(ctx context.Context) MasterEncryptKeyVaultType
+		// MasterEncryptKeyFile returns the master encrypt key file.
+		MasterEncryptKeyFile(ctx context.Context) string
+		// ShowEncryptionStatus returns true if encryption status is shown.
+		ShowEncryptionStatus(ctx context.Context) bool
+		// EventHubMaxOfflineDuration returns the maximum offline duration of event hub.
+		EventHubMaxOfflineDuration(ctx context.Context) time.Duration
+		// EventHubEnabled returns true if event hub is enabled.
+		EventHubEnabled(ctx context.Context) bool
+		// EventHubDebounceDelay returns the debounce delay of event hub.
+		EventHubDebounceDelay(ctx context.Context) time.Duration
+		// FTSEnabled returns true if full-text search is enabled.
+		FTSEnabled(ctx context.Context) bool
+		// FTSIndexType returns the full-text search index type.
+		FTSIndexType(ctx context.Context) FTSIndexType
+		// FTSExtractorType returns the full-text search extractor type.
+		FTSExtractorType(ctx context.Context) FTSExtractorType
+		// FTSIndexMeilisearch returns Meilisearch index settings.
+		FTSIndexMeilisearch(ctx context.Context) *FTSIndexMeilisearchSetting
+		// FTSTikaExtractor returns Tika extractor settings.
+		FTSTikaExtractor(ctx context.Context) *FTSTikaExtractorSetting
+		// FTSChunkSize returns the maximum chunk size in bytes for full-text search indexing.
+		FTSChunkSize(ctx context.Context) int
+		// DefaultViewerMapping returns the default viewer mapping.
+		DefaultViewerMapping(ctx context.Context) types.DefaultViewerMapping
+		// ExposeUserEmail returns true if user email should be exposed to other
+		// signed-in users in redacted responses.
+		ExposeUserEmail(ctx context.Context) bool
+		// SSO returns the inbound single sign-on (OIDC) settings.
+		SSO(ctx context.Context) *SSO
+		QQConnect(ctx context.Context) *QQConnect
+		WeChatConnect(ctx context.Context) *WeChatConnect
+		// SmsGateway returns the generic HTTP SMS gateway config for
+		// phone verification codes.
+		SmsGateway(ctx context.Context) *SmsGateway
+		// EmailFilter returns the sign-up email restriction settings.
+		EmailFilter(ctx context.Context) *EmailFilter
+		// ShareDefaults returns the site-wide share defaults applied when a
+		// user has not overridden them in their personal settings.
+		ShareDefaults(ctx context.Context) *ShareDefaults
+		// DownloadCDNRoutes returns the configured alternative download
+		// endpoints users can pick from (e.g. CDN mirrors of the site).
+		// Group-level routes assigned to the request user extend the
+		// site-level pool.
+		DownloadCDNRoutes(ctx context.Context) []CDNRoute
+		// PreviewCDNRoutes returns the effective CDN endpoints for inline
+		// preview and thumbnail URLs: the site-level `preview_cdn_routes`
+		// pool extended by the request user's group-level routes.
+		PreviewCDNRoutes(ctx context.Context) []CDNRoute
+		// MediaCDNRoutes returns the effective CDN endpoints for streaming
+		// audio/video URLs: `media_cdn_routes` plus group-level routes.
+		MediaCDNRoutes(ctx context.Context) []CDNRoute
+		// DownloadCDNShuffle returns true if generated download URLs should be
+		// distributed randomly across the site URL and all CDN routes.
+		DownloadCDNShuffle(ctx context.Context) bool
+		// DownloadURLBase returns the base URL used when generating file
+		// download URLs. With `download_cdn_shuffle` enabled and CDN routes
+		// configured, an endpoint is picked uniformly at random from the
+		// primary site URL plus all routes; otherwise it falls back to
+		// SiteURL. A context pinned by UseFirstSiteUrl always returns SiteURL.
+		DownloadURLBase(ctx context.Context) *url.URL
+		// PreviewURLBase returns the base URL for inline preview and
+		// thumbnail URLs: a random pick from the effective preview CDN
+		// pool, or SiteURL when no route is configured. A context pinned
+		// by UseFirstSiteUrl always returns SiteURL.
+		PreviewURLBase(ctx context.Context) *url.URL
+		// MediaURLBase returns the base URL for streaming audio/video
+		// content URLs: a random pick from the effective media CDN pool,
+		// falling back to the preview pool, then SiteURL. A context pinned
+		// by UseFirstSiteUrl always returns SiteURL.
+		MediaURLBase(ctx context.Context) *url.URL
+		// AuditLogEnabled returns true if the given audit event type is
+		// recorded. An empty/unset list records everything.
+		AuditLogEnabled(ctx context.Context, eventType int) bool
+		// AuditLogRetentionDays returns the audit retention window in days;
+		// 0 keeps events forever.
+		AuditLogRetentionDays(ctx context.Context) int
+		// Announcement returns the site-wide markdown announcement shown to
+		// logged-in users. "" disables the announcement modal.
+		Announcement(ctx context.Context) string
+		// ShareScoreRate returns the fraction (0..1) of a paid share's
+		// points price the owner receives as income.
+		ShareScoreRate(ctx context.Context) float64
+		// Payment returns the cash-checkout (Stripe) configuration.
+		Payment(ctx context.Context) *PaymentSettings
+	}
+	UseFirstSiteUrlCtxKey = struct{}
+)
+
+// PaymentSettings carries the Stripe cash-checkout configuration. Enabled
+// requires a secret key; the webhook secret is required before webhook
+// fulfillment is accepted.
+type PaymentSettings struct {
+	Enabled        bool
+	SecretKey      string
+	WebhookSecret  string
+	PublishableKey string
+	Currency       string
+}
+
+// NewProvider creates a new setting provider.
+func NewProvider(root SettingStoreAdapter) Provider {
+	return &settingProvider{
+		adapterChain: root,
+	}
+}
+
+const (
+	stringListDefault          = "DEFAULT"
+	stringListDefaultSeparator = ","
+)
+
+var defaultBoolSet = &boolset.BooleanSet{}
+
+type (
+	SiteHostAllowListGetter interface {
+		AllowedHost() []string
+	}
+	settingProvider struct {
+		adapterChain SettingStoreAdapter
+	}
+)
+
+func (s *settingProvider) ShowEncryptionStatus(ctx context.Context) bool {
+	return s.getBoolean(ctx, "show_encryption_status", true)
+}
+
+func (s *settingProvider) MasterEncryptKeyFile(ctx context.Context) string {
+	return s.getString(ctx, "encrypt_master_key_file", "")
+}
+
+func (s *settingProvider) MasterEncryptKeyVault(ctx context.Context) MasterEncryptKeyVaultType {
+	return MasterEncryptKeyVaultType(s.getString(ctx, "encrypt_master_key_vault", "setting"))
+}
+
+func (s *settingProvider) MasterEncryptKey(ctx context.Context) []byte {
+	encoded := s.getString(ctx, "encrypt_master_key", "")
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil
+	}
+	return key
+}
+
+func (s *settingProvider) CustomHTML(ctx context.Context) *CustomHTML {
+	return &CustomHTML{
+		HeadlessFooter: s.getString(ctx, "headless_footer_html", ""),
+		HeadlessBody:   s.getString(ctx, "headless_bottom_html", ""),
+		SidebarBottom:  s.getString(ctx, "sidebar_bottom_html", ""),
+	}
+}
+func (s *settingProvider) CustomNavItems(ctx context.Context) []CustomNavItem {
+	raw := s.getString(ctx, "custom_nav_items", "[]")
+	var items []CustomNavItem
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return []CustomNavItem{}
+	}
+	return items
+}
+func (s *settingProvider) CustomProps(ctx context.Context) []types.CustomProps {
+	raw := s.getString(ctx, "custom_props", "[]")
+	var props []types.CustomProps
+	if err := json.Unmarshal([]byte(raw), &props); err != nil {
+		return []types.CustomProps{}
+	}
+	return props
+}
+
+func (s *settingProvider) License(ctx context.Context) string {
+	return s.getString(ctx, "license", "")
+}
+
+func (s *settingProvider) AvatarProcess(ctx context.Context) *AvatarProcess {
+	return &AvatarProcess{
+		Path:        s.getString(ctx, "avatar_path", "avatar"),
+		MaxFileSize: s.getInt64(ctx, "avatar_size", 4194304),
+		MaxWidth:    s.getInt(ctx, "avatar_size_l", 200),
+	}
+}
+
+func (s *settingProvider) Avatar(ctx context.Context) *Avatar {
+	return &Avatar{
+		Gravatar: s.getString(ctx, "gravatar_server", ""),
+		Path:     s.getString(ctx, "avatar_path", "avatar"),
+	}
+}
+
+func (s *settingProvider) DefaultViewerMapping(ctx context.Context) types.DefaultViewerMapping {
+	raw := s.getString(ctx, "viewer_default_apps", "{}")
+	var mapping types.DefaultViewerMapping
+	if err := json.Unmarshal([]byte(raw), &mapping); err != nil {
+		return types.DefaultViewerMapping{}
+	}
+	return mapping
+}
+
+func (s *settingProvider) FileViewers(ctx context.Context) []types.ViewerGroup {
+	raw := s.getString(ctx, "file_viewers", "[]")
+	var viewers []types.ViewerGroup
+	if err := json.Unmarshal([]byte(raw), &viewers); err != nil {
+		return []types.ViewerGroup{}
+	}
+
+	return viewers
+}
+
+func (s *settingProvider) AppSetting(ctx context.Context) *AppSetting {
+	return &AppSetting{
+		Promotion:        s.getBoolean(ctx, "show_app_promotion", false),
+		DesktopPromotion: s.getBoolean(ctx, "show_desktop_app_promotion", false),
+	}
+}
+
+func (s *settingProvider) MaxParallelTransfer(ctx context.Context) int {
+	return s.getInt(ctx, "max_parallel_transfer", 4)
+}
+
+func (s *settingProvider) ArchiveDownloadSessionTTL(ctx context.Context) int {
+	return s.getInt(ctx, "archive_timeout", 20)
+}
+
+func (s *settingProvider) ViewerSessionTTL(ctx context.Context) int {
+	return s.getInt(ctx, "viewer_session_timeout", 36000)
+}
+
+func (s *settingProvider) MapSetting(ctx context.Context) *MapSetting {
+	return &MapSetting{
+		Provider:       MapProvider(s.getString(ctx, "map_provider", "openstreetmap")),
+		GoogleTileType: MapGoogleTileType(s.getString(ctx, "map_google_tile_type", "roadmap")),
+		MapboxAK:       s.getString(ctx, "map_mapbox_ak", ""),
+	}
+}
+
+func (s *settingProvider) MimeMapping(ctx context.Context) string {
+	return s.getString(ctx, "mime_mapping", "{}")
+}
+
+func (s *settingProvider) Logo(ctx context.Context) *Logo {
+	return &Logo{
+		Normal: s.getString(ctx, "site_logo", "/static/img/logo.svg"),
+		Light:  s.getString(ctx, "site_logo_light", "/static/img/logo_light.svg"),
+	}
+}
+
+func (s *settingProvider) ExplorerFrontendSettings(ctx context.Context) *ExplorerFrontendSettings {
+	return &ExplorerFrontendSettings{
+		Icons: s.getString(ctx, "explorer_icons", "[]"),
+	}
+}
+
+func (s *settingProvider) SearchCategoryQuery(ctx context.Context, category SearchCategory) string {
+	return s.getString(ctx, fmt.Sprintf("explorer_category_%s_query", category), "")
+}
+
+func (s *settingProvider) Captcha(ctx context.Context) *Captcha {
+	return &Captcha{
+		Height:             s.getInt(ctx, "captcha_height", 60),
+		Width:              s.getInt(ctx, "captcha_width", 240),
+		Mode:               CaptchaMode(s.getInt(ctx, "captcha_mode", int(CaptchaModeNumberAlphabet))),
+		ComplexOfNoiseText: s.getInt(ctx, "captcha_ComplexOfNoiseText", 0),
+		ComplexOfNoiseDot:  s.getInt(ctx, "captcha_ComplexOfNoiseDot", 0),
+		IsShowHollowLine:   s.getBoolean(ctx, "captcha_IsShowHollowLine", false),
+		IsShowNoiseDot:     s.getBoolean(ctx, "captcha_IsShowNoiseDot", false),
+		IsShowNoiseText:    s.getBoolean(ctx, "captcha_IsShowNoiseText", false),
+		IsShowSlimeLine:    s.getBoolean(ctx, "captcha_IsShowSlimeLine", false),
+		IsShowSineLine:     s.getBoolean(ctx, "captcha_IsShowSineLine", false),
+		Length:             s.getInt(ctx, "captcha_CaptchaLen", 6),
+	}
+}
+
+func (s *settingProvider) LegalDocuments(ctx context.Context) *LegalDocuments {
+	return &LegalDocuments{
+		PrivacyPolicy:  s.getString(ctx, "privacy_policy_url", ""),
+		TermsOfService: s.getString(ctx, "tos_url", ""),
+	}
+}
+
+func (s *settingProvider) FolderPropsCacheTTL(ctx context.Context) int {
+	return s.getInt(ctx, "folder_props_timeout", 300)
+}
+
+func (s *settingProvider) EmojiPresets(ctx context.Context) string {
+	return s.getString(ctx, "emojis", "{}")
+}
+
+func (s *settingProvider) Theme(ctx context.Context) *Theme {
+	return &Theme{
+		Themes:       s.getString(ctx, "theme_options", "{}"),
+		DefaultTheme: s.getString(ctx, "defaultTheme", ""),
+	}
+}
+
+func (s *settingProvider) Cron(ctx context.Context, t CronType) string {
+	return s.getString(ctx, "cron_"+string(t), "@hourly")
+}
+
+func (s *settingProvider) BuiltinThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_builtin_enabled", true)
+}
+
+func (s *settingProvider) BuiltinThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_builtin_max_size", 78643200)
+}
+
+func (s *settingProvider) MusicCoverThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_music_cover_enabled", true)
+}
+
+func (s *settingProvider) MusicCoverThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_music_cover_max_size", 1073741824)
+}
+
+func (s *settingProvider) MusicCoverThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_music_cover_exts", []string{})
+}
+
+func (s *settingProvider) FFMpegPath(ctx context.Context) string {
+	return s.getString(ctx, "thumb_ffmpeg_path", "ffmpeg")
+}
+
+func (s *settingProvider) FFMpegThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_ffmpeg_enabled", false)
+}
+
+func (s *settingProvider) FFMpegThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_ffmpeg_exts", []string{})
+}
+
+func (s *settingProvider) FFMpegThumbSeek(ctx context.Context) string {
+	return s.getString(ctx, "thumb_ffmpeg_seek", "00:00:01.00")
+}
+
+func (s *settingProvider) FFMpegExtraArgs(ctx context.Context) string {
+	return s.getString(ctx, "thumb_ffmpeg_extra_args", "")
+}
+
+func (s *settingProvider) FFMpegThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_ffmpeg_max_size", 10737418240)
+}
+
+func (s *settingProvider) VipsThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_vips_enabled", false)
+}
+
+func (s *settingProvider) VipsThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_vips_max_size", 78643200)
+}
+
+func (s *settingProvider) VipsThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_vips_exts", []string{})
+}
+
+func (s *settingProvider) VipsPath(ctx context.Context) string {
+	return s.getString(ctx, "thumb_vips_path", "vips")
+}
+
+func (s *settingProvider) LibRawThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_libraw_enabled", false)
+}
+
+func (s *settingProvider) LibRawThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_libraw_max_size", 78643200)
+}
+
+func (s *settingProvider) LibRawThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_libraw_exts", []string{})
+}
+
+func (s *settingProvider) LibRawThumbPath(ctx context.Context) string {
+	return s.getString(ctx, "thumb_libraw_path", "simple_dcraw")
+}
+
+func (s *settingProvider) LibreOfficeThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_libreoffice_enabled", false)
+}
+
+func (s *settingProvider) LibreOfficeThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_libreoffice_max_size", 78643200)
+}
+
+func (s *settingProvider) LibreOfficePath(ctx context.Context) string {
+	return s.getString(ctx, "thumb_libreoffice_path", "soffice")
+}
+
+func (s *settingProvider) LibreOfficeThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_libreoffice_exts", []string{})
+}
+
+func (s *settingProvider) ThumbSize(ctx context.Context) (int, int) {
+	return s.getInt(ctx, "thumb_width", 400), s.getInt(ctx, "thumb_height", 300)
+}
+
+func (s *settingProvider) ThumbEncode(ctx context.Context) *ThumbEncode {
+	return &ThumbEncode{
+		Format:  s.getString(ctx, "thumb_encode_method", "jpg"),
+		Quality: s.getInt(ctx, "thumb_encode_quality", 85),
+	}
+}
+
+func (s *settingProvider) ThumbEntitySuffix(ctx context.Context) string {
+	return s.getString(ctx, "thumb_entity_suffix", "{blob_path}/{blob_name}._thumb")
+}
+
+func (s *settingProvider) ThumbSlaveSidecarSuffix(ctx context.Context) string {
+	return s.getString(ctx, "thumb_slave_sidecar_suffix", "._thumb_sidecar")
+}
+
+func (s *settingProvider) ThumbGCAfterGen(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_gc_after_gen", false)
+}
+
+func (s *settingProvider) TempPath(ctx context.Context) string {
+	return s.getString(ctx, "temp_path", "temp")
+}
+
+func (s *settingProvider) MediaMetaFFProbePath(ctx context.Context) string {
+	return s.getString(ctx, "media_meta_ffprobe_path", "ffprobe")
+}
+
+func (s *settingProvider) MediaMetaFFProbeSizeLimit(ctx context.Context) (int64, int64) {
+	return s.getInt64(ctx, "media_meta_ffprobe_size_local", 0), s.getInt64(ctx, "media_meta_ffprobe_size_remote", 0)
+}
+
+func (s *settingProvider) MediaMetaFFProbeEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_ffprobe", true)
+}
+
+func (s *settingProvider) MediaMetaMusicSizeLimit(ctx context.Context) (int64, int64) {
+	return s.getInt64(ctx, "media_meta_music_size_local", 0), s.getInt64(ctx, "media_meta_music_size_remote", 0)
+}
+
+func (s *settingProvider) MediaMetaMusicEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_music", true)
+}
+
+func (s *settingProvider) MediaMetaExifBruteForce(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_exif_brute_force", false)
+}
+
+func (s *settingProvider) MediaMetaExifSizeLimit(ctx context.Context) (int64, int64) {
+	return s.getInt64(ctx, "media_meta_exif_size_local", 0), s.getInt64(ctx, "media_meta_exif_size_remote", 0)
+}
+
+func (s *settingProvider) MediaMetaExifEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_exif", true)
+}
+
+func (s *settingProvider) MediaMetaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta", true)
+}
+
+func (s *settingProvider) MediaMetaGeocodingEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_geocoding", false)
+}
+
+func (s *settingProvider) MediaMetaGeocodingMapboxAK(ctx context.Context) string {
+	return s.getString(ctx, "media_meta_geocoding_mapbox_ak", "")
+}
+
+func (s *settingProvider) PublicResourceMaxAge(ctx context.Context) int {
+	return s.getInt(ctx, "public_resource_maxage", 0)
+}
+
+func (s *settingProvider) EntityUrlCacheMargin(ctx context.Context) int {
+	return s.getInt(ctx, "entity_url_cache_margin", 600)
+}
+
+func (s *settingProvider) EntityUrlValidDuration(ctx context.Context) time.Duration {
+	return time.Duration(s.getInt(ctx, "entity_url_default_ttl", 3600)) * time.Second
+}
+
+func (s *settingProvider) EventHubMaxOfflineDuration(ctx context.Context) time.Duration {
+	return time.Duration(s.getInt(ctx, "fs_event_push_max_age", 1209600)) * time.Second
+}
+
+func (s *settingProvider) EventHubDebounceDelay(ctx context.Context) time.Duration {
+	return time.Duration(s.getInt(ctx, "fs_event_push_debounce", 5)) * time.Second
+}
+
+func (s *settingProvider) EventHubEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "fs_event_push_enabled", true)
+}
+
+func (s *settingProvider) FTSEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "fts_enabled", false)
+}
+
+func (s *settingProvider) FTSIndexType(ctx context.Context) FTSIndexType {
+	return FTSIndexType(s.getString(ctx, "fts_index_type", ""))
+}
+
+func (s *settingProvider) FTSExtractorType(ctx context.Context) FTSExtractorType {
+	return FTSExtractorType(s.getString(ctx, "fts_extractor_type", ""))
+}
+
+func (s *settingProvider) FTSIndexMeilisearch(ctx context.Context) *FTSIndexMeilisearchSetting {
+	return &FTSIndexMeilisearchSetting{
+		Endpoint:         s.getString(ctx, "fts_meilisearch_endpoint", ""),
+		APIKey:           s.getString(ctx, "fts_meilisearch_api_key", ""),
+		PageSize:         s.getInt(ctx, "fts_meilisearch_page_size", 5),
+		EmbeddingEnbaled: s.getBoolean(ctx, "fts_meilisearch_embed_enabled", false),
+		EmbeddingSetting: s.getString(ctx, "fts_meilisearch_embed_config", "{}"),
+	}
+}
+
+func (s *settingProvider) FTSTikaExtractor(ctx context.Context) *FTSTikaExtractorSetting {
+	return &FTSTikaExtractorSetting{
+		Endpoint:    s.getString(ctx, "fts_tika_endpoint", ""),
+		Exts:        s.getStringList(ctx, "fts_tika_exts", []string{}),
+		MaxFileSize: s.getInt64(ctx, "fts_tika_max_file_size_remote", 52428800),
+	}
+}
+
+func (s *settingProvider) FTSChunkSize(ctx context.Context) int {
+	return s.getInt(ctx, "fts_chunk_size", 2000)
+}
+
+func (s *settingProvider) Queue(ctx context.Context, queueType QueueType) *QueueSetting {
+	queueTypeStr := string(queueType)
+	return &QueueSetting{
+		WorkerNum:          s.getInt(ctx, "queue_"+queueTypeStr+"_worker_num", 15),
+		MaxExecution:       time.Duration(s.getInt(ctx, "queue_"+queueTypeStr+"_max_execution", 86400)) * time.Second,
+		BackoffFactor:      s.getFloat64(ctx, "queue_"+queueTypeStr+"_backoff_factor", 4),
+		BackoffMaxDuration: time.Duration(s.getInt(ctx, "queue_"+queueTypeStr+"_backoff_max_duration", 3600)) * time.Second,
+		MaxRetry:           s.getInt(ctx, "queue_"+queueTypeStr+"_max_retry", 5),
+		RetryDelay:         time.Duration(s.getInt(ctx, "queue_"+queueTypeStr+"_retry_delay", 5)) * time.Second,
+	}
+}
+
+func (s *settingProvider) UseChunkBuffer(ctx context.Context) bool {
+	return s.getBoolean(ctx, "use_temp_chunk_buffer", true)
+}
+
+func (s *settingProvider) ChunkRetryLimit(ctx context.Context) int {
+	return s.getInt(ctx, "chunk_retries", 3)
+}
+
+func (s *settingProvider) SlaveRequestSignTTL(ctx context.Context) int {
+	return s.getInt(ctx, "slave_api_timeout", 60)
+}
+
+func (s *settingProvider) MaxOnlineEditSize(ctx context.Context) int64 {
+	return int64(s.getInt(ctx, "maxEditSize", 52428800))
+}
+
+func (s *settingProvider) UploadSessionTTL(ctx context.Context) time.Duration {
+	return time.Duration(s.getInt(ctx, "upload_session_timeout", 86400)) * time.Second
+}
+
+func (s *settingProvider) MaxBatchedFile(ctx context.Context) int {
+	return s.getInt(ctx, "max_batched_file", 3000)
+}
+
+func (s *settingProvider) AuditLogEnabled(ctx context.Context, eventType int) bool {
+	raw := s.getString(ctx, "audit_log_enabled", "")
+	if raw == "" {
+		return true
+	}
+
+	var enabled []int
+	if err := json.Unmarshal([]byte(raw), &enabled); err != nil {
+		return true
+	}
+	for _, t := range enabled {
+		if t == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *settingProvider) AuditLogRetentionDays(ctx context.Context) int {
+	return s.getInt(ctx, "audit_log_retention_days", 0)
+}
+
+func (s *settingProvider) Announcement(ctx context.Context) string {
+	return s.getString(ctx, "announcement", "")
+}
+
+func (s *settingProvider) DefaultShares(ctx context.Context) []int {
+	raw := s.getString(ctx, "default_symbolics", "")
+	if raw == "" {
+		return nil
+	}
+
+	var ids []int
+	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+		return nil
+	}
+	return ids
+}
+
+func (s *settingProvider) DBFS(ctx context.Context) *DBFS {
+	return &DBFS{
+		UseCursorPagination:        s.getBoolean(ctx, "use_cursor_pagination", true),
+		MaxPageSize:                s.getInt(ctx, "max_page_size", 2000),
+		MaxRecursiveSearchedFolder: s.getInt(ctx, "max_recursive_searched_folder", 65535),
+		UseSSEForSearch:            s.getBoolean(ctx, "use_sse_for_search", false),
+		DedupScope:                 s.getString(ctx, "upload_dedup_scope", "owner"),
+	}
+}
+
+func (s *settingProvider) HashIDSalt(ctx context.Context) string {
+	return s.getString(ctx, "hash_id_salt", "")
+}
+
+func (s *settingProvider) TokenAuth(ctx context.Context) *TokenAuth {
+	return &TokenAuth{
+		AccessTokenTTL:  time.Duration(s.getInt(ctx, "access_token_ttl", 3600)) * time.Second,
+		RefreshTokenTTL: time.Duration(s.getInt(ctx, "refresh_token_ttl", 15552000)) * time.Second,
+	}
+}
+
+func (s *settingProvider) ResetEmailTemplate(ctx context.Context) []EmailTemplate {
+	src := s.getString(ctx, "mail_reset_template", "[]")
+	var templates []EmailTemplate
+	if err := json.Unmarshal([]byte(src), &templates); err != nil {
+		return []EmailTemplate{}
+	}
+
+	return templates
+}
+
+func (s *settingProvider) ActivationEmailTemplate(ctx context.Context) []EmailTemplate {
+	src := s.getString(ctx, "mail_activation_template", "[]")
+	var templates []EmailTemplate
+	if err := json.Unmarshal([]byte(src), &templates); err != nil {
+		return []EmailTemplate{}
+	}
+
+	return templates
+}
+
+func (s *settingProvider) SecretKey(ctx context.Context) string {
+	return s.getString(ctx, "secret_key", "")
+}
+
+func (s *settingProvider) OIDCSigningPrivateKey(ctx context.Context) string {
+	return s.getString(ctx, "oidc_signing_private_key", "")
+}
+
+func (s *settingProvider) AllSiteURLs(ctx context.Context) []*url.URL {
+	rawUrls := s.getStringList(ctx, "siteURL", []string{"http://localhost"})
+	if len(rawUrls) == 0 {
+		rawUrls = []string{"http://localhost"}
+	}
+
+	urls := make([]*url.URL, 0, len(rawUrls))
+	for _, u := range rawUrls {
+		parsedURL, err := url.Parse(u)
+		if err != nil {
+			continue
+		}
+		urls = append(urls, parsedURL)
+	}
+	return urls
+}
+
+func (s *settingProvider) SiteURL(ctx context.Context) *url.URL {
+	rawUrls := s.getStringList(ctx, "siteURL", []string{"http://localhost"})
+	if len(rawUrls) == 0 {
+		rawUrls = []string{"http://localhost"}
+	}
+
+	urls := make([]*url.URL, 0, len(rawUrls))
+	for _, u := range rawUrls {
+		parsedURL, err := url.Parse(u)
+		if err != nil {
+			continue
+		}
+		urls = append(urls, parsedURL)
+	}
+
+	reqInfo := requestinfo.RequestInfoFromContext(ctx)
+	_, useFirst := ctx.Value(UseFirstSiteUrlCtxKey{}).(bool)
+	if !useFirst && reqInfo != nil && reqInfo.Host != "" {
+		for _, u := range urls {
+			if (u.Host) == reqInfo.Host {
+				return u
+			}
+		}
+	}
+
+	return urls[0]
+}
+
+func (s *settingProvider) SMTP(ctx context.Context) *SMTP {
+	return &SMTP{
+		FromName:        s.getString(ctx, "fromName", ""),
+		From:            s.getString(ctx, "fromAdress", ""),
+		Host:            s.getString(ctx, "smtpHost", ""),
+		ReplyTo:         s.getString(ctx, "replyTo", ""),
+		User:            s.getString(ctx, "smtpUser", ""),
+		Password:        s.getString(ctx, "smtpPass", ""),
+		ForceEncryption: s.getBoolean(ctx, "smtpEncryption", false),
+		Port:            s.getInt(ctx, "smtpPort", 25),
+		Keepalive:       s.getInt(ctx, "mail_keepalive", 30),
+		AuthType:        s.getString(ctx, "smtp_auth", "autodiscover"),
+	}
+}
+
+func (s *settingProvider) MailDriver(ctx context.Context) MailDriver {
+	if s.getString(ctx, "mail_driver", string(MailDriverSMTP)) == string(MailDriverHTTP) {
+		return MailDriverHTTP
+	}
+	return MailDriverSMTP
+}
+
+func (s *settingProvider) HTTPMail(ctx context.Context) *HTTPMail {
+	return &HTTPMail{
+		Endpoint:     s.getString(ctx, "mail_http_endpoint", ""),
+		Method:       s.getString(ctx, "mail_http_method", "POST"),
+		Headers:      s.getString(ctx, "mail_http_headers", ""),
+		BodyTemplate: s.getString(ctx, "mail_http_body_tpl", ""),
+	}
+}
+
+func (s *settingProvider) DefaultGroup(ctx context.Context) int {
+	return s.getInt(ctx, "default_group", 2)
+}
+
+func (s *settingProvider) EmailActivationEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "email_active", false)
+}
+
+func (s *settingProvider) TcCaptcha(ctx context.Context) *TcCaptcha {
+	return &TcCaptcha{
+		AppID:        s.getString(ctx, "captcha_TCaptcha_CaptchaAppId", ""),
+		AppSecretKey: s.getString(ctx, "captcha_TCaptcha_AppSecretKey", ""),
+		SecretID:     s.getString(ctx, "captcha_TCaptcha_SecretId", ""),
+		SecretKey:    s.getString(ctx, "captcha_TCaptcha_SecretKey", ""),
+	}
+}
+
+func (s *settingProvider) TurnstileCaptcha(ctx context.Context) *Turnstile {
+	return &Turnstile{
+		Secret: s.getString(ctx, "captcha_turnstile_site_secret", ""),
+		Key:    s.getString(ctx, "captcha_turnstile_site_key", ""),
+	}
+}
+
+func (s *settingProvider) CapCaptcha(ctx context.Context) *Cap {
+	return &Cap{
+		InstanceURL: s.getString(ctx, "captcha_cap_instance_url", ""),
+		SiteKey:     s.getString(ctx, "captcha_cap_site_key", ""),
+		SecretKey:   s.getString(ctx, "captcha_cap_secret_key", ""),
+		AssetServer: s.getString(ctx, "captcha_cap_asset_server", "jsdelivr"),
+	}
+}
+
+func (s *settingProvider) ReCaptcha(ctx context.Context) *ReCaptcha {
+	return &ReCaptcha{
+		Secret: s.getString(ctx, "captcha_ReCaptchaSecret", ""),
+		Key:    s.getString(ctx, "captcha_ReCaptchaKey", ""),
+	}
+}
+
+func (s *settingProvider) CaptchaType(ctx context.Context) CaptchaType {
+	return CaptchaType(s.getString(ctx, "captcha_type", string(CaptchaNormal)))
+}
+
+func (s *settingProvider) RegCaptchaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "reg_captcha", false)
+}
+
+func (s *settingProvider) LoginCaptchaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "login_captcha", false)
+}
+
+func (s *settingProvider) ForgotPasswordCaptchaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "forget_captcha", false)
+}
+
+func (s *settingProvider) AbuseCaptchaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "abuse_captcha", true)
+}
+
+func (s *settingProvider) ShopNavEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "shop_nav", true)
+}
+
+func (s *settingProvider) ShareScoreRate(ctx context.Context) float64 {
+	return s.getFloat64(ctx, "share_score_rate", 100) / 100
+}
+
+// Payment implements Provider.Payment.
+func (s *settingProvider) Payment(ctx context.Context) *PaymentSettings {
+	return &PaymentSettings{
+		Enabled:        s.getBoolean(ctx, "payment_stripe_enabled", false),
+		SecretKey:      s.getString(ctx, "payment_stripe_secret_key", ""),
+		WebhookSecret:  s.getString(ctx, "payment_stripe_webhook_secret", ""),
+		PublishableKey: s.getString(ctx, "payment_stripe_publishable_key", ""),
+		Currency:       s.getString(ctx, "payment_stripe_currency", "usd"),
+	}
+}
+
+func (s *settingProvider) AuthnEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "authn_enabled", false)
+}
+
+func (s *settingProvider) RegisterEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "register_enabled", false)
+}
+
+func (s *settingProvider) InvitationCodeRequired(ctx context.Context) bool {
+	return s.getBoolean(ctx, "invitation_code_required", false)
+}
+
+func (s *settingProvider) SSO(ctx context.Context) *SSO {
+	// Base scopes are always requested; sso_scopes holds extras only, so the
+	// admin cannot break the flow by removing "openid".
+	scopes := map[string]bool{"openid": true, "profile": true, "email": true}
+	for _, extra := range strings.FieldsFunc(s.getString(ctx, "sso_scopes", ""), func(r rune) bool {
+		return r == ',' || r == ';' || r == ' '
+	}) {
+		if extra = strings.TrimSpace(extra); extra != "" {
+			scopes[extra] = true
+		}
+	}
+	scopeList := make([]string, 0, len(scopes))
+	for sc := range scopes {
+		scopeList = append(scopeList, sc)
+	}
+	sort.Strings(scopeList)
+
+	issuer := strings.TrimSpace(s.getString(ctx, "sso_issuer", ""))
+	// Tolerate admins pasting the full well-known document URL.
+	issuer = strings.TrimSuffix(issuer, "/.well-known/openid-configuration")
+	issuer = strings.TrimRight(issuer, "/")
+
+	return &SSO{
+		Enabled:         s.getBoolean(ctx, "sso_enabled", false),
+		DisplayName:     s.getString(ctx, "sso_display_name", "SSO"),
+		Issuer:          issuer,
+		ClientID:        s.getString(ctx, "sso_client_id", ""),
+		ClientSecret:    s.getString(ctx, "sso_client_secret", ""),
+		Scopes:          strings.Join(scopeList, " "),
+		RegisterEnabled: s.getBoolean(ctx, "sso_register_enabled", true),
+		AutoRedirect:    s.getBoolean(ctx, "sso_auto_redirect", false),
+	}
+}
+
+func (s *settingProvider) QQConnect(ctx context.Context) *QQConnect {
+	return &QQConnect{
+		Enabled:         s.getBoolean(ctx, "qq_connect_enabled", false),
+		AppID:           s.getString(ctx, "qq_connect_app_id", ""),
+		AppSecret:       s.getString(ctx, "qq_connect_app_secret", ""),
+		RegisterEnabled: s.getBoolean(ctx, "qq_connect_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) WeChatConnect(ctx context.Context) *WeChatConnect {
+	return &WeChatConnect{
+		Enabled:         s.getBoolean(ctx, "wechat_connect_enabled", false),
+		AppID:           s.getString(ctx, "wechat_connect_app_id", ""),
+		AppSecret:       s.getString(ctx, "wechat_connect_app_secret", ""),
+		RegisterEnabled: s.getBoolean(ctx, "wechat_connect_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) SmsGateway(ctx context.Context) *SmsGateway {
+	method := strings.ToUpper(s.getString(ctx, "sms_method", "POST"))
+	if method != http.MethodGet && method != http.MethodPost {
+		method = http.MethodPost
+	}
+	return &SmsGateway{
+		Enabled:         s.getBoolean(ctx, "sms_enabled", false),
+		Endpoint:        s.getString(ctx, "sms_endpoint", ""),
+		Method:          method,
+		Headers:         s.getString(ctx, "sms_headers", ""),
+		BodyTemplate:    s.getString(ctx, "sms_body_tpl", `{"phone":"{phone}","code":"{code}"}`),
+		RegisterEnabled: s.getBoolean(ctx, "sms_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) EmailFilter(ctx context.Context) *EmailFilter {
+	mode := EmailFilterMode(s.getInt(ctx, "email_filter_mode", 0))
+	if mode < EmailFilterDisabled || mode > EmailFilterBlacklist {
+		mode = EmailFilterDisabled
+	}
+
+	raw := s.getString(ctx, "email_filter_list", "")
+	var list []string
+	for _, entry := range strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == ';' || r == ' '
+	}) {
+		entry = strings.ToLower(strings.TrimSpace(entry))
+		if entry != "" {
+			list = append(list, entry)
+		}
+	}
+
+	return &EmailFilter{
+		Mode:              mode,
+		List:              list,
+		DisableSubAddress: s.getBoolean(ctx, "email_disable_subaddress", false),
+		SubAddressChars:   s.getString(ctx, "email_subaddress_chars", "+"),
+	}
+}
+
+func (s *settingProvider) ExposeUserEmail(ctx context.Context) bool {
+	return s.getBoolean(ctx, "expose_user_email", true)
+}
+
+// ShareDefaults holds the site-wide share defaults (#3390).
+type ShareDefaults struct {
+	// LinksInProfile is the default profile share visibility applied when a
+	// user's own share_links_in_profile is unset.
+	LinksInProfile types.ShareLinksInProfileLevel
+	// PrivateByDefault makes new shares default to private (random password).
+	PrivateByDefault bool
+}
+
+// CDNRoute is an alternative download endpoint offered to users when
+// downloading files, e.g. a CDN mirror fronting the site.
+type CDNRoute struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func (s *settingProvider) DownloadCDNRoutes(ctx context.Context) []CDNRoute {
+	return s.effectiveCDNRoutes(ctx, "download_cdn_routes",
+		func(g *types.GroupSetting) []string { return g.DownloadCDNRoutes })
+}
+
+func (s *settingProvider) PreviewCDNRoutes(ctx context.Context) []CDNRoute {
+	return s.effectiveCDNRoutes(ctx, "preview_cdn_routes",
+		func(g *types.GroupSetting) []string { return g.PreviewCDNRoutes })
+}
+
+func (s *settingProvider) MediaCDNRoutes(ctx context.Context) []CDNRoute {
+	return s.effectiveCDNRoutes(ctx, "media_cdn_routes",
+		func(g *types.GroupSetting) []string { return g.MediaCDNRoutes })
+}
+
+// effectiveCDNRoutes resolves the CDN route pool for a purpose: the
+// site-level setting plus the route lines assigned to the request
+// user's effective group. Duplicate `name=url` entries collapse.
+func (s *settingProvider) effectiveCDNRoutes(ctx context.Context, siteKey string,
+	groupPick func(*types.GroupSetting) []string) []CDNRoute {
+	lines := strings.Split(s.getString(ctx, siteKey, ""), "\n")
+	if u := inventory.UserFromContext(ctx); u != nil {
+		if g := inventory.EffectiveGroup(u); g != nil && g.Settings != nil {
+			lines = append(lines, groupPick(g.Settings)...)
+		}
+	}
+	return parseCDNRoutes(lines)
+}
+
+func parseCDNRoutes(lines []string) []CDNRoute {
+	routes := make([]CDNRoute, 0, len(lines))
+	seen := map[string]bool{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name, u, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+		u = strings.TrimRight(strings.TrimSpace(u), "/")
+		parsed, err := url.Parse(u)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" ||
+			(parsed.Scheme != "http" && parsed.Scheme != "https") {
+			continue
+		}
+		name = strings.TrimSpace(name)
+		key := name + "\x00" + u
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		routes = append(routes, CDNRoute{Name: name, URL: u})
+	}
+	return routes
+}
+
+func (s *settingProvider) DownloadCDNShuffle(ctx context.Context) bool {
+	return s.getBoolean(ctx, "download_cdn_shuffle", false)
+}
+
+func (s *settingProvider) DownloadURLBase(ctx context.Context) *url.URL {
+	if _, pinned := ctx.Value(UseFirstSiteUrlCtxKey{}).(bool); pinned {
+		return s.SiteURL(ctx)
+	}
+	if !s.DownloadCDNShuffle(ctx) {
+		return s.SiteURL(ctx)
+	}
+	routes := s.DownloadCDNRoutes(ctx)
+	if len(routes) == 0 {
+		return s.SiteURL(ctx)
+	}
+
+	pool := make([]*url.URL, 0, len(routes)+1)
+	pool = append(pool, s.SiteURL(ctx))
+	for _, r := range routes {
+		if u, err := url.Parse(r.URL); err == nil && u.Scheme != "" && u.Host != "" {
+			pool = append(pool, u)
+		}
+	}
+	return pool[rand.IntN(len(pool))]
+}
+
+func (s *settingProvider) PreviewURLBase(ctx context.Context) *url.URL {
+	if _, pinned := ctx.Value(UseFirstSiteUrlCtxKey{}).(bool); pinned {
+		return s.SiteURL(ctx)
+	}
+	return s.routeBaseOrSite(ctx, s.PreviewCDNRoutes(ctx))
+}
+
+func (s *settingProvider) MediaURLBase(ctx context.Context) *url.URL {
+	if _, pinned := ctx.Value(UseFirstSiteUrlCtxKey{}).(bool); pinned {
+		return s.SiteURL(ctx)
+	}
+	if routes := s.MediaCDNRoutes(ctx); len(routes) > 0 {
+		return s.routeBaseOrSite(ctx, routes)
+	}
+	// Media is a preview lane subtype: an operator with only a preview
+	// pool configured still gets CDN offload for streams.
+	return s.routeBaseOrSite(ctx, s.PreviewCDNRoutes(ctx))
+}
+
+// routeBaseOrSite picks one route uniformly at random, or the resolved
+// site URL when the pool is empty or a route fails to parse.
+func (s *settingProvider) routeBaseOrSite(ctx context.Context, routes []CDNRoute) *url.URL {
+	if len(routes) == 0 {
+		return s.SiteURL(ctx)
+	}
+	if u, err := url.Parse(routes[rand.IntN(len(routes))].URL); err == nil && u.Scheme != "" && u.Host != "" {
+		return u
+	}
+	return s.SiteURL(ctx)
+}
+
+func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {
+	level := types.ShareLinksInProfileLevel(s.getString(ctx, "default_share_links_in_profile", ""))
+	switch level {
+	case types.ProfilePublicShareOnly, types.ProfileAllShare, types.ProfileHideShare:
+	default:
+		level = types.ProfilePublicShareOnly
+	}
+	return &ShareDefaults{
+		LinksInProfile:   level,
+		PrivateByDefault: s.getBoolean(ctx, "share_default_private", false),
+	}
+}
+
+func (s *settingProvider) SiteBasic(ctx context.Context) *SiteBasic {
+	return s.SiteBasicLocalized(ctx, "")
+}
+
+func (s *settingProvider) SiteBasicLocalized(ctx context.Context, lang string) *SiteBasic {
+	return &SiteBasic{
+		Name:        s.Localized(ctx, "siteName", lang),
+		Title:       s.Localized(ctx, "siteTitle", lang),
+		ID:          s.getString(ctx, "siteID", ""),
+		Description: s.Localized(ctx, "siteDes", lang),
+		Script:      s.getString(ctx, "siteScript", ""),
+	}
+}
+
+func (s *settingProvider) Localized(ctx context.Context, key, lang string) string {
+	base := s.getString(ctx, key, "")
+	if lang == "" {
+		return base
+	}
+
+	raw := s.getString(ctx, key+"_i18n", "")
+	if raw == "" {
+		return base
+	}
+
+	var translations map[string]string
+	if err := json.Unmarshal([]byte(raw), &translations); err != nil || len(translations) == 0 {
+		return base
+	}
+
+	return MatchLanguage(translations, lang, base)
+}
+
+// MatchLanguage picks the best translation for lang from translations.
+// Exact tag match wins, then a bare primary subtag ("zh" for "zh-CN"), then
+// any entry sharing the primary subtag (for bare requests like "zh"), then
+// the "*" wildcard entry; fallback is returned otherwise.
+func MatchLanguage(translations map[string]string, lang, fallback string) string {
+	if lang == "" || len(translations) == 0 {
+		return fallback
+	}
+
+	if v, ok := translations[lang]; ok && v != "" {
+		return v
+	}
+
+	primary := lang
+	if i := strings.IndexAny(lang, "-_"); i >= 0 {
+		primary = lang[:i]
+		if v, ok := translations[primary]; ok && v != "" {
+			return v
+		}
+	} else {
+		// Bare request ("zh") may match a regional entry ("zh-CN").
+		keys := make([]string, 0, len(translations))
+		for k := range translations {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if strings.IndexAny(k, "-_") > 0 && k[:strings.IndexAny(k, "-_")] == primary && translations[k] != "" {
+				return translations[k]
+			}
+		}
+	}
+
+	if v, ok := translations["*"]; ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+// ParseAcceptLanguage returns the first language tag of an Accept-Language
+// header value, ignoring quality weights — browsers send the preferred tag
+// first. "" when the header is empty or malformed.
+func ParseAcceptLanguage(header string) string {
+	if header == "" {
+		return ""
+	}
+	first := strings.TrimSpace(strings.Split(header, ",")[0])
+	if i := strings.Index(first, ";"); i >= 0 {
+		first = strings.TrimSpace(first[:i])
+	}
+	return first
+}
+
+func (s *settingProvider) PWA(ctx context.Context) *PWASetting {
+	return &PWASetting{
+		SmallIcon:       s.getString(ctx, "pwa_small_icon", ""),
+		MediumIcon:      s.getString(ctx, "pwa_medium_icon", ""),
+		LargeIcon:       s.getString(ctx, "pwa_large_icon", ""),
+		Display:         s.getString(ctx, "pwa_display", ""),
+		ThemeColor:      s.getString(ctx, "pwa_theme_color", ""),
+		BackgroundColor: s.getString(ctx, "pwa_background_color", ""),
+	}
+}
+
+func IsTrueValue(val string) bool {
+	return val == "1" || val == "true"
+}
+
+func (s *settingProvider) getInt(ctx context.Context, name string, defaultVal int) int {
+	val := s.adapterChain.Get(ctx, name, defaultVal)
+	if intVal, ok := val.(int); ok {
+		return intVal
+	}
+
+	strVal := val.(string)
+	if intVal, err := strconv.Atoi(strVal); err == nil {
+		return intVal
+	}
+
+	return defaultVal
+}
+
+func (s *settingProvider) getInt64(ctx context.Context, name string, defaultVal int64) int64 {
+	val := s.adapterChain.Get(ctx, name, defaultVal)
+	if intVal, ok := val.(int64); ok {
+		return intVal
+	}
+
+	strVal := val.(string)
+	if intVal, err := strconv.ParseInt(strVal, 10, 64); err == nil {
+		return intVal
+	}
+
+	return defaultVal
+}
+
+func (s *settingProvider) getFloat64(ctx context.Context, name string, defaultVal float64) float64 {
+	val := s.adapterChain.Get(ctx, name, defaultVal)
+	if intVal, ok := val.(float64); ok {
+		return intVal
+	}
+
+	strVal := val.(string)
+	if intVal, err := strconv.ParseFloat(strVal, 64); err == nil {
+		return intVal
+	}
+
+	return defaultVal
+}
+
+func (s *settingProvider) getBoolean(ctx context.Context, name string, defaultVal bool) bool {
+	val := s.adapterChain.Get(ctx, name, defaultVal)
+	if intVal, ok := val.(bool); ok {
+		return intVal
+	}
+
+	strVal := val.(string)
+	return IsTrueValue(strVal)
+}
+
+func (s *settingProvider) getString(ctx context.Context, name string, defaultVal string) string {
+	val := s.adapterChain.Get(ctx, name, defaultVal)
+	return val.(string)
+}
+
+func (s *settingProvider) getStringList(ctx context.Context, name string, defaultVal []string) []string {
+	res, _ := s.getStringListRaw(ctx, name, defaultVal)
+	return res
+}
+
+func (s *settingProvider) getStringListRaw(ctx context.Context, name string, defaultVal []string) ([]string, string) {
+	val := s.getString(ctx, name, stringListDefault)
+	if val == stringListDefault {
+		return defaultVal, val
+	}
+
+	return strings.Split(val, stringListDefaultSeparator), val
+}
+
+func (s *settingProvider) getBoolSet(ctx context.Context, name string) *boolset.BooleanSet {
+	val := s.getString(ctx, name, "")
+	if val == "" {
+		return defaultBoolSet
+	}
+
+	res, err := boolset.FromString(val)
+	if err != nil {
+		return defaultBoolSet
+	}
+
+	return res
+}
+
+func UseFirstSiteUrl(ctx context.Context) context.Context {
+	return context.WithValue(ctx, UseFirstSiteUrlCtxKey{}, true)
+}

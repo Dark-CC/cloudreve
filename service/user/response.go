@@ -1,0 +1,321 @@
+package user
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/samber/lo"
+	"github.com/ua-parser/uap-go/uaparser"
+)
+
+type PreparePasskeyLoginResponse struct {
+	Options   *protocol.CredentialAssertion `json:"options"`
+	SessionID string                        `json:"session_id"`
+}
+
+type UserSettings struct {
+	VersionRetentionEnabled bool              `json:"version_retention_enabled"`
+	VersionRetentionExt     []string          `json:"version_retention_ext,omitempty"`
+	VersionRetentionMax     int               `json:"version_retention_max,omitempty"`
+	Paswordless             bool              `json:"passwordless"`
+	TwoFAEnabled            bool              `json:"two_fa_enabled"`
+	TwoFABackupCount        int               `json:"two_factor_backup_count"`
+	Passkeys                []Passkey         `json:"passkeys,omitempty"`
+	DisableViewSync         bool              `json:"disable_view_sync"`
+	ShareLinksInProfile     string            `json:"share_links_in_profile"`
+	ShareDefaultPrivate     *bool             `json:"share_default_private,omitempty"`
+	PreferredViewers        map[string]string `json:"preferred_viewers,omitempty"`
+	TrashRetention          int               `json:"trash_retention,omitempty"`
+	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
+	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
+	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
+	// VaultEnabled reports whether the private space is set up.
+	VaultEnabled bool `json:"vault_enabled"`
+	// VaultUnlocked reports whether an unlock session is currently active.
+	VaultUnlocked bool `json:"vault_unlocked"`
+	// Phone is the bound mobile number, masked for display.
+	Phone string `json:"phone,omitempty"`
+}
+
+// LinkedAccount is an external identity bound to the local account
+// (e.g. a QQ Connect openid). Subject is masked in the response.
+type LinkedAccount struct {
+	Provider  string    `json:"provider"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Parser, grants []*ent.OAuthGrant, bindings []*ent.SsoBinding) *UserSettings {
+	// Users written without a settings blob (manual inserts, legacy rows)
+	// must not panic the settings page.
+	if u.Settings == nil {
+		u.Settings = &types.UserSetting{}
+	}
+	return &UserSettings{
+		VersionRetentionEnabled: u.Settings.VersionRetention,
+		VersionRetentionExt:     u.Settings.VersionRetentionExt,
+		VersionRetentionMax:     u.Settings.VersionRetentionMax,
+		TwoFAEnabled:            u.TwoFactorSecret != "",
+		TwoFABackupCount:        len(u.TwoFactorBackupCodes),
+		Paswordless:             u.Password == "",
+		Passkeys: lo.Map(passkeys, func(item *ent.Passkey, index int) Passkey {
+			return BuildPasskey(item)
+		}),
+		DisableViewSync:     u.Settings.DisableViewSync,
+		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
+		ShareDefaultPrivate: u.Settings.ShareDefaultPrivate,
+		PreferredViewers:    u.Settings.PreferredViewers,
+		TrashRetention:      u.Settings.TrashRetention,
+		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
+			return BuildOauthGrant(item)
+		}),
+		LinkedAccounts: lo.Map(bindings, func(item *ent.SsoBinding, index int) LinkedAccount {
+			return LinkedAccount{Provider: item.Provider, CreatedAt: item.CreatedAt}
+		}),
+		VaultEnabled: u.VaultFolder > 0,
+		Phone:        maskPhone(u.Phone),
+	}
+}
+
+// maskPhone redacts the middle of a bound phone number for display.
+func maskPhone(phone *string) string {
+	if phone == nil || len(*phone) < 5 {
+		return ""
+	}
+	p := *phone
+	return p[:3] + "****" + p[len(p)-2:]
+}
+
+type Passkey struct {
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	UsedAt    *time.Time `json:"used_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+func BuildPasskey(passkey *ent.Passkey) Passkey {
+	return Passkey{
+		ID:        passkey.CredentialID,
+		Name:      passkey.Name,
+		UsedAt:    passkey.UsedAt,
+		CreatedAt: passkey.CreatedAt,
+	}
+}
+
+// Node option for handling workflows.
+type Node struct {
+	ID           string              `json:"id"`
+	Name         string              `json:"name"`
+	Type         string              `json:"type"`
+	Capabilities *boolset.BooleanSet `json:"capabilities"`
+}
+
+// BuildNodes serialize a list of nodes.
+func BuildNodes(nodes []*ent.Node, idEncoder hashid.Encoder) []*Node {
+	res := make([]*Node, 0, len(nodes))
+	for _, v := range nodes {
+		res = append(res, BuildNode(v, idEncoder))
+	}
+
+	return res
+}
+
+// BuildNode serialize a node.
+func BuildNode(node *ent.Node, idEncoder hashid.Encoder) *Node {
+	return &Node{
+		ID:           hashid.EncodeNodeID(idEncoder, node.ID),
+		Name:         node.Name,
+		Type:         string(node.Type),
+		Capabilities: node.Capabilities,
+	}
+}
+
+// BuiltinLoginResponse response for a successful login for builtin auth provider.
+type BuiltinLoginResponse struct {
+	User  User       `json:"user"`
+	Token auth.Token `json:"token"`
+}
+
+// User 用户序列化器
+type User struct {
+	ID                  string                         `json:"id"`
+	Email               string                         `json:"email,omitempty"`
+	Nickname            string                         `json:"nickname"`
+	Status              user.Status                    `json:"status,omitempty"`
+	Avatar              string                         `json:"avatar,omitempty"`
+	CreatedAt           time.Time                      `json:"created_at"`
+	PreferredTheme      string                         `json:"preferred_theme,omitempty"`
+	Anonymous           bool                           `json:"anonymous,omitempty"`
+	Group               *Group                         `json:"group,omitempty"`
+	Pined               []types.PinedFile              `json:"pined,omitempty"`
+	Language            string                         `json:"language,omitempty"`
+	DisableViewSync     bool                           `json:"disable_view_sync,omitempty"`
+	ShareLinksInProfile types.ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
+	// ShareDefaultPrivate is the user's own private-share override; nil means
+	// the site default applies. Never resolved here — the dialog computes the
+	// effective default from user ?? site.
+	ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
+	// PreferredViewers maps file extensions to viewer IDs ("always open with").
+	PreferredViewers map[string]string `json:"preferred_viewers,omitempty"`
+}
+
+type Group struct {
+	ID                  string              `json:"id"`
+	Name                string              `json:"name"`
+	Permission          *boolset.BooleanSet `json:"permission,omitempty"`
+	DirectLinkBatchSize int                 `json:"direct_link_batch_size,omitempty"`
+	TrashRetention      int                 `json:"trash_retention,omitempty"`
+}
+
+type storage struct {
+	Used  uint64 `json:"used"`
+	Free  uint64 `json:"free"`
+	Total uint64 `json:"total"`
+}
+
+// WebAuthnCredentials 外部验证器凭证
+type WebAuthnCredentials struct {
+	ID          []byte `json:"id"`
+	FingerPrint string `json:"fingerprint"`
+}
+
+type PrepareLoginResponse struct {
+	WebAuthnEnabled bool `json:"webauthn_enabled"`
+	PasswordEnabled bool `json:"password_enabled"`
+}
+
+// BuildWebAuthnList 构建设置页面凭证列表
+func BuildWebAuthnList(credentials []webauthn.Credential) []WebAuthnCredentials {
+	res := make([]WebAuthnCredentials, 0, len(credentials))
+	for _, v := range credentials {
+		credential := WebAuthnCredentials{
+			ID:          v.ID,
+			FingerPrint: fmt.Sprintf("% X", v.Authenticator.AAGUID),
+		}
+		res = append(res, credential)
+	}
+
+	return res
+}
+
+// BuildUser 序列化用户
+func BuildUser(user *ent.User, idEncoder hashid.Encoder) User {
+	// A NULL settings column would otherwise panic every dereference below.
+	if user.Settings == nil {
+		user.Settings = &types.UserSetting{}
+	}
+	return User{
+		ID:                  hashid.EncodeUserID(idEncoder, user.ID),
+		Email:               user.Email,
+		Nickname:            user.Nick,
+		Status:              user.Status,
+		Avatar:              user.Avatar,
+		CreatedAt:           user.CreatedAt,
+		PreferredTheme:      user.Settings.PreferredTheme,
+		Anonymous:           user.ID == 0,
+		Group:               BuildGroup(inventory.EffectiveGroup(user), idEncoder),
+		Pined:               user.Settings.Pined,
+		Language:            user.Settings.Language,
+		DisableViewSync:     user.Settings.DisableViewSync,
+		ShareLinksInProfile: user.Settings.ShareLinksInProfile,
+		ShareDefaultPrivate: user.Settings.ShareDefaultPrivate,
+		PreferredViewers:    user.Settings.PreferredViewers,
+	}
+}
+
+type OauthGrant struct {
+	ClientID   string     `json:"client_id"`
+	ClientName string     `json:"client_name"`
+	ClientLogo string     `json:"client_logo"`
+	Scopes     []string   `json:"scopes"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+}
+
+func BuildOauthGrant(grant *ent.OAuthGrant) OauthGrant {
+	res := OauthGrant{
+		Scopes:     grant.Scopes,
+		LastUsedAt: grant.LastUsedAt,
+	}
+
+	if grant.Edges.Client != nil {
+		res.ClientID = grant.Edges.Client.GUID
+		res.ClientName = grant.Edges.Client.Name
+		if grant.Edges.Client.Props != nil {
+			res.ClientLogo = grant.Edges.Client.Props.Icon
+		}
+	}
+
+	return res
+}
+
+func BuildGroup(group *ent.Group, idEncoder hashid.Encoder) *Group {
+	if group == nil {
+		return nil
+	}
+	return &Group{
+		ID:                  hashid.EncodeGroupID(idEncoder, group.ID),
+		Name:                group.Name,
+		Permission:          group.Permissions,
+		DirectLinkBatchSize: group.Settings.SourceBatchSize,
+		TrashRetention:      group.Settings.TrashRetention,
+	}
+}
+
+const sensitiveTag = "redacted"
+
+const (
+	RedactLevelAnonymous = iota
+	RedactLevelUser
+)
+
+// BuildUserRedacted Serialize a user without sensitive information.
+// The email is only exposed when the requester is a signed-in user (level >=
+// RedactLevelUser) and the `expose_user_email` setting is enabled.
+func BuildUserRedacted(ctx context.Context, u *ent.User, level int, idEncoder hashid.Encoder) User {
+	userRaw := BuildUser(u, idEncoder)
+
+	user := User{
+		ID:        userRaw.ID,
+		Nickname:  userRaw.Nickname,
+		Avatar:    userRaw.Avatar,
+		CreatedAt: userRaw.CreatedAt,
+		// Profile visitors see the effective visibility: an unset user
+		// preference resolves to the site-wide default (#3390).
+		ShareLinksInProfile: userRaw.ShareLinksInProfile,
+	}
+	if user.ShareLinksInProfile == types.ProfilePublicShareOnly {
+		user.ShareLinksInProfile = dependency.FromContext(ctx).SettingProvider().ShareDefaults(ctx).LinksInProfile
+	}
+
+	if userRaw.Group != nil {
+		user.Group = RedactedGroup(userRaw.Group)
+	}
+
+	if level == RedactLevelUser && dependency.FromContext(ctx).SettingProvider().ExposeUserEmail(ctx) {
+		user.Email = userRaw.Email
+	}
+
+	return user
+}
+
+// BuildGroupRedacted Serialize a group without sensitive information.
+func RedactedGroup(g *Group) *Group {
+	if g == nil {
+		return nil
+	}
+
+	return &Group{
+		ID:   g.ID,
+		Name: g.Name,
+	}
+}
