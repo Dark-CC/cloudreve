@@ -14,6 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { Grid2 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -121,8 +122,8 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
           <Typography variant="subtitle2" color="text.secondary">
             {t("user.invitationCodesDes")}
           </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "flex-end" }}>
-            <SettingForm title={t("user.invitationCode")} lgWidth={4}>
+          <Grid2 container spacing={1} sx={{ width: "100%", alignItems: "flex-end" }}>
+            <SettingForm noContainer title={t("user.invitationCode")} lgWidth={3}>
               <DenseFilledTextField
                 fullWidth
                 placeholder={t("user.invitationCodeAuto")}
@@ -130,10 +131,10 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
                 onChange={(e) => setCode(e.target.value)}
               />
             </SettingForm>
-            <SettingForm title={t("user.invitationCodeGroup")} lgWidth={3}>
+            <SettingForm noContainer title={t("user.invitationCodeGroup")} lgWidth={3}>
               <GroupSelectionInput value={groupId} onChange={setGroupId} fullWidth />
             </SettingForm>
-            <SettingForm title={t("user.invitationCodeMaxUses")} lgWidth={2}>
+            <SettingForm noContainer title={t("user.invitationCodeMaxUses")} lgWidth={2}>
               <DenseFilledTextField
                 fullWidth
                 type="number"
@@ -142,7 +143,7 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
                 onChange={(e) => setMaxUses(e.target.value)}
               />
             </SettingForm>
-            <SettingForm title={t("user.invitationCodeExpires")} lgWidth={3}>
+            <SettingForm noContainer title={t("user.invitationCodeExpires")} lgWidth={2}>
               <DenseFilledTextField
                 fullWidth
                 type="datetime-local"
@@ -150,18 +151,19 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
             </SettingForm>
-            <Box sx={{ pb: 0.5 }}>
+            <Grid2 size={{ xs: 12, md: 2 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 startIcon={<Add />}
                 onClick={handleCreate}
                 disabled={creating}
-                sx={{ whiteSpace: "nowrap" }}
+                fullWidth
+                sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
               >
                 {t("group.create")}
               </Button>
-            </Box>
-          </Stack>
+            </Grid2>
+          </Grid2>
 
           <Stack direction="row" justifyContent="flex-end">
             <SecondaryButton size="small" startIcon={<ArrowSync />} onClick={() => fetchCodes()} disabled={loading}>

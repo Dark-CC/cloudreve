@@ -13,16 +13,15 @@
 | 数据目录 | `/data/cloudreve-fork-test`（bind mount → 容器 `/cloudreve/data`，含 `cloudreve.db` 与 `conf.ini`） |
 | Docker data-root | `/data/docker`（新建 `/etc/docker/daemon.json`，此前 Docker 无任何容器，属安全改动） |
 | 公网访问 | https://15212-agqw5litn4acpbo7b5axu3ycku.instabox.tech（InstaBox 发布端口，不走机器公网 IP——InstaBox 机的 IP 不直接对外开这些端口） |
-| 初始管理员 | 首个注册用户自动成为管理员（v4 行为，见官方 docs/zh/overview/deploy/configure.md）。账号 `admin@fork-test.local`，登录页同密码登录 |
+| 初始管理员 | 首个注册用户自动成为管理员（v4 行为，见官方 docs/zh/overview/deploy/configure.md） |
+
+> ⚠️ 管理员凭据更新说明（2026-10-26）：本文档最初记录的首注账号 `admin@fork-test.local` 已被用户弃用并删除，现由用户自建的管理员账号取代；具体凭据以用户处保存为准，不再写入仓库。若凭据丢失需要重建管理员：`docker exec -it` 进入容器删除数据（或清理 `/data/cloudreve-fork-test/cloudreve.db`）重新初始化后，再次首注即可。
 
 ## 管理员账号获取方式
 
-Cloudreve v4 不再打印初始管理员密码——**第一个注册的用户自动进入 Admin 组（group 1）**。本实例已完成首注：
+Cloudreve v4 不再打印初始管理员密码——**第一个注册的用户自动进入 Admin 组（group 1）**。本实例已完成首注，当前管理员账号由用户本人维护（见上方更新说明，勿在文档/聊天中记录明文）。
 
-- 邮箱：`admin@fork-test.local`
-- 密码：`ForkTest-2026`
-
-登录 https://15212-agqw5litn4acpbo7b5axu3ycku.instabox.tech/login 后可进 `/admin` 管理面板。若需要重建管理员：删除 `/data/cloudreve-fork-test/cloudreve.db` 重新初始化后，再次首注即可。
+登录 https://15212-agqw5litn4acpbo7b5axu3ycku.instabox.tech/login 后可进 `/admin` 管理面板。
 
 ## 常用运维命令
 
