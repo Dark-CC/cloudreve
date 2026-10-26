@@ -1498,6 +1498,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "dos-date-time"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6bf3a6a5a5068b83e2bc1251735e040c3c0d54bc0bb829bec86d76eb1197689"
+dependencies = [
+ "chrono",
+ "jiff",
+ "time",
+]
+
+[[package]]
 name = "downcast-rs"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3674,11 +3685,14 @@ dependencies = [
 
 [[package]]
 name = "nt-time"
-version = "0.8.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2de419e64947cd8830e66beb584acc3fb42ed411d103e3c794dda355d1b374b5"
+checksum = "293dcb75775acfac821c0be754ea8489cc606689f1a23faa11425c0154e5a85c"
 dependencies = [
  "chrono",
+ "dos-date-time",
+ "jiff",
+ "rand 0.10.2",
  "time",
 ]
 
