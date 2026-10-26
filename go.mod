@@ -28,7 +28,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-webauthn/webauthn v0.11.2
 	github.com/gofrs/uuid v4.0.0+incompatible
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gomodule/redigo v1.9.2
 	github.com/google/go-querystring v1.1.0
 	github.com/gorilla/securecookie v1.1.2
