@@ -1,0 +1,501 @@
+package manager
+
+import (
+	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/gofrs/uuid"
+)
+
+type (
+	EntityManagement interface {
+		// GetEntityUrls gets download urls of given entities, return URLs and the earliest expiry time
+		GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, opts ...fs.Option) ([]EntityUrl, *time.Time, error)
+		// GetUrlForRedirectedDirectLink gets redirected direct download link of given direct link
+		GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.DirectLink, opts ...fs.Option) (*EntityUrl, *time.Time, error)
+		// GetDirectLink gets permanent direct download link of given files
+		GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectLink, error)
+		// GetEntitySource gets source of given entity
+		GetEntitySource(ctx context.Context, entityID int, opts ...fs.Option) (entitysource.EntitySource, error)
+		// Thumbnail gets thumbnail entity of given file
+		Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.EntitySource, error)
+		// SubmitAndAwaitThumbnailTask submits a thumbnail task and waits for result
+		SubmitAndAwaitThumbnailTask(ctx context.Context, uri *fs.URI, ext string, entity fs.Entity) (fs.Entity, error)
+		// SetCurrentVersion sets current version of given file
+		SetCurrentVersion(ctx context.Context, path *fs.URI, version int) error
+		// DeleteVersion deletes a version of given file
+		DeleteVersion(ctx context.Context, path *fs.URI, version int) error
+		// ExtractAndSaveMediaMeta extracts and saves media meta into file metadata of given file.
+		ExtractAndSaveMediaMeta(ctx context.Context, uri *fs.URI, entityID int) error
+		// RecycleEntities recycles a group of entities
+		RecycleEntities(ctx context.Context, force bool, entityIDs ...int) error
+		// ListPhysical lists physical files in a path
+		ListPhysical(ctx context.Context, path string, policyID int, recursive bool, progress driver.ListProgressFunc) ([]fs.PhysicalObject, error)
+		// ImportPhysical imports a physical file to a Cloudreve file
+		ImportPhysical(ctx context.Context, dst *fs.URI, policyId int, src fs.PhysicalObject, completeHook bool) error
+	}
+	DirectLink struct {
+		File fs.File
+		Url  string
+	}
+
+	EntityUrl struct {
+		Url                        string `json:"url"`
+		BrowserDownloadDisplayName string `json:"stream_saver_display_name,omitempty"`
+		// Size and OwnerID identify the billed resource for link-traffic
+		// metering; internal only, never serialized into responses.
+		Size    int64 `json:"-"`
+		OwnerID int   `json:"-"`
+		// Metered marks URLs carrying a serve-time metering claim; the
+		// serving endpoint charges transferred bytes, so callers must not
+		// bill these at issue. Unmetered (externally-hosted) URLs keep
+		// issue-time charging.
+		Metered bool `json:"-"`
+	}
+)
+
+func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectLink, error) {
+	ae := serializer.NewAggregateError()
+	res := make([]DirectLink, 0, len(urls))
+	useRedirect := inventory.EffectiveGroup(m.user).Settings.RedirectedSource
+	fileClient := m.dep.FileClient()
+	siteUrl := m.settings.SiteURL(ctx)
+
+	for _, url := range urls {
+		file, err := m.fs.Get(
+			ctx, url,
+			dbfs.WithFileEntities(),
+			dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile),
+		)
+		if err != nil {
+			ae.Add(url.String(), err)
+			continue
+		}
+
+		if file.OwnerID() != m.user.ID && !inventory.EffectiveGroup(m.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			ae.Add(url.String(), fs.ErrOwnerOnly)
+			continue
+		}
+
+		if file.Type() != types.FileTypeFile {
+			ae.Add(url.String(), fs.ErrEntityNotExist)
+			continue
+		}
+
+		target := file.PrimaryEntity()
+		if target == nil {
+			ae.Add(url.String(), fs.ErrEntityNotExist)
+			continue
+		}
+
+		// Hooks for entity download; failures deny the link. Direct links are
+		// always explicit downloads.
+		ctx = context.WithValue(ctx, dbfs.IsDownloadCtxKey{}, true)
+		if err := m.fs.ExecuteNavigatorHooks(ctx, fs.HookTypeBeforeDownload, file); err != nil {
+			ae.Add(url.String(), err)
+			continue
+		}
+
+		if useRedirect {
+			reuseExisting := !inventory.EffectiveGroup(m.user).Permissions.Enabled(int(types.GroupPermissionUniqueRedirectDirectLink))
+			// Use redirect source
+			link, err := fileClient.CreateDirectLink(ctx, file.ID(), file.Name(), inventory.EffectiveGroup(m.user).SpeedLimit, reuseExisting)
+			if err != nil {
+				ae.Add(url.String(), err)
+				continue
+			}
+
+			linkHashID := hashid.EncodeSourceLinkID(m.hasher, link.ID)
+			res = append(res, DirectLink{
+				File: file,
+				Url:  routes.MasterDirectLink(siteUrl, linkHashID, link.Name).String(),
+			})
+		} else {
+			// Use direct source
+			policy, d, err := m.getEntityPolicyDriver(ctx, target, nil)
+			if err != nil {
+				ae.Add(url.String(), err)
+				continue
+			}
+
+			source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
+				m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
+			sourceUrl, err := source.Url(ctx,
+				entitysource.WithSpeedLimit(int64(inventory.EffectiveGroup(m.user).SpeedLimit)),
+				entitysource.WithDisplayName(file.Name()),
+			)
+			if err != nil {
+				ae.Add(url.String(), err)
+				continue
+			}
+
+			res = append(res, DirectLink{
+				File: file,
+				Url:  sourceUrl.Url,
+			})
+		}
+
+	}
+
+	return res, ae.Aggregate()
+}
+
+func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.DirectLink, opts ...fs.Option) (*EntityUrl, *time.Time, error) {
+	o := newOption()
+	for _, opt := range opts {
+		opt.Apply(o)
+	}
+
+	file, err := m.fs.GetFileFromDirectLink(ctx, dl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Find primary entity
+	primaryEntity := file.PrimaryEntity()
+
+	// Serve-time metering: direct links bill the owner; the claim rides
+	// inside the signed content URL when metering is requested.
+	meterClaim := ""
+	if o.TrafficMeter && file.OwnerID() != 0 && file.OwnerID() != o.TrafficMeterExempt {
+		meterClaim = routes.MeterSegment(hashid.EncodeUserID(m.hasher, file.OwnerID()), o.IsDownload)
+	}
+
+	// Generate url
+	var (
+		res     *EntityUrl
+		expire  *time.Time
+		metered bool
+	)
+
+	// Try to read from cache.
+	cacheKey := entityUrlCacheKey(primaryEntity.ID(), int64(dl.Speed), dl.Name, o.IsDownload,
+		m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, dl.Name, o.IsDownload)+"|"+meterClaim)
+	if cached, ok := m.kv.Get(cacheKey); ok {
+		cachedItem := cached.(EntityUrlCache)
+		res = &EntityUrl{Url: cachedItem.Url}
+		expire = cachedItem.ExpireAt
+		metered = cachedItem.Metered
+	} else {
+		// Cache miss, Generate new url
+		policy, d, err := m.getEntityPolicyDriver(ctx, primaryEntity, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		source := entitysource.NewEntitySource(primaryEntity, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
+			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
+		downloadUrl, err := source.Url(ctx,
+			entitysource.WithExpire(o.Expire),
+			entitysource.WithDownload(o.IsDownload),
+			entitysource.WithSpeedLimit(int64(dl.Speed)),
+			entitysource.WithDisplayName(dl.Name),
+			entitysource.WithMeterClaim(meterClaim),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Save into kv
+		cacheValidDuration := expireTimeToTTL(o.Expire) - m.settings.EntityUrlCacheMargin(ctx)
+		if cacheValidDuration > 0 {
+			m.kv.Set(cacheKey, EntityUrlCache{
+				Url:      downloadUrl.Url,
+				ExpireAt: downloadUrl.ExpireAt,
+				Metered:  downloadUrl.Metered,
+			}, cacheValidDuration)
+		}
+
+		res = &EntityUrl{Url: downloadUrl.Url}
+		expire = downloadUrl.ExpireAt
+		metered = downloadUrl.Metered
+	}
+
+	res.Size = file.Size()
+	res.OwnerID = file.OwnerID()
+	res.Metered = metered
+	return res, expire, nil
+}
+
+func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, opts ...fs.Option) ([]EntityUrl, *time.Time, error) {
+	o := newOption()
+	for _, opt := range opts {
+		opt.Apply(o)
+	}
+
+	var earliestExpireAt *time.Time
+	res := make([]EntityUrl, len(args))
+	ae := serializer.NewAggregateError()
+	for i, arg := range args {
+		file, err := m.fs.Get(
+			ctx, arg.URI,
+			dbfs.WithFileEntities(),
+			dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile),
+		)
+		if err != nil {
+			ae.Add(arg.URI.String(), err)
+			continue
+		}
+
+		// The navigator-level capability check runs before a share is resolved;
+		// the resolved file's capability set is authoritative (e.g. drop-box
+		// shares strip DownloadFile from it).
+		if caps := file.Capabilities(); caps == nil || !caps.Enabled(int(dbfs.NavigatorCapabilityDownloadFile)) {
+			ae.Add(arg.URI.String(), fs.ErrNotSupportedAction.WithError(fmt.Errorf("download is not allowed")))
+			continue
+		}
+
+		if file.Type() != types.FileTypeFile {
+			ae.Add(arg.URI.String(), fs.ErrEntityNotExist)
+			continue
+		}
+
+		var (
+			target fs.Entity
+			found  bool
+		)
+		if arg.PreferredEntityID != "" {
+			found, target = fs.FindDesiredEntity(file, arg.PreferredEntityID, m.hasher, nil)
+			if !found {
+				ae.Add(arg.URI.String(), fs.ErrEntityNotExist)
+				continue
+			}
+		} else {
+			// No preferred entity ID, use the primary version entity
+			target = file.PrimaryEntity()
+			if target == nil {
+				ae.Add(arg.URI.String(), fs.ErrEntityNotExist)
+				continue
+			}
+		}
+
+		// Hooks for entity download; failures deny the URL. Preview-only
+		// shares deny explicit downloads here via the IsDownload flag.
+		if o.IsDownload {
+			ctx = context.WithValue(ctx, dbfs.IsDownloadCtxKey{}, true)
+		}
+		if err := m.fs.ExecuteNavigatorHooks(ctx, fs.HookTypeBeforeDownload, file); err != nil {
+			ae.Add(arg.URI.String(), err)
+			continue
+		}
+
+		policy, d, err := m.getEntityPolicyDriver(ctx, target, nil)
+		if err != nil {
+			ae.Add(arg.URI.String(), err)
+			continue
+		}
+
+		// Serve-time metering: billed URIs (e.g. share-scoped ones) embed a
+		// signed claim naming the owner's pool. Only applies when metering
+		// was requested and the owner is not the exempt requester.
+		meterClaim := ""
+		if arg.Meter && o.TrafficMeter {
+			ownerID := file.OwnerID()
+			if ownerID != 0 && ownerID != o.TrafficMeterExempt {
+				meterClaim = routes.MeterSegment(hashid.EncodeUserID(m.hasher, ownerID), o.IsDownload)
+			}
+		}
+
+		// Try to read from cache.
+		cacheKey := entityUrlCacheKey(target.ID(), o.DownloadSpeed, getEntityDisplayName(file, target), o.IsDownload,
+			m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, getEntityDisplayName(file, target), o.IsDownload)+"|"+meterClaim)
+		if cached, ok := m.kv.Get(cacheKey); ok && !o.NoCache {
+			cachedItem := cached.(EntityUrlCache)
+			// Find the earliest expiry time
+			if cachedItem.ExpireAt != nil && (earliestExpireAt == nil || cachedItem.ExpireAt.Before(*earliestExpireAt)) {
+				earliestExpireAt = cachedItem.ExpireAt
+			}
+			res[i] = EntityUrl{
+				Url:                        cachedItem.Url,
+				BrowserDownloadDisplayName: cachedItem.BrowserDownloadDisplayName,
+				Size:                       file.Size(),
+				OwnerID:                    file.OwnerID(),
+				Metered:                    cachedItem.Metered,
+			}
+			continue
+		}
+
+		// Cache miss, Generate new url
+		source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
+			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
+		downloadUrl, err := source.Url(ctx,
+			entitysource.WithExpire(o.Expire),
+			entitysource.WithDownload(o.IsDownload),
+			entitysource.WithSpeedLimit(o.DownloadSpeed),
+			entitysource.WithDisplayName(getEntityDisplayName(file, target)),
+			entitysource.WithMeterClaim(meterClaim),
+		)
+		if err != nil {
+			ae.Add(arg.URI.String(), err)
+			continue
+		}
+
+		// Find the earliest expiry time
+		if downloadUrl.ExpireAt != nil && (earliestExpireAt == nil || downloadUrl.ExpireAt.Before(*earliestExpireAt)) {
+			earliestExpireAt = downloadUrl.ExpireAt
+		}
+
+		// Save into kv
+		cacheValidDuration := expireTimeToTTL(o.Expire) - m.settings.EntityUrlCacheMargin(ctx)
+		if cacheValidDuration > 0 {
+			m.kv.Set(cacheKey, EntityUrlCache{
+				Url:      downloadUrl.Url,
+				ExpireAt: downloadUrl.ExpireAt,
+				Metered:  downloadUrl.Metered,
+			}, cacheValidDuration)
+		}
+
+		res[i] = EntityUrl{
+			Url:     downloadUrl.Url,
+			Size:    file.Size(),
+			OwnerID: file.OwnerID(),
+			Metered: downloadUrl.Metered,
+		}
+		if d.Capabilities().BrowserRelayedDownload {
+			res[i].BrowserDownloadDisplayName = getEntityDisplayName(file, target)
+		}
+	}
+
+	return res, earliestExpireAt, ae.Aggregate()
+}
+
+func (m *manager) GetEntitySource(ctx context.Context, entityID int, opts ...fs.Option) (entitysource.EntitySource, error) {
+	o := newOption()
+	for _, opt := range opts {
+		opt.Apply(o)
+	}
+
+	var (
+		entity fs.Entity
+		err    error
+	)
+
+	if o.Entity != nil {
+		entity = o.Entity
+	} else {
+		entity, err = m.fs.GetEntity(ctx, entityID)
+		if err != nil {
+			return nil, err
+		}
+
+		if entity.ReferenceCount() == 0 {
+			return nil, fs.ErrEntityNotExist
+		}
+	}
+
+	policy, handler, err := m.getEntityPolicyDriver(ctx, entity, o.Policy)
+	if err != nil {
+		return nil, err
+	}
+
+	return entitysource.NewEntitySource(entity, handler, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(), m.l,
+		m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx), entitysource.WithContext(ctx), entitysource.WithThumb(o.IsThumb)), nil
+}
+
+func (l *manager) SetCurrentVersion(ctx context.Context, path *fs.URI, version int) error {
+	indexDiff, err := l.fs.VersionControl(ctx, path, version, false)
+
+	l.processIndexDiff(ctx, indexDiff)
+	return err
+}
+
+func (l *manager) DeleteVersion(ctx context.Context, path *fs.URI, version int) error {
+	_, err := l.fs.VersionControl(ctx, path, version, true)
+	return err
+}
+
+func (l *manager) ListPhysical(ctx context.Context, path string, policyID int, recursive bool, progress driver.ListProgressFunc) ([]fs.PhysicalObject, error) {
+	policy, err := l.dep.StoragePolicyClient().GetPolicyByID(ctx, policyID)
+	if err != nil {
+		return nil, err
+	}
+
+	driver, err := l.GetStorageDriver(ctx, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	return driver.List(ctx, path, progress, recursive)
+}
+
+func (l *manager) ImportPhysical(ctx context.Context, dst *fs.URI, policyId int, src fs.PhysicalObject, completeHook bool) error {
+	targetUri := dst.Join(src.RelativePath)
+	req := &fs.UploadRequest{
+		Props: &fs.UploadProps{
+			Uri:                    targetUri,
+			UploadSessionID:        uuid.Must(uuid.NewV4()).String(),
+			Size:                   src.Size,
+			PreferredStoragePolicy: policyId,
+			SavePath:               src.Source,
+			LastModified:           &src.LastModify,
+		},
+		ImportFrom: &src,
+	}
+
+	// Prepare for upload
+	uploadSession, err := l.fs.PrepareUpload(ctx, req)
+	if err != nil {
+		return fmt.Errorf("faield to prepare uplaod: %w", err)
+	}
+	if completeHook {
+		d, err := l.GetStorageDriver(ctx, l.CastStoragePolicyOnSlave(ctx, uploadSession.Policy))
+		if err != nil {
+			return err
+		}
+
+		l.onNewEntityUploaded(ctx, uploadSession, d, l.user.ID)
+	}
+
+	return nil
+}
+
+func entityUrlCacheKey(id int, speed int64, displayName string, download bool, siteUrl string) string {
+	hash := sha1.New()
+	hash.Write([]byte(fmt.Sprintf("%d_%d_%s_%t_%s", id,
+		speed, displayName, download, siteUrl)))
+	hashRes := hex.EncodeToString(hash.Sum(nil))
+
+	return fmt.Sprintf("%s_%s", EntityUrlCacheKeyPrefix, hashRes)
+}
+
+// cdnPoolKey fingerprints the effective CDN route pool a generated entity
+// URL draws from, so cached URLs are not shared between requesters with
+// different group-level route assignments. The lanes mirror the
+// entitysource purpose split; media falls back to the preview pool when
+// no media routes exist, matching MediaURLBase.
+func (m *manager) cdnPoolKey(ctx context.Context, displayName string, isDownload bool) string {
+	var routes []setting.CDNRoute
+	switch {
+	case isDownload:
+		routes = m.settings.DownloadCDNRoutes(ctx)
+	case entitysource.IsStreamMedia(displayName):
+		if routes = m.settings.MediaCDNRoutes(ctx); len(routes) == 0 {
+			routes = m.settings.PreviewCDNRoutes(ctx)
+		}
+	default:
+		routes = m.settings.PreviewCDNRoutes(ctx)
+	}
+	if len(routes) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(routes))
+	for _, r := range routes {
+		parts = append(parts, r.URL)
+	}
+	return strings.Join(parts, ",")
+}

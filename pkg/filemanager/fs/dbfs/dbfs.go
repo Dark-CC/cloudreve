@@ -1,0 +1,1126 @@
+package dbfs
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"path"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/application/constants"
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
+	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/eventhub"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
+	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/gofrs/uuid"
+	"github.com/samber/lo"
+	"math"
+)
+
+const (
+	ContextHintHeader         = constants.CrHeaderPrefix + "Context-Hint"
+	NavigatorStateCachePrefix = "navigator_state_"
+	ContextHintTTL            = 5 * 60 // 5 minutes
+
+	folderSummaryCachePrefix = "folder_summary_"
+	defaultPageSize          = 100
+)
+
+type (
+	ContextHintCtxKey      struct{}
+	ByPassOwnerCheckCtxKey struct{}
+	// IsDownloadCtxKey marks the request as an explicit file download (as
+	// opposed to an inline preview fetch). Navigator hooks consult it.
+	IsDownloadCtxKey struct{}
+	// PurchaseTicketCtxKey carries a paid-share resume ticket used to
+	// restore download access after session loss.
+	PurchaseTicketCtxKey struct{}
+	// ExpectedSourceIDsCtxKey carries source-file identity preconditions
+	// for move/copy/rename: a []int positionally aligned with the source
+	// URI list. An entry of 0 disables the check for that position (#3565).
+	ExpectedSourceIDsCtxKey struct{}
+	// MoveConflictCtxKey carries the on-conflict policy for move/copy:
+	// "skip" drops colliding entries, "overwrite" deletes the colliding
+	// destination first. Empty keeps the fail-fast default (#3159).
+	MoveConflictCtxKey struct{}
+)
+
+const (
+	MoveConflictSkip      = "skip"
+	MoveConflictOverwrite = "overwrite"
+)
+
+// moveConflictMode returns the configured on-conflict policy.
+func moveConflictMode(ctx context.Context) string {
+	mode, _ := ctx.Value(MoveConflictCtxKey{}).(string)
+	return mode
+}
+
+// WithExpectedSourceIDs records the expected database IDs of the source
+// files so a delayed/retried request cannot silently operate on a new
+// file that reused the same path.
+func WithExpectedSourceIDs(ctx context.Context, ids []int) context.Context {
+	return context.WithValue(ctx, ExpectedSourceIDsCtxKey{}, ids)
+}
+
+// sourceIDMismatch reports whether the resolved file violates the
+// expected-source precondition at the given position.
+func sourceIDMismatch(ctx context.Context, pos int, actual int) bool {
+	expected, ok := ctx.Value(ExpectedSourceIDsCtxKey{}).([]int)
+	if !ok || pos >= len(expected) || expected[pos] == 0 {
+		return false
+	}
+	return expected[pos] != actual
+}
+
+// writePermitted reports whether the user may mutate file under the given
+// capability. File owners are always permitted; non-owners (e.g. share
+// visitors) require the capability in the file's resolved capability set,
+// which for share file systems is derived from the share's props.
+func (f *DBFS) writePermitted(file *File, capability NavigatorCapability) bool {
+	if file.Owner().ID == f.user.ID {
+		return true
+	}
+	caps := file.Capabilities()
+	return caps != nil && caps.Enabled(int(capability))
+}
+
+// DBFSDependencies groups the collaborators wired into a DBFS instance so the
+// constructor call site names each dependency.
+type DBFSDependencies struct {
+	FileClient          inventory.FileClient
+	ShareClient         inventory.ShareClient
+	AclClient           inventory.AclClient
+	VasClient           inventory.VasClient
+	ActivityClient      inventory.ActivityClient
+	UserClient          inventory.UserClient
+	StoragePolicyClient inventory.StoragePolicyClient
+	DirectLinkClient    inventory.DirectLinkClient
+	Logger              logging.Logger
+	LockSystem          lock.LockSystem
+	SettingProvider     setting.Provider
+	Hasher              hashid.Encoder
+	Cache               cache.Driver
+	StateKV             cache.Driver
+	EncryptorFactory    encrypt.CryptorFactory
+	EventHub            eventhub.EventHub
+}
+
+func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
+	return &DBFS{
+		user:                u,
+		navigators:          make(map[string]Navigator),
+		fileClient:          deps.FileClient,
+		shareClient:         deps.ShareClient,
+		aclClient:           deps.AclClient,
+		vasClient:           deps.VasClient,
+		activityClient:      deps.ActivityClient,
+		l:                   deps.Logger,
+		ls:                  deps.LockSystem,
+		settingClient:       deps.SettingProvider,
+		storagePolicyClient: deps.StoragePolicyClient,
+		hasher:              deps.Hasher,
+		userClient:          deps.UserClient,
+		cache:               deps.Cache,
+		stateKv:             deps.StateKV,
+		directLinkClient:    deps.DirectLinkClient,
+		encryptorFactory:    deps.EncryptorFactory,
+		eventHub:            deps.EventHub,
+	}
+}
+
+type DBFS struct {
+	user                *ent.User
+	navigators          map[string]Navigator
+	fileClient          inventory.FileClient
+	userClient          inventory.UserClient
+	storagePolicyClient inventory.StoragePolicyClient
+	shareClient         inventory.ShareClient
+	aclClient           inventory.AclClient
+	vasClient           inventory.VasClient
+	activityClient      inventory.ActivityClient
+	directLinkClient    inventory.DirectLinkClient
+	l                   logging.Logger
+	ls                  lock.LockSystem
+	settingClient       setting.Provider
+	hasher              hashid.Encoder
+	cache               cache.Driver
+	stateKv             cache.Driver
+	mu                  sync.Mutex
+	encryptorFactory    encrypt.CryptorFactory
+	eventHub            eventhub.EventHub
+}
+
+func (f *DBFS) Recycle() {
+	for _, navigator := range f.navigators {
+		navigator.Recycle()
+	}
+}
+
+func (f *DBFS) GetEntity(ctx context.Context, entityID int) (fs.Entity, error) {
+	if entityID == 0 {
+		return fs.NewEmptyEntity(f.user), nil
+	}
+
+	files, _, err := f.fileClient.GetEntitiesByIDs(ctx, []int{entityID}, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entity: %w", err)
+	}
+
+	if len(files) == 0 {
+		return nil, fs.ErrEntityNotExist
+	}
+
+	return fs.NewEntity(files[0]), nil
+
+}
+
+func (f *DBFS) List(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.File, *fs.ListFileResult, error) {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	// Get navigator
+	navigator, err := f.getNavigator(ctx, path, NavigatorCapabilityListChildren)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	searchParams := path.SearchParameters()
+	isSearching := searchParams != nil
+
+	parent, err := f.getFileByPath(ctx, navigator, path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parent not exist: %w", err)
+	}
+
+	pageSize := 0
+	orderDirection := ""
+	orderBy := ""
+
+	view := navigator.GetView(ctx, parent)
+	if view != nil {
+		pageSize = view.PageSize
+		orderDirection = view.OrderDirection
+		orderBy = view.Order
+	}
+
+	if o.PageSize > 0 {
+		pageSize = o.PageSize
+	}
+	if o.OrderDirection != "" {
+		orderDirection = o.OrderDirection
+	}
+	if o.OrderBy != "" {
+		orderBy = o.OrderBy
+	}
+
+	// Validate pagination args
+	props := navigator.Capabilities(isSearching)
+	if pageSize > props.MaxPageSize {
+		pageSize = props.MaxPageSize
+	} else if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+
+	if view != nil {
+		view.PageSize = pageSize
+		view.OrderDirection = orderDirection
+		view.Order = orderBy
+	}
+
+	var hintId *uuid.UUID
+	if o.generateContextHint {
+		newHintId := uuid.Must(uuid.NewV4())
+		hintId = &newHintId
+	}
+
+	if o.loadFilePublicMetadata {
+		ctx = context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, true)
+	}
+	if o.loadFileShareIfOwned && parent != nil && parent.OwnerID() == f.user.ID {
+		ctx = context.WithValue(ctx, inventory.LoadFileShare{}, true)
+	}
+
+	var streamCallback func([]*File)
+	if o.streamListResponseCallback != nil {
+		streamCallback = func(files []*File) {
+			o.streamListResponseCallback(parent, lo.Map(files, func(item *File, index int) fs.File {
+				return item
+			}))
+		}
+	}
+
+	children, err := navigator.Children(ctx, parent, &ListArgs{
+		Page: &inventory.PaginationArgs{
+			Page:                o.FsOption.Page,
+			PageSize:            pageSize,
+			OrderBy:             orderBy,
+			Order:               inventory.OrderDirection(orderDirection),
+			UseCursorPagination: o.useCursorPagination,
+			PageToken:           o.pageToken,
+		},
+		Search:         searchParams,
+		StreamCallback: streamCallback,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get children: %w", err)
+	}
+
+	var storagePolicy *ent.StoragePolicy
+	if parent != nil {
+		storagePolicy, err = f.getPreferredPolicy(ctx, parent)
+		if err != nil {
+			f.l.Warning("Failed to get preferred policy: %v", err)
+		}
+	}
+
+	return parent, &fs.ListFileResult{
+		Files: lo.Map(children.Files, func(item *File, index int) fs.File {
+			return item
+		}),
+		Props:                 props,
+		Pagination:            children.Pagination,
+		ContextHint:           hintId,
+		RecursionLimitReached: children.RecursionLimitReached,
+		MixedType:             children.MixedType,
+		SingleFileView:        children.SingleFileView,
+		Parent:                parent,
+		StoragePolicy:         storagePolicy,
+		View:                  view,
+	}, nil
+}
+
+func (f *DBFS) Capacity(ctx context.Context, u *ent.User) (*fs.Capacity, error) {
+	// First, get user's available storage packs
+	var (
+		res = &fs.Capacity{}
+	)
+
+	requesterGroup := inventory.EffectiveGroup(u)
+	if requesterGroup == nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user's group", nil)
+	}
+
+	res.Used = f.user.Storage
+	res.Total = requesterGroup.MaxStorage
+
+	if f.vasClient != nil {
+		if bonus, err := f.vasClient.StorageBonus(ctx, u.ID); err == nil {
+			res.Total += bonus
+		}
+	}
+	return res, nil
+}
+
+func (f *DBFS) CreateEntity(ctx context.Context, file fs.File, policy *ent.StoragePolicy,
+	entityType types.EntityType, req *fs.UploadRequest, opts ...fs.Option) (fs.Entity, error) {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	// If uploader specified previous latest version ID (etag), we should check if it's still valid.
+	if o.previousVersion != "" {
+		entityId, err := f.hasher.Decode(o.previousVersion, hashid.EntityID)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Unknown version ID", err)
+		}
+
+		entities, err := file.(*File).Model.Edges.EntitiesOrErr()
+		if err != nil || entities == nil {
+			return nil, fmt.Errorf("create entity: previous entities not load")
+		}
+
+		// File is stale during edit if the latest entity is not the same as the one specified by uploader.
+		if e := file.PrimaryEntity(); e == nil || e.ID() != entityId {
+			return nil, fs.ErrStaleVersion
+		}
+	}
+
+	fc, tx, ctx, err := inventory.WithTx(ctx, f.fileClient)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to start transaction", err)
+	}
+
+	fileModel := file.(*File).Model
+	if o.removeStaleEntities {
+		storageDiff, err := fc.RemoveStaleEntities(ctx, fileModel)
+		if err != nil {
+			_ = inventory.Rollback(tx)
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to remove stale entities", err)
+		}
+
+		tx.AppendStorageDiff(storageDiff)
+	}
+
+	entity, storageDiff, err := fc.CreateEntity(ctx, fileModel, &inventory.EntityParameters{
+		OwnerID:         file.(*File).Owner().ID,
+		EntityType:      entityType,
+		StoragePolicyID: policy.ID,
+		Source:          req.Props.SavePath,
+		Size:            req.Props.Size,
+		UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
+		EncryptMetadata: o.encryptMetadata,
+	})
+	if err != nil {
+		_ = inventory.Rollback(tx)
+
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create entity", err)
+	}
+	tx.AppendStorageDiff(storageDiff)
+
+	if err := inventory.CommitWithStorageDiff(ctx, tx, f.l, f.userClient); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to commit create change", err)
+	}
+
+	return fs.NewEntity(entity), nil
+}
+
+func (f *DBFS) SharedAddressTranslation(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.File, *fs.URI, error) {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	// Get navigator
+	navigator, err := f.getNavigator(ctx, path, o.requiredCapabilities...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx = context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, true)
+	if o.loadFileEntities {
+		ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
+	}
+
+	uriTranslation := func(target *File, rebase bool) (fs.File, *fs.URI, error) {
+		// Translate shared address to real address
+		metadata := target.Metadata()
+		if metadata == nil {
+			if err := f.fileClient.QueryMetadata(ctx, target.Model); err != nil {
+				return nil, nil, fmt.Errorf("failed to query metadata: %w", err)
+			}
+			metadata = target.Metadata()
+		}
+		redirect, ok := metadata[MetadataSharedRedirect]
+		if !ok {
+			return nil, nil, fmt.Errorf("missing metadata %s in symbolic folder %s", MetadataSharedRedirect, path)
+		}
+
+		redirectUri, err := fs.NewUriFromString(redirect)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid redirect uri %s in symbolic folder %s", redirect, path)
+		}
+		newUri := redirectUri
+		if rebase {
+			newUri = redirectUri.Rebase(path, target.Uri(false))
+		}
+		return f.SharedAddressTranslation(ctx, newUri, opts...)
+	}
+
+	target, err := f.getFileByPath(ctx, navigator, path)
+	if err != nil {
+		if errors.Is(err, ErrSymbolicFolderFound) && target.Type() == types.FileTypeFolder {
+			return uriTranslation(target, true)
+		}
+
+		if !ent.IsNotFound(err) {
+			return nil, nil, fmt.Errorf("failed to get target file: %w", err)
+		}
+
+		// Request URI does not exist, return most recent ancestor
+		return target, path, err
+	}
+
+	if target.IsSymbolic() {
+		return uriTranslation(target, false)
+	}
+
+	return target, path, nil
+}
+
+func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.File, error) {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	// Get navigator
+	navigator, err := f.getNavigator(ctx, path, o.requiredCapabilities...)
+	if err != nil {
+		return nil, err
+	}
+
+	if o.loadFilePublicMetadata || o.extendedInfo {
+		ctx = context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, true)
+	}
+
+	if o.loadFileEntities || o.extendedInfo || o.loadFolderSummary {
+		ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
+	}
+
+	if o.extendedInfo {
+		ctx = context.WithValue(ctx, inventory.LoadFileDirectLink{}, true)
+	}
+
+	if o.loadFileShareIfOwned {
+		ctx = context.WithValue(ctx, inventory.LoadFileShare{}, true)
+	}
+
+	if o.loadEntityUser {
+		ctx = context.WithValue(ctx, inventory.LoadEntityUser{}, true)
+	}
+
+	// Get target file
+	target, err := f.getFileByPath(ctx, navigator, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get target file: %w", err)
+	}
+
+	if o.notRoot && (target == nil || target.IsRootFolder()) {
+		return nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("cannot operate root file"))
+	}
+
+	if o.extendedInfo && target != nil {
+		extendedInfo := &fs.FileExtendedInfo{
+			StorageUsed:           target.SizeUsed(),
+			EntityStoragePolicies: make(map[int]*ent.StoragePolicy),
+		}
+
+		if f.user.ID == target.OwnerID() {
+			extendedInfo.DirectLinks = target.Model.Edges.DirectLinks
+		}
+
+		policyID := target.PolicyID()
+		if policyID > 0 {
+			policy, err := f.storagePolicyClient.GetPolicyByID(ctx, policyID)
+			if err == nil {
+				extendedInfo.StoragePolicy = policy
+			}
+		}
+
+		target.FileExtendedInfo = extendedInfo
+		if target.OwnerID() == f.user.ID || inventory.EffectiveGroup(f.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			target.FileExtendedInfo.Shares = target.Model.Edges.Shares
+			if target.Model.Props != nil {
+				target.FileExtendedInfo.View = target.Model.Props.View
+			}
+		}
+
+		entities := target.Entities()
+		for _, entity := range entities {
+			if _, ok := extendedInfo.EntityStoragePolicies[entity.PolicyID()]; !ok {
+				policy, err := f.storagePolicyClient.GetPolicyByID(ctx, entity.PolicyID())
+				if err != nil {
+					return nil, fmt.Errorf("failed to get policy: %w", err)
+				}
+
+				extendedInfo.EntityStoragePolicies[entity.PolicyID()] = policy
+			}
+		}
+	}
+
+	// Calculate folder summary if requested
+	if o.loadFolderSummary && target != nil && target.Type() == types.FileTypeFolder {
+		if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(target, NavigatorCapabilityRenameFile) {
+			return nil, fs.ErrOwnerOnly
+		}
+
+		// first, try to load from cache
+		summary, ok := f.cache.Get(fmt.Sprintf("%s%d", folderSummaryCachePrefix, target.ID()))
+		if ok {
+			summaryTyped := summary.(fs.FolderSummary)
+			target.FileFolderSummary = &summaryTyped
+		} else {
+			// cache miss, walk the folder to get the summary
+			newSummary := &fs.FolderSummary{Completed: true}
+			if inventory.EffectiveGroup(f.user) == nil {
+				return nil, fmt.Errorf("user group not loaded")
+			}
+			limit := max(inventory.EffectiveGroup(f.user).Settings.MaxWalkedFiles, 1)
+
+			// disable load metadata to speed up
+			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
+			if err := navigator.Walk(ctxWalk, []*File{target}, limit, math.MaxInt, func(files []*File, l int) error {
+				for _, file := range files {
+					if file.ID() == target.ID() {
+						continue
+					}
+					if file.Type() == types.FileTypeFile {
+						newSummary.Files++
+					} else {
+						newSummary.Folders++
+					}
+
+					newSummary.Size += file.SizeUsed()
+				}
+				return nil
+			}); err != nil {
+				if !errors.Is(err, ErrFileCountLimitedReached) {
+					return nil, fmt.Errorf("failed to walk: %w", err)
+				}
+
+				newSummary.Completed = false
+			}
+
+			// cache the summary
+			newSummary.CalculatedAt = time.Now()
+			f.cache.Set(fmt.Sprintf("%s%d", folderSummaryCachePrefix, target.ID()), *newSummary, f.settingClient.FolderPropsCacheTTL(ctx))
+			target.FileFolderSummary = newSummary
+		}
+	}
+
+	if target == nil {
+		return nil, fmt.Errorf("cannot get root file with nil root")
+	}
+
+	return target, nil
+}
+
+func (f *DBFS) CheckCapability(ctx context.Context, uri *fs.URI, opts ...fs.Option) error {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	// Get navigator
+	_, err := f.getNavigator(ctx, uri, o.requiredCapabilities...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *DBFS) Walk(ctx context.Context, path *fs.URI, depth int, walk fs.WalkFunc, opts ...fs.Option) error {
+	o := newDbfsOption()
+	for _, opt := range opts {
+		o.apply(opt)
+	}
+
+	if o.loadFilePublicMetadata {
+		ctx = context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, true)
+	}
+
+	if o.loadFileEntities {
+		ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
+	}
+
+	// Get navigator
+	navigator, err := f.getNavigator(ctx, path, o.requiredCapabilities...)
+	if err != nil {
+		return err
+	}
+
+	target, err := f.getFileByPath(ctx, navigator, path)
+	if err != nil {
+		return err
+	}
+
+	// Require Read permission
+	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && target.OwnerID() != f.user.ID {
+		return fs.ErrOwnerOnly
+	}
+
+	// Walk
+	if inventory.EffectiveGroup(f.user) == nil {
+		return fmt.Errorf("user group not loaded")
+	}
+	limit := max(inventory.EffectiveGroup(f.user).Settings.MaxWalkedFiles, 1)
+
+	if err := navigator.Walk(ctx, []*File{target}, limit, depth, func(files []*File, l int) error {
+		for _, file := range files {
+			if err := walk(file, l); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to walk: %w", err)
+	}
+
+	return nil
+}
+
+func (f *DBFS) ExecuteNavigatorHooks(ctx context.Context, hookType fs.HookType, file fs.File) error {
+	navigator, err := f.getNavigator(ctx, file.Uri(false))
+	if err != nil {
+		return err
+	}
+
+	if dbfsFile, ok := file.(*File); ok {
+		return navigator.ExecuteHook(ctx, hookType, dbfsFile)
+	}
+
+	return nil
+}
+
+// createFile creates a file with given name and type under given parent folder
+func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileType types.FileType, o *dbfsOption) (*File, error) {
+	createFileArgs := &inventory.CreateFileParameters{
+		FileType:            fileType,
+		Name:                name,
+		MetadataPrivateMask: make(map[string]bool),
+		Metadata:            make(map[string]string),
+		IsSymbolic:          o.isSymbolicLink,
+	}
+
+	if o.Metadata != nil {
+		for k, v := range o.Metadata {
+			createFileArgs.Metadata[k] = v
+		}
+	}
+
+	if o.preferredStoragePolicy != nil {
+		createFileArgs.StoragePolicyID = o.preferredStoragePolicy.ID
+	} else {
+		// get preferred storage policy
+		policy, err := f.getPreferredPolicy(ctx, parent)
+		if err != nil {
+			return nil, err
+		}
+
+		createFileArgs.StoragePolicyID = policy.ID
+	}
+
+	if o.UploadRequest != nil {
+		createFileArgs.EntityParameters = &inventory.EntityParameters{
+			EntityType:      types.EntityTypeVersion,
+			Source:          o.UploadRequest.Props.SavePath,
+			Size:            o.UploadRequest.Props.Size,
+			ModifiedAt:      o.UploadRequest.Props.LastModified,
+			UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
+			Importing:       o.UploadRequest.ImportFrom != nil,
+			EncryptMetadata: o.encryptMetadata,
+			Hash:            o.UploadRequest.Props.Hash,
+		}
+	}
+	if o.existingEntity != nil {
+		if createFileArgs.EntityParameters == nil {
+			createFileArgs.EntityParameters = &inventory.EntityParameters{}
+		}
+		createFileArgs.EntityParameters.LinkedEntityID = o.existingEntity.ID
+	}
+
+	// Start transaction to create files
+	fc, tx, ctx, err := inventory.WithTx(ctx, f.fileClient)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to start transaction", err)
+	}
+
+	file, entity, storageDiff, err := fc.CreateFile(ctx, parent.Model, createFileArgs)
+	if err != nil {
+		_ = inventory.Rollback(tx)
+		if ent.IsConstraintError(err) {
+			return nil, fs.ErrFileExisted.WithError(err)
+		}
+
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create file", err)
+	}
+
+	tx.AppendStorageDiff(storageDiff)
+	if err := inventory.CommitWithStorageDiff(ctx, tx, f.l, f.userClient); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to commit create change", err)
+	}
+
+	file.SetEntities([]*ent.Entity{entity})
+	newFile := newFile(parent, file)
+	f.emitFileCreated(ctx, newFile)
+	f.record(ctx, types.EventFileCreate, activity.File(newFile.ID()), activity.Extra(map[string]any{"uri": newFile.Uri(false).String()}))
+	return newFile, nil
+}
+
+func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.UploadRequest, policy *ent.StoragePolicy) (*types.EncryptMetadata, error) {
+	relayEnabled := policy.Settings != nil && policy.Settings.Relay
+	if (len(uploadRequest.Props.EncryptionSupported) > 0 && uploadRequest.Props.EncryptionSupported[0] == types.CipherAES256CTR) || relayEnabled {
+		encryptor, err := f.encryptorFactory(types.CipherAES256CTR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get encryptor: %w", err)
+		}
+
+		return encryptor.GenerateMetadata(ctx)
+	}
+
+	return nil, nil
+}
+
+// getPreferredPolicy tries to get the preferred storage policy for the given file.
+func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
+	return f.getPreferredPolicyForSize(ctx, file, 0)
+}
+
+// getPreferredPolicyForSize is getPreferredPolicy with the incoming upload
+// size, so weighted-capacity selection can exclude policies without headroom.
+func (f *DBFS) getPreferredPolicyForSize(ctx context.Context, file *File, size int64) (*ent.StoragePolicy, error) {
+	owner := file.Owner()
+	ownerGroup := inventory.EffectiveGroup(owner)
+	if ownerGroup == nil {
+		return nil, fmt.Errorf("owner group not loaded")
+	}
+
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	allowed, err := sc.ListByGroups(ctx, inventory.GroupsOf(owner))
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
+	}
+	if len(allowed) == 0 {
+		return nil, serializer.NewError(serializer.CodeDBError, "No active storage policy available for the group", nil)
+	}
+
+	candidate := f.pickPolicy(ctx, file, owner, allowed, size)
+
+	// A load_balance policy resolves to one of its weighted children before
+	// any storage driver sees it.
+	if candidate.Type == types.PolicyTypeLoadBalance {
+		child, err := sc.ResolveLoadBalance(ctx, candidate)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to resolve load-balanced storage policy", err)
+		}
+		candidate = child
+	}
+
+	return candidate, nil
+}
+
+// pickPolicy chooses among the group's allowed policies: the nearest ancestor
+// directory carrying a preferred-policy marker wins; next the owner's own
+// preferred_policy setting (applied only in their own tree); with the group's
+// weighted_policies flag on, the allowed policy with the most free capacity
+// that fits the file; finally the group default, or the first allowed policy
+// when none is configured.
+func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allowed []*ent.StoragePolicy, size int64) *ent.StoragePolicy {
+	inAllowed := func(id int) *ent.StoragePolicy {
+		for _, p := range allowed {
+			if p.ID == id {
+				return p
+			}
+		}
+		return nil
+	}
+
+	// The nearest ancestor directory with a preference wins; if its choice is
+	// no longer usable, the preference is ignored rather than inherited from
+	// a further ancestor. Ancestor metadata may not be eager-loaded, so each
+	// level is loaded lazily until a marker is found.
+	for _, ancestor := range file.AncestorsChain() {
+		if _, err := ancestor.Model.Edges.MetadataOrErr(); err != nil {
+			if err := f.fileClient.QueryMetadata(ctx, ancestor.Model); err != nil {
+				continue
+			}
+		}
+		raw := ancestor.Metadata()[MetadataPreferredPolicy]
+		if raw == "" {
+			continue
+		}
+		if id, err := f.hasher.Decode(raw, hashid.PolicyID); err == nil {
+			if p := inAllowed(id); p != nil {
+				return p
+			}
+		}
+		break
+	}
+
+	if f.user.ID == owner.ID && owner.Settings != nil && owner.Settings.PreferredPolicy > 0 {
+		if p := inAllowed(owner.Settings.PreferredPolicy); p != nil {
+			return p
+		}
+	}
+
+	if ownerGroup := inventory.EffectiveGroup(owner); ownerGroup != nil && ownerGroup.Settings != nil && ownerGroup.Settings.WeightedPolicies {
+		if p := f.pickByFreeCapacity(ctx, allowed, size); p != nil {
+			return p
+		}
+	}
+
+	if p := inAllowed(inventory.EffectiveGroup(owner).StoragePolicyID); p != nil {
+		return p
+	}
+	return allowed[0]
+}
+
+// pickByFreeCapacity returns the allowed policy with the most remaining
+// MaxTotalSize headroom that still fits size. Uncapped and suspended
+// policies are not weighed; nil is returned when nothing qualifies.
+func (f *DBFS) pickByFreeCapacity(ctx context.Context, allowed []*ent.StoragePolicy, size int64) *ent.StoragePolicy {
+	var best *ent.StoragePolicy
+	bestFree := int64(-1)
+	for _, p := range allowed {
+		if p.Settings == nil || p.Settings.MaxTotalSize <= 0 || p.Status == storagepolicy.StatusSuspended {
+			continue
+		}
+		_, used, err := f.fileClient.CountEntityByStoragePolicyID(ctx, p.ID)
+		if err != nil {
+			f.l.Warning("Failed to weigh storage policy %d usage: %s", p.ID, err)
+			continue
+		}
+		free := p.Settings.MaxTotalSize - int64(used)
+		if free >= size && free > bestFree {
+			best, bestFree = p, free
+		}
+	}
+	return best
+}
+
+func (f *DBFS) getFileByPath(ctx context.Context, navigator Navigator, path *fs.URI) (*File, error) {
+	file, err := navigator.To(ctx, path)
+	if err != nil && errors.Is(err, ErrFsNotInitialized) {
+		// Initialize file system for user if root folder does not exist.
+		uid := path.ID(hashid.EncodeUserID(f.hasher, f.user.ID))
+		uidInt, err := f.hasher.Decode(uid, hashid.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode user ID: %w", err)
+		}
+
+		if err := f.initFs(ctx, uidInt); err != nil {
+			return nil, fmt.Errorf("failed to initialize file system: %w", err)
+		}
+		return navigator.To(ctx, path)
+	}
+
+	return file, err
+}
+
+// initFs initializes the file system for the user.
+func (f *DBFS) initFs(ctx context.Context, uid int) error {
+	f.l.Info("Initialize database file system for user %q", f.user.Email)
+	root, err := f.fileClient.CreateFolder(ctx, nil,
+		&inventory.CreateFolderParameters{
+			Owner: uid,
+			Name:  inventory.RootFolderName,
+		})
+	if err != nil {
+		return fmt.Errorf("failed to create root folder: %w", err)
+	}
+
+	f.seedDefaultShares(ctx, uid, root)
+
+	return nil
+}
+
+// seedDefaultShares materializes share shortcuts configured in the
+// `default_shares` setting into the root of a newly created file system.
+// Invalid or expired shares are skipped without failing initialization.
+func (f *DBFS) seedDefaultShares(ctx context.Context, uid int, root *ent.File) {
+	shareIDs := f.settingClient.DefaultShares(ctx)
+
+	shareCtx := context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	shareCtx = context.WithValue(shareCtx, inventory.LoadShareUser{}, true)
+
+	// Symbolic entries carry no entities, but the storage_policy_files
+	// column is non-nullable; bind to the new user's group policy.
+	policyID := 0
+	userCtx := context.WithValue(ctx, inventory.LoadUserGroup{}, true)
+	if owner, err := f.userClient.GetByID(userCtx, uid); err == nil {
+		if group := owner.Edges.Group; group != nil {
+			if policy, err := f.storagePolicyClient.GetByGroup(ctx, group); err == nil && policy != nil {
+				policyID = policy.ID
+			}
+		}
+		if group := inventory.EffectiveGroup(owner); group != nil && group.Settings != nil && len(group.Settings.DefaultPinned) > 0 {
+			shareIDs = lo.Union(shareIDs, group.Settings.DefaultPinned)
+		}
+	}
+	if len(shareIDs) == 0 {
+		return
+	}
+
+	for _, sid := range shareIDs {
+		s, err := f.shareClient.GetByID(shareCtx, sid)
+		if err != nil || s == nil || s.Edges.File == nil {
+			f.l.Warning("[DBFS] Skip invalid default share %d: %v", sid, err)
+			continue
+		}
+		if err := inventory.IsValidShare(s); err != nil {
+			f.l.Warning("[DBFS] Skip default share %d: %v", sid, err)
+			continue
+		}
+
+		metadata := map[string]string{
+			MetadataSharedRedirect: fs.NewShareUri(hashid.EncodeShareID(f.hasher, s.ID), ""),
+		}
+		if s.Edges.User != nil {
+			metadata[MetadataSharedOwner] = hashid.EncodeUserID(f.hasher, s.Edges.User.ID)
+		}
+
+		if s.Edges.File.Type == int(types.FileTypeFolder) {
+			_, err = f.fileClient.CreateFolder(ctx, root, &inventory.CreateFolderParameters{
+				Owner:      uid,
+				Name:       s.Edges.File.Name,
+				IsSymbolic: true,
+				Metadata:   metadata,
+			})
+		} else {
+			_, _, _, err = f.fileClient.CreateFile(ctx, root, &inventory.CreateFileParameters{
+				FileType:        types.FileTypeFile,
+				Name:            s.Edges.File.Name,
+				IsSymbolic:      true,
+				StoragePolicyID: policyID,
+				Metadata:        metadata,
+			})
+		}
+		if err != nil {
+			f.l.Warning("[DBFS] Failed to seed default share %d: %v", sid, err)
+		}
+	}
+}
+
+func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilities ...NavigatorCapability) (Navigator, error) {
+	pathFs := path.FileSystem()
+	config := f.settingClient.DBFS(ctx)
+	navigatorId := f.navigatorId(path)
+	var (
+		res Navigator
+	)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if navigator, ok := f.navigators[navigatorId]; ok {
+		res = navigator
+	} else {
+		var n Navigator
+		switch pathFs {
+		case constants.FileSystemMy:
+			n = NewMyNavigator(f.user, f.fileClient, f.userClient, f.l, config, f.hasher)
+		case constants.FileSystemShare:
+			n = NewShareNavigator(f.user, f.fileClient, f.shareClient, f.aclClient, f.vasClient, f.l, config, f.hasher)
+		case constants.FileSystemTrash:
+			n = NewTrashNavigator(f.user, f.fileClient, f.l, config, f.hasher)
+		case constants.FileSystemSharedWithMe:
+			n = NewSharedWithMeNavigator(f.user, f.fileClient, f.aclClient, f.l, config, f.hasher)
+		default:
+			return nil, fmt.Errorf("unknown file system %q", pathFs)
+		}
+
+		// retrieve state if context hint is provided
+		if stateID, ok := ctx.Value(ContextHintCtxKey{}).(uuid.UUID); ok && stateID != uuid.Nil {
+			cacheKey := NavigatorStateCachePrefix + stateID.String() + "_" + navigatorId
+			if stateRaw, ok := f.stateKv.Get(cacheKey); ok {
+				if err := n.RestoreState(stateRaw.(State)); err != nil {
+					f.l.Warning("Failed to restore state for navigator %q: %s", navigatorId, err)
+				} else {
+					f.l.Info("Navigator %q restored state (%q) successfully", navigatorId, stateID)
+				}
+			} else {
+				// State expire, refresh it
+				n.PersistState(f.stateKv, cacheKey)
+			}
+		}
+
+		f.navigators[navigatorId] = n
+		res = n
+	}
+
+	// Check fs capabilities
+	capabilities := res.Capabilities(false).Capability
+	for _, capability := range requiredCapabilities {
+		if !capabilities.Enabled(int(capability)) {
+			return nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("action %v is not supported under current fs", capability))
+		}
+	}
+
+	// Wrap with the private-space gate. The check must re-evaluate on every
+	// call, so the wrapper is applied per request rather than cached.
+	return &vaultNavigator{Navigator: res, fs: f, roots: map[int]int{}}, nil
+}
+
+func (f *DBFS) navigatorId(path *fs.URI) string {
+	uidHashed := hashid.EncodeUserID(f.hasher, f.user.ID)
+	switch path.FileSystem() {
+	case constants.FileSystemMy:
+		return fmt.Sprintf("%s/%s/%d", constants.FileSystemMy, path.ID(uidHashed), f.user.ID)
+	case constants.FileSystemShare:
+		return fmt.Sprintf("%s/%s/%d", constants.FileSystemShare, path.ID(uidHashed), f.user.ID)
+	case constants.FileSystemTrash:
+		return fmt.Sprintf("%s/%s", constants.FileSystemTrash, path.ID(uidHashed))
+	case constants.FileSystemSharedWithMe:
+		// Per-subtree navigators keep the resolved ACL capability set from
+		// going stale when a request touches several shared roots.
+		scope := ""
+		if elements := path.Elements(); len(elements) > 0 {
+			scope = "/" + elements[0]
+		}
+		return fmt.Sprintf("%s%s/%d", constants.FileSystemSharedWithMe, scope, f.user.ID)
+	default:
+		return fmt.Sprintf("%s/%s/%d", path.FileSystem(), path.ID(uidHashed), f.user.ID)
+	}
+}
+
+// generateSavePath generates the physical save path for the upload request.
+func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
+	currentTime := time.Now()
+	dynamicReplace := func(rule string, pathAvailable bool) string {
+		return fs.ReplaceMagicVar(rule, fs.MagicVarProps{
+			FsSeparator:   fs.Separator,
+			PathAvailable: pathAvailable,
+			Time:          currentTime,
+			UserID:        user.ID,
+			OriginName:    req.Props.Uri.Name(),
+			OriginPath:    req.Props.Uri.Dir(),
+		})
+	}
+
+	dirRule := policy.DirNameRule
+	dirRule = filepath.ToSlash(dirRule)
+	dirRule = dynamicReplace(dirRule, true)
+
+	nameRule := policy.FileNameRule
+	nameRule = dynamicReplace(nameRule, false)
+
+	return path.Join(path.Clean(dirRule), nameRule)
+}
+
+func canMoveOrCopyTo(src, dst *fs.URI, isCopy bool) bool {
+	if isCopy {
+		if src.FileSystem() == constants.FileSystemShare {
+			// Copy within the same share is allowed; write permission on the
+			// destination is enforced separately.
+			return dst.FileSystem() == constants.FileSystemShare && src.ID("") != "" && src.ID("") == dst.ID("")
+		}
+		return src.FileSystem() == dst.FileSystem() && src.FileSystem() == constants.FileSystemMy
+	} else {
+		switch src.FileSystem() {
+		case constants.FileSystemMy:
+			return dst.FileSystem() == constants.FileSystemMy || dst.FileSystem() == constants.FileSystemTrash
+		case constants.FileSystemTrash:
+			return dst.FileSystem() == constants.FileSystemMy
+		case constants.FileSystemShare:
+			// Move within the same share is allowed; cross-share moves are not.
+			return dst.FileSystem() == constants.FileSystemShare && src.ID("") != "" && src.ID("") == dst.ID("")
+		}
+	}
+
+	return false
+}
+
+func allAncestors(targets []*File) []*ent.File {
+	return lo.Map(
+		lo.UniqBy(
+			lo.FlatMap(targets, func(value *File, index int) []*File {
+				return value.Ancestors()
+			}),
+			func(item *File) int {
+				return item.ID()
+			},
+		),
+		func(item *File, index int) *ent.File {
+			return item.Model
+		},
+	)
+}
+
+func WithBypassOwnerCheck(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ByPassOwnerCheckCtxKey{}, true)
+}

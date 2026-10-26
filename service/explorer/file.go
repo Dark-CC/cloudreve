@@ -1,0 +1,1058 @@
+package explorer
+
+import (
+	"context"
+	"encoding/gob"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/application/constants"
+	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
+	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
+	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/cloudreve/Cloudreve/v4/pkg/request"
+	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/cloudreve/Cloudreve/v4/pkg/util"
+	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
+	"github.com/samber/lo"
+)
+
+// SingleFileService 对单文件进行操作的五福，path为文件完整路径
+type SingleFileService struct {
+	Path string `uri:"path" json:"path" binding:"required,min=1,max=65535"`
+}
+
+// FileIDService 通过文件ID对文件进行操作的服务
+type FileIDService struct {
+}
+
+// FileAnonymousGetService 匿名（外链）获取文件服务
+type FileAnonymousGetService struct {
+	ID   uint   `uri:"id" binding:"required,min=1"`
+	Name string `uri:"name" binding:"required"`
+}
+
+func init() {
+	gob.Register(ArchiveDownloadSession{})
+}
+
+// ArchiveService 文件流式打包下載服务
+type (
+	ArchiveService struct {
+		ID string `uri:"sessionID" binding:"required"`
+	}
+	ArchiveParamCtx struct{}
+)
+
+// DownloadArchived 通过预签名 URL 打包下载
+func (service *ArchiveService) DownloadArchived(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	archiveSessionRaw, found := dep.KV().Get(ArchiveDownloadSessionPrefix + service.ID)
+	if !found {
+		return serializer.NewError(serializer.CodeNotFound, "Archive session not exist", nil)
+	}
+
+	// Switch to user context
+	archiveSession := archiveSessionRaw.(ArchiveDownloadSession)
+	requester, err := dep.UserClient().GetLoginUserByID(c, archiveSession.RequesterID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Requester not found", err)
+	}
+
+	util.WithValue(c, inventory.UserCtx{}, requester)
+
+	fm := manager.NewFileManager(dep, requester)
+	defer fm.Recycle()
+
+	// 开始打包
+	c.Header("Content-Disposition", "attachment;")
+	c.Header("Content-Type", "application/zip")
+
+	if _, err := fm.CreateArchive(c, archiveSession.Uris, c.Writer); err != nil {
+		return serializer.NewError(serializer.CodeIOFailed, "Failed to create archive", err)
+	}
+
+	return nil
+}
+
+type (
+	GetDirectLinkParamCtx struct{}
+	GetDirectLinkService  struct {
+		Uris []string `json:"uris" binding:"required,min=1"`
+	}
+)
+
+func (s *GetDirectLinkService) GetUris() []string {
+	return s.Uris
+}
+
+// Sources 批量获取对象的外链
+func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error) {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+
+	if inventory.EffectiveGroup(u).Settings.SourceBatchSize == 0 {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
+	}
+
+	if len(s.Uris) > inventory.EffectiveGroup(u).Settings.SourceBatchSize {
+		return nil, serializer.NewError(serializer.CodeBatchSourceSize, "", nil)
+	}
+
+	m := manager.NewFileManager(dep, u)
+	defer m.Recycle()
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	res, err := m.GetDirectLink(c, uris...)
+	if err == nil {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventGetDirectLink,
+			activity.Extra(map[string]any{"uris": s.Uris}))
+	}
+	return BuildDirectLinkResponse(res), err
+}
+
+func DeleteDirectLink(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	linkId := hashid.FromContext(c)
+	linkClient := dep.DirectLinkClient()
+	ctx := context.WithValue(c, inventory.LoadDirectLinkFile{}, true)
+	link, err := linkClient.GetByID(ctx, linkId)
+	if err != nil || link.Edges.File == nil {
+		return serializer.NewError(serializer.CodeNotFound, "Direct link not found", err)
+	}
+
+	if link.Edges.File.OwnerID != user.ID {
+		return serializer.NewError(serializer.CodeNotFound, "Direct link not found", err)
+	}
+
+	if err := linkClient.Delete(c, link.ID); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete direct link", err)
+	}
+
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDeleteDirectLink,
+		activity.File(link.Edges.File.ID))
+	return nil
+}
+
+type (
+	// ListFileParameterCtx define key fore ListFileService
+	ListFileParameterCtx struct{}
+
+	// ListFileService stores parameters for list file by URI
+	ListFileService struct {
+		Uri            string `uri:"uri" form:"uri" json:"uri" binding:"required"`
+		Page           int    `uri:"page" form:"page" json:"page" binding:"min=0"`
+		PageSize       int    `uri:"page_size" form:"page_size" json:"page_size"`
+		OrderBy        string `uri:"order_by" form:"order_by" json:"order_by"`
+		OrderDirection string `uri:"order_direction" form:"order_direction" json:"order_direction"`
+		NextPageToken  string `uri:"next_page_token" form:"next_page_token" json:"next_page_token"`
+	}
+)
+
+// List all files for given path
+func (service *ListFileService) List(c *gin.Context) (*ListResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uri, err := fs.NewUriFromString(service.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	pageSize := service.PageSize
+	streamed := false
+	hasher := dep.HashIDEncoder()
+	parent, res, err := m.List(c, uri, &manager.ListArgs{
+		Page:           service.Page,
+		PageSize:       pageSize,
+		Order:          service.OrderBy,
+		OrderDirection: service.OrderDirection,
+		PageToken:      service.NextPageToken,
+		StreamResponseCallback: func(parent fs.File, files []fs.File) {
+			if !streamed {
+				WriteEventSourceHeader(c)
+				streamed = true
+			}
+
+			WriteEventSource(c, "file", lo.Map(files, func(file fs.File, index int) *FileResponse {
+				return BuildFileResponse(c, user, file, hasher, nil)
+			}))
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	listResponse := BuildListResponse(c, user, parent, res, hasher)
+	if streamed {
+		WriteEventSource(c, "list", listResponse)
+		return nil, ErrSSETakeOver
+	}
+
+	return listResponse, nil
+}
+
+type (
+	CreateFileParameterCtx struct{}
+	CreateFileService      struct {
+		Uri           string            `json:"uri" binding:"required"`
+		Type          string            `json:"type" binding:"required,eq=file|eq=folder|eq=share"`
+		Metadata      map[string]string `json:"metadata"`
+		ErrOnConflict bool              `json:"err_on_conflict"`
+		// ShareID and SharePassword create a symbolic share shortcut instead
+		// of a regular entry when Type == "share", so a saved share link
+		// stays browsable from the owner's file list.
+		ShareID       string `json:"share_id"`
+		SharePassword string `json:"share_password"`
+	}
+)
+
+func (service *CreateFileService) Create(c *gin.Context) (*FileResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uri, err := fs.NewUriFromString(service.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	opts := []fs.Option{
+		fs.WithMetadata(service.Metadata),
+	}
+	fileType := types.FileTypeFromString(service.Type)
+	if service.Type == "share" {
+		if service.ShareID == "" {
+			return nil, serializer.NewError(serializer.CodeParamErr, "share_id is required", nil)
+		}
+
+		shareCtx := context.WithValue(c, inventory.LoadShareUser{}, true)
+		shareCtx = context.WithValue(shareCtx, inventory.LoadShareFile{}, true)
+		shareCtx = context.WithValue(shareCtx, inventory.LoadShareFiles{}, true)
+		share, err := dep.ShareClient().GetByHashID(shareCtx, service.ShareID)
+		if err != nil || share == nil {
+			return nil, serializer.NewError(serializer.CodeNotFound, "Share not found", err)
+		}
+
+		ft, metadata, sErr := shareShortcutEntry(share, dep.HashIDEncoder(), service.SharePassword)
+		if sErr != nil {
+			return nil, sErr
+		}
+		fileType = ft
+
+		opts = []fs.Option{
+			dbfs.WithSymbolicLink(),
+			fs.WithMetadata(metadata),
+		}
+	}
+
+	if service.ErrOnConflict {
+		opts = append(opts, dbfs.WithErrorOnConflict())
+	}
+	file, err := m.Create(c, uri, fileType, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return BuildFileResponse(c, user, file, dep.HashIDEncoder(), nil), nil
+}
+
+// shareShortcutEntry resolves a share into the symbolic entry attributes used
+// for saved share links: folder type for folder and multi-file shares, file
+// type otherwise.
+func shareShortcutEntry(share *ent.Share, hasher hashid.Encoder, password string) (types.FileType, map[string]string, error) {
+	if err := inventory.IsValidShare(share); err != nil {
+		return 0, nil, err
+	}
+
+	fileType := types.FileTypeFolder
+	if len(share.Edges.Files) == 0 && share.Edges.File != nil &&
+		types.FileType(share.Edges.File.Type) != types.FileTypeFolder {
+		fileType = types.FileTypeFile
+	}
+
+	metadata := map[string]string{
+		dbfs.MetadataSharedRedirect: fs.NewShareUri(hashid.EncodeShareID(hasher, share.ID), password),
+	}
+	if share.Edges.User != nil {
+		metadata[dbfs.MetadataSharedOwner] = hashid.EncodeUserID(hasher, share.Edges.User.ID)
+	}
+
+	return fileType, metadata, nil
+}
+
+type (
+	RenameFileParameterCtx struct{}
+	RenameFileService      struct {
+		Uri     string `json:"uri" binding:"required"`
+		NewName string `json:"new_name" binding:"required,min=1,max=255"`
+		// ExpectID optionally carries the hashid of the file the caller
+		// believes sits at Uri; the rename fails with a conflict if the
+		// resolved file differs (retried request after path reuse, #3565).
+		ExpectID string `json:"expect_id"`
+	}
+)
+
+func (service *RenameFileService) Rename(c *gin.Context) (*FileResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uri, err := fs.NewUriFromString(service.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	if service.ExpectID != "" {
+		expectID, err := dep.HashIDEncoder().Decode(service.ExpectID, hashid.FileID)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "unknown expect_id", err)
+		}
+		util.WithValue(c, dbfs.ExpectedSourceIDsCtxKey{}, []int{expectID})
+	}
+
+	file, err := m.Rename(c, uri, service.NewName)
+	if err != nil {
+		return nil, err
+	}
+
+	return BuildFileResponse(c, user, file, dep.HashIDEncoder(), nil), nil
+}
+
+type (
+	MoveFileParameterCtx struct{}
+	MoveFileService      struct {
+		Uris []string `json:"uris" binding:"required,min=1"`
+		Dst  string   `json:"dst" binding:"required"`
+		Copy bool     `json:"copy"`
+		// ExpectIDs optionally carries the hashids of the source files the
+		// caller selected, positionally aligned with Uris; a mismatch fails
+		// that entry with a conflict (#3565). An empty string entry skips
+		// the check for that position.
+		ExpectIDs []string `json:"expect_ids"`
+		// OnConflict selects the behaviour when a destination child with
+		// the same name exists: "skip" drops the colliding source,
+		// "overwrite" deletes the destination object first. Empty keeps
+		// the default fail-fast behaviour (#3159).
+		OnConflict string `json:"on_conflict" binding:"omitempty,eq=skip|eq=overwrite"`
+	}
+)
+
+func (s *MoveFileService) GetUris() []string {
+	return s.Uris
+}
+
+func (s *MoveFileService) Move(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	dst, err := fs.NewUriFromString(s.Dst)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "unknown destination uri", err)
+	}
+
+	if len(s.ExpectIDs) > 0 {
+		if len(s.ExpectIDs) != len(s.Uris) {
+			return serializer.NewError(serializer.CodeParamErr, "expect_ids must align with uris", nil)
+		}
+		ids := make([]int, len(s.ExpectIDs))
+		for i, e := range s.ExpectIDs {
+			if e == "" {
+				continue
+			}
+			id, err := dep.HashIDEncoder().Decode(e, hashid.FileID)
+			if err != nil {
+				return serializer.NewError(serializer.CodeParamErr, "unknown expect_ids entry", err)
+			}
+			ids[i] = id
+		}
+		util.WithValue(c, dbfs.ExpectedSourceIDsCtxKey{}, ids)
+	}
+
+	if s.OnConflict != "" {
+		util.WithValue(c, dbfs.MoveConflictCtxKey{}, s.OnConflict)
+	}
+
+	return m.MoveOrCopy(c, uris, dst, s.Copy)
+}
+
+type (
+	FileUpdateParameterCtx struct{}
+	FileUpdateService      struct {
+		Uri      string `form:"uri" binding:"required"`
+		Previous string `form:"previous"`
+	}
+)
+
+func (service *FileUpdateService) PutContent(c *gin.Context, ls fs.LockSession) (*FileResponse, error) {
+	dep := dependency.FromContext(c)
+	settings := dep.SettingProvider()
+	// 取得文件大小
+	rc, fileSize, err := request.SniffContentLength(c.Request)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "invalid content length", err)
+	}
+
+	if fileSize > settings.MaxOnlineEditSize(c) {
+		return nil, fs.ErrFileSizeTooBig
+	}
+
+	uri, err := fs.NewUriFromString(service.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	fileData := &fs.UploadRequest{
+		Props: &fs.UploadProps{
+			Uri:             uri,
+			PreviousVersion: service.Previous,
+			Size:            fileSize,
+		},
+		File: rc,
+		Mode: fs.ModeOverwrite,
+	}
+
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	// Update file
+	var ctx context.Context = c
+	if ls != nil {
+		ctx = fs.LockSessionToContext(c, ls)
+	}
+	res, err := m.Update(ctx, fileData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update file: %w", err)
+	}
+
+	return BuildFileResponse(c, user, res, dep.HashIDEncoder(), nil), nil
+}
+
+type (
+	FileURLParameterCtx struct{}
+	FileURLService      struct {
+		Uris              []string `json:"uris" binding:"required"`
+		Download          bool     `json:"download"`
+		Redirect          bool     `json:"redirect"` // Only works if Uris count is 1.
+		Entity            string   `json:"entity"`   // Only works if Uris count is 1.
+		UsePrimarySiteURL bool     `json:"use_primary_site_url"`
+		SkipError         bool     `json:"skip_error"`
+		Archive           bool     `json:"archive"`
+		NoCache           bool     `json:"no_cache"`
+		// PurchaseTicket restores paid-share access after session loss.
+		PurchaseTicket string `json:"purchase_ticket"`
+	}
+	FileURLResponse struct {
+		Urls    []manager.EntityUrl `json:"urls"`
+		Expires *time.Time          `json:"expires"`
+	}
+	ArchiveDownloadSession struct {
+		Uris        []*fs.URI `json:"uris"`
+		RequesterID int       `json:"requester_id"`
+	}
+)
+
+const (
+	ArchiveDownloadSessionPrefix = "archive_"
+)
+
+func (s *FileURLService) GetUris() []string {
+	return s.Uris
+}
+
+// GetArchiveDownloadSession generates temporary download session for archive download.
+func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResponse, error) {
+	dep := dependency.FromContext(c)
+	settings := dep.SettingProvider()
+	user := inventory.UserFromContext(c)
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionArchiveDownload)) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
+	}
+
+	// Create archive download session
+	archiveSession := &ArchiveDownloadSession{
+		Uris:        uris,
+		RequesterID: user.ID,
+	}
+	sessionId := uuid.Must(uuid.NewV4()).String()
+	ttl := settings.ArchiveDownloadSessionTTL(c)
+	expire := time.Now().Add(time.Duration(ttl) * time.Second)
+	if err := dep.KV().Set(ArchiveDownloadSessionPrefix+sessionId, *archiveSession, ttl); err != nil {
+		return nil, serializer.NewError(serializer.CodeInternalSetting, "failed to create archive download session", err)
+	}
+
+	base := settings.DownloadURLBase(c)
+	downloadUrl := routes.MasterArchiveDownloadUrl(base, sessionId)
+	finalUrl, err := auth.SignURI(c, dep.GeneralAuth(), downloadUrl.String(), &expire)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeInternalSetting, "failed to sign archive download url", err)
+	}
+
+	return &FileURLResponse{
+		Urls:    []manager.EntityUrl{{Url: finalUrl.String()}},
+		Expires: &expire,
+	}, nil
+}
+
+func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
+	if s.Archive {
+		return s.GetArchiveDownloadSession(c)
+	}
+
+	dep := dependency.FromContext(c)
+	settings := dep.SettingProvider()
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	// Request entity URL
+	expire := time.Now().Add(settings.EntityUrlValidDuration(c))
+	requesterID := 0
+	if user != nil {
+		requesterID = user.ID
+	}
+	urlReq := lo.Map(uris, func(uri *fs.URI, _ int) manager.GetEntityUrlArgs {
+		return manager.GetEntityUrlArgs{
+			URI:               uri,
+			PreferredEntityID: s.Entity,
+			// Share-scoped URIs bill the file owner's pool at serve time.
+			Meter: uri.FileSystem() == constants.FileSystemShare,
+		}
+	})
+
+	var ctx context.Context = c
+	if s.UsePrimarySiteURL {
+		ctx = setting.UseFirstSiteUrl(ctx)
+	}
+	if s.PurchaseTicket != "" {
+		ctx = context.WithValue(ctx, dbfs.PurchaseTicketCtxKey{}, s.PurchaseTicket)
+	}
+
+	res, earliestExpire, err := m.GetEntityUrls(ctx, urlReq,
+		fs.WithDownloadSpeed(int64(inventory.EffectiveGroup(user).SpeedLimit)),
+		fs.WithIsDownload(s.Download),
+		fs.WithNoCache(s.NoCache),
+		fs.WithUrlExpire(&expire),
+		fs.WithTrafficMeter(requesterID),
+	)
+	if err != nil && !s.SkipError {
+		return nil, fmt.Errorf("failed to get entity url: %w", err)
+	}
+
+	// Link-traffic metering: self-served URLs carry a signed claim and are
+	// billed by bytes actually transferred. Externally-hosted URLs cannot
+	// carry the claim, so they keep issue-time charging by file size.
+	// The owner is never billed for their own browsing; thumbnails are
+	// unmetered derivatives and do not pass through here.
+	if err := chargeShareLinkTraffic(ctx, dep, user, uris, res, s.Download); err != nil {
+		return nil, err
+	}
+
+	if s.Download {
+		opts := []activity.Opt{activity.Extra(map[string]any{"uris": s.Uris})}
+		if share, fileID := resolveShareEventSubjects(c, dep, s.Uris); share != nil {
+			opts = append(opts, activity.Share(share.ID))
+			if fileID > 0 {
+				opts = append(opts, activity.File(fileID))
+			}
+		}
+		activity.Record(c, settings, dep.ActivityClient(), types.EventEntityDownloaded, opts...)
+	}
+
+	//if !s.NoCache && earliestExpire != nil {
+	//	// Set cache header
+	//	cacheTTL := int(earliestExpire.Sub(time.Now()).Seconds() - float64(settings.EntityUrlCacheMargin(c)))
+	//	if cacheTTL > 0 {
+	//		c.Header("Cache-Control", fmt.Sprintf("private, max-age=%d", cacheTTL))
+	//	}
+	//}
+
+	if s.Redirect && len(uris) == 1 {
+		c.Redirect(http.StatusFound, res[0].Url)
+		return nil, nil
+	}
+
+	return &FileURLResponse{
+		Urls:    res,
+		Expires: earliestExpire,
+	}, nil
+}
+
+type (
+	FileThumbParameterCtx struct{}
+	FileThumbService      struct {
+		Uri            string `form:"uri" binding:"required"`
+		PurchaseTicket string `form:"purchase_ticket"`
+	}
+	FileThumbResponse struct {
+		Url     string     `json:"url"`
+		Expires *time.Time `json:"expires"`
+	}
+)
+
+// Get redirect to thumb file.
+func (s *FileThumbService) Get(c *gin.Context) (*FileThumbResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uri, err := fs.NewUriFromString(s.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	// Get thumbnail
+	var ctx context.Context = c
+	if s.PurchaseTicket != "" {
+		ctx = context.WithValue(c, dbfs.PurchaseTicketCtxKey{}, s.PurchaseTicket)
+	}
+	thumb, err := m.Thumbnail(ctx, uri)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get thumbnail: %w", err)
+	}
+
+	expire := time.Now().Add(dep.SettingProvider().EntityUrlValidDuration(c))
+	thumbUrl, err := thumb.Url(c, entitysource.WithExpire(&expire))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get thumbnail url: %w", err)
+	}
+
+	return &FileThumbResponse{
+		Url:     thumbUrl.Url,
+		Expires: thumbUrl.ExpireAt,
+	}, nil
+}
+
+type (
+	DeleteFileParameterCtx struct{}
+	DeleteFileService      struct {
+		Uris           []string `json:"uris" binding:"required,min=1"`
+		UnlinkOnly     bool     `json:"unlink"`
+		SkipSoftDelete bool     `json:"skip_soft_delete"`
+	}
+)
+
+func (s *DeleteFileService) GetUris() []string {
+	return s.Uris
+}
+
+func (s *DeleteFileService) Delete(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	if s.UnlinkOnly && !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionAdvanceDelete)) {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "advance delete permission is required", nil)
+	}
+
+	// Delete file
+	if err = m.Delete(c, uris, fs.WithUnlinkOnly(s.UnlinkOnly), fs.WithSkipSoftDelete(s.SkipSoftDelete)); err != nil {
+		return fmt.Errorf("failed to delete file: %w", err)
+	}
+
+	return nil
+}
+
+func (s *DeleteFileService) Restore(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uris, err := fs.NewUriFromStrings(s.Uris...)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	// Delete file
+	if err = m.Restore(c, uris...); err != nil {
+		return fmt.Errorf("failed to restore file: %w", err)
+
+	}
+
+	return nil
+}
+
+// EmptyTrash hard-deletes every top-level item in the current user's trash bin.
+func EmptyTrash(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	if err := m.EmptyTrash(c); err != nil {
+		return fmt.Errorf("failed to empty trash: %w", err)
+	}
+
+	return nil
+}
+
+type (
+	UnlockFileParameterCtx struct{}
+	UnlockFileService      struct {
+		Tokens []string `json:"tokens" binding:"required,max=16384"`
+	}
+)
+
+func (s *UnlockFileService) Unlock(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	// Unlock file
+	if err := m.Unlock(c, s.Tokens...); err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "failed to unlock file", err)
+	}
+
+	return nil
+}
+
+type (
+	GetFileInfoParameterCtx struct{}
+	GetFileInfoService      struct {
+		Uri           string `form:"uri"`
+		ID            string `form:"id"`
+		ExtendedInfo  bool   `form:"extended"`
+		FolderSummary bool   `form:"folder_summary"`
+	}
+)
+
+func (s *GetFileInfoService) Get(c *gin.Context) (*FileResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	if s.ID != "" && s.Uri == "" {
+		fileId, err := dep.HashIDEncoder().Decode(s.ID, hashid.FileID)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "unknown file id", err)
+		}
+
+		file, err := m.TraverseFile(c, fileId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to traverse file: %w", err)
+		}
+
+		s.Uri = file.Uri(true).String()
+	}
+
+	if s.Uri == "" {
+		return nil, serializer.NewError(serializer.CodeParamErr, "uri is required", nil)
+	}
+
+	uri, err := fs.NewUriFromString(s.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	opts := []fs.Option{dbfs.WithFilePublicMetadata(), dbfs.WithNotRoot()}
+	if s.ExtendedInfo {
+		opts = append(opts, dbfs.WithExtendedInfo(), dbfs.WithEntityUser(), dbfs.WithFileShareIfOwned())
+	}
+	if s.FolderSummary {
+		opts = append(opts, dbfs.WithLoadFolderSummary())
+	}
+
+	file, err := m.Get(c, uri, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file: %w", err)
+	}
+
+	if file == nil {
+		return nil, serializer.NewError(serializer.CodeNotFound, "file not found", nil)
+	}
+
+	return BuildFileResponse(c, user, file, dep.HashIDEncoder(), nil), nil
+}
+
+func RedirectDirectLink(c *gin.Context, name string, download bool) error {
+	dep := dependency.FromContext(c)
+	settings := dep.SettingProvider()
+
+	sourceLinkID := hashid.FromContext(c)
+	ctx := context.WithValue(c, inventory.LoadDirectLinkFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadFileUser{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadUserGroup{}, true)
+	dl, err := dep.DirectLinkClient().GetByNameID(ctx, sourceLinkID, name)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "direct link not found", err)
+	}
+
+	m := manager.NewFileManager(dep, dl.Edges.File.Edges.Owner)
+	defer m.Recycle()
+
+	// Request entity URL. TrafficMeter(-1) makes every owner billable —
+	// direct links always meter the owner regardless of who requests.
+	expire := time.Now().Add(settings.EntityUrlValidDuration(c))
+	res, earliestExpire, err := m.GetUrlForRedirectedDirectLink(c, dl,
+		fs.WithUrlExpire(&expire),
+		fs.WithIsDownload(download),
+		fs.WithTrafficMeter(-1),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Link-traffic allowance: when the issued URL is self-served it carries
+	// a metering claim and the serving endpoint debits actual transferred
+	// bytes. Externally-hosted URLs cannot carry the claim, so they keep
+	// the issue-time charge by file size — downloads draw on dl_traffic,
+	// inline/stream views on stream_traffic.
+	owner := dl.Edges.File.Edges.Owner
+	if owner != nil && !res.Metered {
+		var (
+			ok  bool
+			err error
+		)
+		if download {
+			ok, err = dep.UserClient().ConsumeDirectTraffic(c, owner.ID, dl.Edges.File.Size)
+		} else {
+			ok, err = dep.UserClient().ConsumeStreamTraffic(c, owner.ID, dl.Edges.File.Size)
+		}
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to check direct link traffic", err)
+		}
+		if !ok {
+			return serializer.NewError(serializer.CodeInsufficientTraffic, "Direct link traffic exhausted", nil)
+		}
+	} else if owner != nil {
+		// Metered path: fail fast when the pool is already empty instead of
+		// issuing a URL that aborts mid-stream.
+		pool := owner.DlTraffic
+		if !download {
+			pool = owner.StreamTraffic
+		}
+		if pool == 0 {
+			return serializer.NewError(serializer.CodeInsufficientTraffic, "Direct link traffic exhausted", nil)
+		}
+	}
+
+	c.Redirect(http.StatusFound, res.Url)
+	c.Header("Cache-Control", fmt.Sprintf("public, max-age=%d", int(earliestExpire.Sub(time.Now()).Seconds())))
+	return nil
+}
+
+type (
+	PatchViewParameterCtx struct{}
+	PatchViewService      struct {
+		Uri  string              `json:"uri" binding:"required"`
+		View *types.ExplorerView `json:"view"`
+	}
+)
+
+func (s *PatchViewService) Patch(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	uri, err := fs.NewUriFromString(s.Uri)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	if err := m.PatchView(c, uri, s.View); err != nil {
+		return err
+	}
+
+	opts := []activity.Opt{activity.Extra(map[string]any{"view": s.View})}
+	if target, err := m.Get(c, uri); err == nil {
+		opts = append(opts, activity.File(target.ID()))
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUpdateView, opts...)
+
+	return nil
+}
+
+type (
+	ArchiveListFilesParamCtx struct{}
+	ArchiveListFilesService  struct {
+		Uri          string `form:"uri" binding:"required"`
+		Entity       string `form:"entity"`
+		TextEncoding string `form:"text_encoding"`
+	}
+)
+
+func (s *ArchiveListFilesService) List(c *gin.Context) (*ArchiveListFilesResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+	if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to extract archive files", nil)
+	}
+
+	uri, err := fs.NewUriFromString(s.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	files, err := m.ListArchiveFiles(c, uri, s.Entity, s.TextEncoding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list archive files: %w", err)
+	}
+
+	return BuildArchiveListFilesResponse(files), nil
+}
+
+type (
+	FulltextSearchParamCtx struct{}
+	FulltextSearchService  struct {
+		Query  string `form:"query" binding:"required"`
+		Offset int    `form:"offset"`
+	}
+)
+
+func (s *FulltextSearchService) Search(c *gin.Context) (*FullTextSearchResults, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	results, err := m.SearchFullText(c, s.Query, s.Offset)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeInternalSetting, "failed to search full text", err)
+	}
+
+	return BuildFullTextSearchResults(c, user, dep.HashIDEncoder(), results), nil
+}
+
+// chargeShareLinkTraffic bills link traffic for share-scoped URIs to the
+// file owner's dl_traffic (downloads) or stream_traffic (previews and
+// media streams) pool. urls[i] pairs with uris[i]; entries that failed to
+// produce a URL are skipped. Requester and owner may be identical — the
+// owner's own browsing is never billed. Non-share URIs are ignored so
+// browsing one's own files never consumes the pools.
+func chargeShareLinkTraffic(ctx context.Context, dep dependency.Dep, requester *ent.User, uris []*fs.URI, urls []manager.EntityUrl, download bool) error {
+	billed := make(map[int]int64)
+	// Metered owners still get a zero-balance gate at issue time so an
+	// exhausted pool fails fast with a clean error instead of producing a
+	// URL that truncates mid-stream.
+	meteredOwners := make(map[int]bool)
+	for i, uri := range uris {
+		if uri.FileSystem() != constants.FileSystemShare || i >= len(urls) || urls[i].Url == "" {
+			continue
+		}
+		ownerID := urls[i].OwnerID
+		if ownerID == 0 || (requester != nil && ownerID == requester.ID) {
+			continue
+		}
+		if urls[i].Metered {
+			meteredOwners[ownerID] = true
+			continue
+		}
+		billed[ownerID] += urls[i].Size
+	}
+
+	for ownerID := range meteredOwners {
+		owner, err := dep.UserClient().GetByID(ctx, ownerID)
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to check link traffic", err)
+		}
+		pool := owner.DlTraffic
+		if !download {
+			pool = owner.StreamTraffic
+		}
+		if pool == 0 {
+			return serializer.NewError(serializer.CodeInsufficientTraffic, "Share link traffic exhausted", nil)
+		}
+	}
+
+	for ownerID, size := range billed {
+		var (
+			ok  bool
+			err error
+		)
+		if download {
+			ok, err = dep.UserClient().ConsumeDirectTraffic(ctx, ownerID, size)
+		} else {
+			ok, err = dep.UserClient().ConsumeStreamTraffic(ctx, ownerID, size)
+		}
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to check link traffic", err)
+		}
+		if !ok {
+			return serializer.NewError(serializer.CodeInsufficientTraffic, "Share link traffic exhausted", nil)
+		}
+	}
+	return nil
+}
+
+// resolveShareEventSubjects extracts the share and subject file for audit
+// events on share-scoped URIs. Returns nils for non-share URIs and on any
+// resolution failure — auditing must never break a download.
+func resolveShareEventSubjects(ctx context.Context, dep dependency.Dep, uris []string) (*ent.Share, int) {
+	for _, raw := range uris {
+		uri, err := fs.NewUriFromString(raw)
+		if err != nil || uri.FileSystem() != constants.FileSystemShare {
+			continue
+		}
+		id := uri.ID("")
+		if id == "" {
+			continue
+		}
+		share, err := dep.ShareClient().GetByHashID(context.WithValue(ctx, inventory.LoadShareFile{}, true), id)
+		if err != nil || share == nil {
+			return nil, 0
+		}
+		fileID := 0
+		if share.Edges.File != nil {
+			fileID = share.Edges.File.ID
+		}
+		return share, fileID
+	}
+	return nil, 0
+}

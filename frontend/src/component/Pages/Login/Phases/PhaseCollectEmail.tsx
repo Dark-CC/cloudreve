@@ -1,0 +1,125 @@
+import { Box, Button, Divider, FormControl, Link, Stack } from "@mui/material";
+import { useEffect } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
+import { LoginResponse } from "../../../../api/user.ts";
+import { useAppSelector } from "../../../../redux/hooks.ts";
+import { useQuery } from "../../../../util";
+import { OutlineIconTextField } from "../../../Common/Form/OutlineIconTextField.tsx";
+import MailOutlined from "../../../Icons/MailOutlined.tsx";
+import PhoneLaptopOutlined from "../../../Icons/PhoneLaptopOutlined.tsx";
+import PasskeyLoginButton from "../Signin/PasskeyLoginButton.tsx";
+import QQLoginButton from "../Signin/QQLoginButton.tsx";
+import SSOLoginButton from "../Signin/SSOLoginButton.tsx";
+import WeChatLoginButton from "../Signin/WeChatLoginButton.tsx";
+import { Control } from "../Signin/SignIn.tsx";
+
+export const LegalLinks = () => {
+  const { t } = useTranslation();
+  const tos = useAppSelector((state) => state.siteConfig.login.config.tos_url);
+  const privacyPolicy = useAppSelector((state) => state.siteConfig.login.config.privacy_policy_url);
+  return (
+    <>
+      {(tos || privacyPolicy) && (
+        <Box
+          sx={{
+            mt: 2,
+            color: "text.secondary",
+            typography: "caption",
+            textAlign: "center",
+          }}
+        >
+          {tos && (
+            <Link target={"_blank"} underline="hover" color={"inherit"} href={tos}>
+              {t("login.termOfUse")}
+            </Link>
+          )}
+          {tos && privacyPolicy && " | "}
+          {privacyPolicy && (
+            <Link target={"_blank"} underline="hover" color={"inherit"} href={privacyPolicy}>
+              {t("login.privacyPolicy")}
+            </Link>
+          )}
+        </Box>
+      )}
+    </>
+  );
+};
+
+interface PhaseCollectEmailProps {
+  email: string;
+  setEmail: (email: string) => void;
+  control?: Control;
+  onOAuthPasskeyLogin?: (response: LoginResponse) => void;
+  onSmsLogin?: () => void;
+}
+
+const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin, onSmsLogin }: PhaseCollectEmailProps) => {
+  const { t } = useTranslation();
+  const query = useQuery();
+  const { register_enabled, authn, sso_enabled, qq_connect_enabled, sms_enabled } = useAppSelector(
+    (state) => state.siteConfig.login.config,
+  );
+  const tos = useAppSelector((state) => state.siteConfig.login.config.tos_url);
+  const privacyPolicy = useAppSelector((state) => state.siteConfig.login.config.privacy_policy_url);
+
+  const showFooter = tos || privacyPolicy || authn || sso_enabled || qq_connect_enabled || sms_enabled;
+
+  useEffect(() => {
+    if (!!query.get("email")) {
+      setEmail(query.get("email") ?? "");
+    }
+  }, []);
+
+  return (
+    <>
+      <FormControl variant="standard" margin="normal" required fullWidth>
+        <OutlineIconTextField
+          label={t("login.email")}
+          variant={"outlined"}
+          inputProps={{
+            id: "email",
+            type: "email",
+            name: "email",
+            required: true,
+          }}
+          onChange={(e) => setEmail(e.target.value)}
+          icon={<MailOutlined />}
+          autoComplete={"username webauthn"}
+          value={email}
+          autoFocus
+        />
+      </FormControl>
+      {control?.submit}
+      {control?.back}
+      {register_enabled && (
+        <Box sx={{ mt: 2, typography: "body2", textAlign: "center" }}>
+          <Trans
+            ns={"application"}
+            i18nKey={"login.noAccountSignupNow"}
+            components={[<Link key={0} underline="hover" component={RouterLink} to="/session/signup" />]}
+          />
+        </Box>
+      )}
+      {showFooter && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Stack spacing={1}>
+            {authn && <PasskeyLoginButton autoComplete onLoginSuccess={onOAuthPasskeyLogin} />}
+            <SSOLoginButton />
+            <QQLoginButton />
+            <WeChatLoginButton />
+            {sms_enabled && onSmsLogin && (
+              <Button variant="outlined" startIcon={<PhoneLaptopOutlined />} onClick={onSmsLogin}>
+                {t("login.smsSignIn")}
+              </Button>
+            )}
+          </Stack>
+          <LegalLinks />
+        </>
+      )}
+    </>
+  );
+};
+
+export default PhaseCollectEmail;

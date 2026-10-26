@@ -1,0 +1,87 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Cloudreve",
+  "version": "0.3.12",
+  "identifier": "cloudreve.desktop",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "yarn --cwd ui run dev",
+    "beforeBuildCommand": "yarn --cwd ui run build"
+  },
+  "app": {
+    "enableGTKAppId": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Cloudreve",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "requireLiteralLeadingDot": false,
+          "allow": [
+            "**/*"
+          ]
+        }
+      }
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "appimage", "deb", "nsis"],
+    "resources": {
+      "../package/AppxManifest.xml": "AppxManifest.xml",
+      "../package/AppxManifest.sparse.xml": "AppxManifest.sparse.xml",
+      "../package/Images/": "Images/",
+      "../register-identity.ps1": "register-identity.ps1"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "fuse3"
+        ]
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "cloudreve"
+        ]
+      }
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/Dvorinka/cloudreve/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIzRUE2QkM3NzJDQ0QxRjAKUldUdzBjeHl4MnZxSXloWjRaRmtqMXZkcXN1UlRYdk1PanliYis0WDlqWEdWczQ1RHZBcHMvV2cK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

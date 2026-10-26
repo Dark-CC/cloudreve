@@ -1,0 +1,77 @@
+[package]
+name = "cloudreve-desktop"
+version = "0.3.12"
+description = "Cloudreve Desktop Sync Client"
+authors = ["cloudreve"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+log = "0.4"
+tauri = { version = "2.11.0", features = ["protocol-asset", "tray-icon"] }
+tauri-plugin-log = "2"
+tokio = { version = "1.35", features = ["full"] }
+tracing = "0.1"
+anyhow = "1.0"
+rust-i18n = "3"
+sys-locale="0"
+base64 = "0.22"
+file_icon_provider = "1.0"
+showfile = "0.1"
+urlencoding = "2.1"
+
+# Main sync service crate
+cloudreve-sync = { path = "../crates/cloudreve-sync" }
+
+tauri-plugin-http = "~2.6"
+tauri-plugin-opener = "2"
+# Pinned: 2.6.2 fails to compile against rust-ini 0.21.x (its ParseOption
+# literal lacks fields upstream added). Unpin once tauri ships a compatible
+# release. Cargo.lock is gitignored, so CI resolves fresh on every run.
+tauri-plugin-deep-link = "=2.6.1"
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-prevent-default = "4"
+tauri-plugin-os = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-frame = "1.1.6"
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.58.0"
+features = [
+  "Foundation",
+  "Foundation_Collections",
+  "ApplicationModel",
+  "Management_Deployment",
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Registry",
+  "Win32_System_Threading",
+  "Win32_System_Com",
+  "Win32_Security",
+  "Win32_Security_Cryptography",
+]
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-positioner = { version = "2.3.2", features = ["tray-icon"] }
+
+[dev-dependencies]
+serial_test = "3"
