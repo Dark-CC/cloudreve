@@ -38,7 +38,7 @@ require (
 	github.com/jinzhu/gorm v1.9.11
 	github.com/jpillora/backoff v1.0.0
 	github.com/juju/ratelimit v1.0.1
-	github.com/ks3sdklib/aws-sdk-go v1.6.2
+	github.com/ks3sdklib/aws-sdk-go v1.12.1
 	github.com/lib/pq v1.10.9
 	github.com/meilisearch/meilisearch-go v0.36.0
 	github.com/mholt/archives v0.1.5
