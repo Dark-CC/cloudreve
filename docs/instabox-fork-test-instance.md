@@ -8,12 +8,12 @@
 |---|---|
 | 机器 | InstaBox `m_agqw5litn4acpbo7b5axu3ycku`（instabox-baixiong） |
 | 容器名 | `cloudreve-fork-test`（`--restart unless-stopped`） |
-| 镜像 | `ghcr.io/dvorinka/cloudreve:latest`（digest `sha256:1f794775…`，构建 V4.23.4 Commit #649864c，Pro=false） |
+| 镜像 | `cloudreve-fork:4.23.4-invfix2e1d5d79`（自建，含邀请码弹窗布局修复 `2e1d5d79`；二进制 sha256 `db17f972…97c359`；2026-10-27 前为 `ghcr.io/dvorinka/cloudreve:latest` digest `sha256:1f794775…`，该旧镜像仍在机上可回滚，构建管线与验收见 `docs/instabox-invfix-deploy/README.md`） |
 | 端口 | 容器内 5212 → 宿主机 `15212`（生产 5212 未受影响） |
 | 数据目录 | `/data/cloudreve-fork-test`（bind mount → 容器 `/cloudreve/data`，含 `cloudreve.db` 与 `conf.ini`） |
 | Docker data-root | `/data/docker`（新建 `/etc/docker/daemon.json`，此前 Docker 无任何容器，属安全改动） |
 | 公网访问 | https://15212-agqw5litn4acpbo7b5axu3ycku.instabox.tech（InstaBox 发布端口，不走机器公网 IP——InstaBox 机的 IP 不直接对外开这些端口） |
-| 初始管理员 | 首个注册用户自动成为管理员（v4 行为，见官方 docs/zh/overview/deploy/configure.md）。账号 `admin@fork-test.local`，登录页同密码登录 |
+| 初始管理员 | 首个注册用户自动成为管理员（v4 行为，见官方 docs/zh/overview/deploy/configure.md）。当前实际管理员 `123@qq.com`（Admin 组，登录后可进 `/admin`）；`admin@fork-test.local` 为部署时首注账号 |
 
 ## 管理员账号获取方式
 
@@ -38,8 +38,8 @@ sudo docker restart cloudreve-fork-test
 sudo docker stop cloudreve-fork-test
 sudo docker start cloudreve-fork-test
 
-# 更新到 fork 最新镜像
-sudo docker pull ghcr.io/dvorinka/cloudreve:latest
+# 更新到 fork 最新镜像（自建镜像管线，见 docs/instabox-invfix-deploy/README.md）
+# （官方 ghcr 镜像不含 fork 的二开改动，仅作回滚用）
 sudo docker stop cloudreve-fork-test && sudo docker rm cloudreve-fork-test
 sudo docker run -d --name cloudreve-fork-test --restart unless-stopped \
   -p 15212:5212 -v /data/cloudreve-fork-test:/cloudreve/data \
