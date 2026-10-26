@@ -30,7 +30,7 @@
     "@types/path-browserify": "^1.0.2",
     "@types/streamsaver": "^2.0.4",
     "@uiw/color-convert": "^2.1.1",
-    "@uiw/react-color-sketch": "^2.1.1",
+    "@uiw/react-color-sketch": "^2.10.3",
     "artplayer": "5.2.2",
     "artplayer-plugin-chapter": "^1.0.0",
     "artplayer-plugin-hls-control": "^1.0.1",
