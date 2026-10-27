@@ -77,7 +77,6 @@
       "sso_no_email": "Il provider di identità non ha restituito un indirizzo email.",
       "sso_account_unavailable": "Nessun account disponibile per questa identità. La registrazione potrebbe essere limitata."
     },
-    "browsePublicShares": "Sfoglia le condivisioni pubbliche",
     "inputBackupCode": "Inserisci uno dei tuoi codici di ripristino",
     "useBackupCode": "Usa un codice di ripristino invece",
     "use2FACode": "Usa il codice dell'autenticatore invece"
@@ -179,7 +178,7 @@
     "shop": "Negozio",
     "addAccount": "Aggiungi account",
     "signedOut": "Disconnesso",
-    "discover": "Scopri"
+    "discover": "Piazza di condivisione"
   },
   "fileManager": {
     "continueInDesktop": "Autorizzazione riuscita, continua nel client desktop.",

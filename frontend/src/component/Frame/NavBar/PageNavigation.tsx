@@ -1,4 +1,5 @@
 import { Icon as Iconify } from "@iconify/react";
+import { GridView, GridViewOutlined } from "@mui/icons-material";
 import { Box, SvgIconProps, useTheme } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon/SvgIcon";
 import { memo, useMemo } from "react";
@@ -22,8 +23,6 @@ import DataHistogram from "../../Icons/DataHistogram.tsx";
 import DataHistogramFilled from "../../Icons/DataHistogramFilled.tsx";
 import Folder from "../../Icons/Folder.tsx";
 import FolderOutlined from "../../Icons/FolderOutlined.tsx";
-import Globe from "../../Icons/Globe.tsx";
-import GlobeFilled from "../../Icons/GlobeFilled.tsx";
 import HomeOutlined from "../../Icons/HomeOutlined.tsx";
 import People from "../../Icons/People.tsx";
 import PeopleFilled from "../../Icons/PeopleFilled.tsx";
@@ -95,7 +94,9 @@ const ShopNavigationItem: NavigationItem = {
 // Public share directory — rendered for anonymous visitors too.
 const DiscoverNavigationItem: NavigationItem = {
   label: "navbar.discover",
-  icon: [GlobeFilled, Globe],
+  // 分享广场：GridView 表达“可浏览的集合/广场”，与页面卡片网格版式一致；
+  // Share 会与“我的分享”的 share 箭头图标撞图标，故不采用。
+  icon: [GridView, GridViewOutlined],
   path: "/discover",
 };
 

@@ -1,4 +1,4 @@
-import { Button, InputAdornment } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,23 +32,18 @@ const RedeemCodeInput = ({ onRedeemed }: RedeemCodeInputProps) => {
   };
 
   return (
-    <DenseFilledTextField
-      fullWidth
-      value={code}
-      onChange={(e) => setCode(e.target.value)}
-      placeholder={t("setting.giftCodePlaceholder")}
-      slotProps={{
-        input: {
-          endAdornment: (
-            <InputAdornment position="end">
-              <Button variant="contained" onClick={onRedeem} disabled={redeeming || !code.trim()}>
-                {t("setting.redeem")}
-              </Button>
-            </InputAdornment>
-          ),
-        },
-      }}
-    />
+    // 兑换按钮放在输入框右侧（同一行），而不是嵌在输入框内。
+    <Stack direction="row" spacing={1} alignItems="center">
+      <DenseFilledTextField
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder={t("setting.giftCodePlaceholder")}
+        sx={{ flexGrow: 1, minWidth: 0 }}
+      />
+      <Button variant="contained" onClick={onRedeem} disabled={redeeming || !code.trim()} sx={{ flexShrink: 0 }}>
+        {t("setting.redeem")}
+      </Button>
+    </Stack>
   );
 };
 

@@ -77,7 +77,6 @@
       "sso_no_email": "The identity provider did not return an email address.",
       "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
     },
-    "browsePublicShares": "Browse public shares",
     "inputBackupCode": "Enter one of your recovery codes",
     "useBackupCode": "Use a recovery code instead",
     "use2FACode": "Use authenticator code instead"
@@ -144,7 +143,7 @@
     "remoteDownload": "Remote Download",
     "connect": "Connect & Mount",
     "taskQueue": "Background Tasks",
-    "shop": "Shop",
+    "shop": "Store",
     "setting": "Settings",
     "videos": "Videos",
     "photos": "Photos",
@@ -176,7 +175,7 @@
     "dashboard": "Dashboard",
     "addAccount": "Add account",
     "signedOut": "Signed out",
-    "discover": "Discover"
+    "discover": "Share Plaza"
   },
   "fileManager": {
     "continueInDesktop": "Authorization successful, please continue in the desktop client.",

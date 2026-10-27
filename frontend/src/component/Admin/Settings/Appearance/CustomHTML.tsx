@@ -18,7 +18,6 @@ import Logo from "../../../Common/Logo";
 import DrawerHeader from "../../../Frame/NavBar/DrawerHeader";
 import { SideNavItemComponent } from "../../../Frame/NavBar/PageNavigation";
 import StorageSummary from "../../../Frame/NavBar/StorageSummary";
-import PoweredBy from "../../../Frame/PoweredBy";
 import CloudDownload from "../../../Icons/CloudDownload";
 import CloudDownloadOutlined from "../../../Icons/CloudDownloadOutlined";
 import CubeSync from "../../../Icons/CubeSync";
@@ -87,7 +86,6 @@ const HeadlessFooterPreview = ({ footer, bottom }: { footer?: string; bottom?: s
               </div>
             </Paper>
           </Box>
-          <PoweredBy />
           {footer && (
             <Box sx={{ mb: 2, width: "100%" }}>
               <div dangerouslySetInnerHTML={{ __html: footer }} />

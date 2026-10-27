@@ -77,7 +77,6 @@
       "sso_no_email": "Der Identitätsanbieter hat keine E-Mail-Adresse zurückgegeben.",
       "sso_account_unavailable": "Für diese Identität ist kein Konto verfügbar. Die Registrierung ist möglicherweise eingeschränkt."
     },
-    "browsePublicShares": "Öffentliche Freigaben durchsuchen",
     "inputBackupCode": "Einen Ihrer Wiederherstellungscodes eingeben",
     "useBackupCode": "Stattdessen Wiederherstellungscode verwenden",
     "use2FACode": "Stattdessen Authenticator-Code verwenden"
@@ -176,7 +175,7 @@
     "shop": "Shop",
     "addAccount": "Konto hinzufügen",
     "signedOut": "Abgemeldet",
-    "discover": "Entdecken"
+    "discover": "Share-Platz"
   },
   "fileManager": {
     "continueInDesktop": "Autorisierung erfolgreich, bitte fahren Sie im Desktop-Client fort.",

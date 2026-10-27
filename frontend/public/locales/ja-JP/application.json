@@ -77,7 +77,6 @@
       "sso_no_email": "認証プロバイダがメールアドレスを返しませんでした。",
       "sso_account_unavailable": "この認証情報に対応するアカウントがありません。登録が制限されている可能性があります。"
     },
-    "browsePublicShares": "公開共有を閲覧",
     "inputBackupCode": "リカバリーコードのいずれかを入力",
     "useBackupCode": "代わりにリカバリーコードを使用",
     "use2FACode": "代わりに認証コードを使用"
@@ -176,10 +175,10 @@
     "toLightMode": "ライト",
     "myProfile": "マイページ",
     "dashboard": "管理パネル",
-    "shop": "ショップ",
+    "shop": "ストア",
     "addAccount": "アカウントを追加",
     "signedOut": "ログアウトしました",
-    "discover": "発見"
+    "discover": "シェア広場"
   },
   "fileManager": {
     "continueInDesktop": "認証に成功しました。デスクトップクライアントで操作を続けてください。",

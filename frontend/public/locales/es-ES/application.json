@@ -77,7 +77,6 @@
       "sso_no_email": "El proveedor de identidad no devolvió una dirección de correo.",
       "sso_account_unavailable": "No hay ninguna cuenta disponible para esta identidad. Puede que el registro esté restringido."
     },
-    "browsePublicShares": "Explorar shares públicos",
     "inputBackupCode": "Introduce uno de tus códigos de recuperación",
     "useBackupCode": "Usar un código de recuperación en su lugar",
     "use2FACode": "Usar el código del autenticador en su lugar"
@@ -176,7 +175,7 @@
     "shop": "Tienda",
     "addAccount": "Añadir cuenta",
     "signedOut": "Sesión cerrada",
-    "discover": "Descubrir"
+    "discover": "Plaza de compartir"
   },
   "fileManager": {
     "continueInDesktop": "Autorización exitosa, por favor continúa en el cliente de escritorio.",

@@ -77,7 +77,6 @@
       "sso_no_email": "O provedor de identidade não retornou um endereço de e-mail.",
       "sso_account_unavailable": "Nenhuma conta disponível para essa identidade. O cadastro pode estar restrito."
     },
-    "browsePublicShares": "Navegar pelos compartilhamentos públicos",
     "inputBackupCode": "Digite um dos seus códigos de recuperação",
     "useBackupCode": "Usar um código de recuperação",
     "use2FACode": "Usar código do autenticador"
@@ -179,7 +178,7 @@
     "shop": "Loja",
     "addAccount": "Adicionar conta",
     "signedOut": "Desconectado",
-    "discover": "Descobrir"
+    "discover": "Praça de compartilhamento"
   },
   "fileManager": {
     "continueInDesktop": "Autorização bem-sucedida, continue no cliente desktop.",

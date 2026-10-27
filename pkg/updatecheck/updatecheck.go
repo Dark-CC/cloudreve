@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,17 +21,29 @@ import (
 
 const (
 	// ReleaseRepo is the GitHub repository releases are fetched from.
-	ReleaseRepo     = "Dark-CC/cloudreve"
-	releaseAPI      = "https://api.github.com/repos/" + ReleaseRepo + "/releases"
-	releaseTTL      = 6 * time.Hour
-	cacheKey        = "server_update_latest"
+	ReleaseRepo = "Dark-CC/cloudreve"
+	releaseTTL  = 6 * time.Hour
+	cacheKey    = "server_update_latest"
 	checkTimeout    = 15 * time.Second
 	downloadTimeout = 10 * time.Minute
 )
 
+// releaseAPI is a variable so tests can point it at a stub server.
+var releaseAPI = "https://api.github.com/repos/" + ReleaseRepo + "/releases"
+
+// CurrentVersion returns the running server version without the leading "v".
+func CurrentVersion() string {
+	return strings.TrimPrefix(constants.BackendVersion, "v")
+}
+
 // serverTag matches server release tags (v4.19.2, v4.19.2-rc1) and rejects the
 // desktop-v* / android-v* tag families living in the same repository.
 var serverTag = regexp.MustCompile(`^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
+
+// ErrNoRelease is returned when the repository exposes no server release at
+// all (e.g. every release has been deleted). Callers treat it as "already on
+// the latest version" instead of surfacing an error to the admin.
+var ErrNoRelease = errors.New("no server release found")
 
 func init() {
 	// Required for *ReleaseInfo to survive a round trip through the
@@ -104,7 +117,8 @@ func LatestRelease(ctx context.Context, kv cache.Driver) (*ReleaseInfo, error) {
 		}
 	}
 	if gh == nil {
-		return nil, fmt.Errorf("no server release found")
+		// Not cached: a later release must not stay hidden for releaseTTL.
+		return nil, ErrNoRelease
 	}
 
 	rel := &ReleaseInfo{
@@ -112,7 +126,7 @@ func LatestRelease(ctx context.Context, kv cache.Driver) (*ReleaseInfo, error) {
 		URL:         gh.HTMLURL,
 		Notes:       gh.Body,
 		PublishedAt: gh.PublishedAt,
-		Current:     strings.TrimPrefix(constants.BackendVersion, "v"),
+		Current:     CurrentVersion(),
 	}
 	rel.Newer = IsNewer(rel.Current, rel.Version)
 

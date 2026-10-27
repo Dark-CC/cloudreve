@@ -1856,7 +1856,11 @@ export function sendReset(uid: string, req: ResetPasswordService): ThunkResponse
 
 export function getServerUpdateInfo(): ThunkResponse<UpdateInfo> {
   return async (dispatch, _getState) => {
-    return await dispatch(send(`/admin/tool/update`, { method: "GET" }, { ...defaultOpts }));
+    // Background check: failures (offline, rate limit) must stay silent —
+    // the update banner simply does not appear.
+    return await dispatch(
+      send(`/admin/tool/update`, { method: "GET" }, { ...defaultOpts, bypassSnackbar: () => true }),
+    );
   };
 }
 

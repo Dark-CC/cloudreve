@@ -144,7 +144,7 @@ const Shop = () => {
         />
         <ResponsiveTabs value={tab} onChange={(_e, v) => setTab(v)} tabs={tabs} />
         {tab === ShopPageTab.Redeem && (
-          <Paper variant="outlined" sx={{ p: 2, maxWidth: 480 }}>
+          <Paper variant="outlined" sx={{ p: 2, maxWidth: 480, mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
               {t("setting.redeemGiftCode")}
             </Typography>

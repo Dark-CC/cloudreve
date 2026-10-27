@@ -23,26 +23,6 @@ export interface UserAvatarProps {
   [key: string]: any;
 }
 
-function stringToColor(string: string) {
-  let hash = 0;
-  let i;
-
-  /* eslint-disable no-bitwise */
-  for (i = 0; i < string.length; i += 1) {
-    hash = string.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  let color = "#";
-
-  for (i = 0; i < 3; i += 1) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += `00${value.toString(16)}`.slice(-2);
-  }
-  /* eslint-enable no-bitwise */
-
-  return color;
-}
-
 export const AnonymousUser: User = {
   id: "",
   nickname: "",
@@ -117,7 +97,8 @@ const UserAvatar = memo(
               {...bindHover(popupState)}
               sx={[
                 {
-                  bgcolor: loadedUser.nickname ? stringToColor(loadedUser.nickname) : grey[500],
+                  // 默认头像统一为灰底白字（昵称首字母），不再按昵称哈希取彩色。
+                  bgcolor: grey[500],
                   ...sx,
                 },
                 overwriteTextSize && {
