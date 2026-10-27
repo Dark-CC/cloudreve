@@ -3,6 +3,7 @@ import {
   Button,
   Chip,
   Collapse,
+  Container,
   Dialog,
   DialogActions,
   DialogContent,
@@ -213,8 +214,9 @@ const AbuseReportList = () => {
 
   return (
     <PageContainer>
-      <PageHeader title={t("nav.abuseReport")} />
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+      <Container maxWidth="xl">
+        <PageHeader title={t("nav.abuseReport")} />
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <DenseSelect
           size="small"
           value={status}
@@ -278,6 +280,7 @@ const AbuseReportList = () => {
           load();
         }}
       />
+      </Container>
     </PageContainer>
   );
 };

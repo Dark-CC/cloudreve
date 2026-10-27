@@ -15,6 +15,9 @@ import {
   Typography,
 } from "@mui/material";
 import { Grid2 } from "@mui/material";
+import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { Dayjs } from "dayjs";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -52,7 +55,7 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
   const [code, setCode] = useState("");
   const [groupId, setGroupId] = useState("");
   const [maxUses, setMaxUses] = useState("1");
-  const [expiresAt, setExpiresAt] = useState("");
+  const [expiresAt, setExpiresAt] = useState<Dayjs | null>(null);
 
   const fetchCodes = useCallback(
     (token?: string) => {
@@ -73,7 +76,7 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
       setCode("");
       setGroupId("");
       setMaxUses("1");
-      setExpiresAt("");
+      setExpiresAt(null);
       fetchCodes();
     }
   }, [open, fetchCodes]);
@@ -85,7 +88,7 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
         code: code || undefined,
         group_id: groupId ? parseInt(groupId) : undefined,
         max_uses: maxUses ? parseInt(maxUses) : undefined,
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+        expires_at: expiresAt ? expiresAt.toISOString() : undefined,
       }),
     )
       .then(() => {
@@ -144,12 +147,15 @@ const InvitationCodeDialog = ({ open, onClose }: InvitationCodeDialogProps) => {
               />
             </SettingForm>
             <SettingForm noContainer title={t("user.invitationCodeExpires")} lgWidth={2}>
-              <DenseFilledTextField
-                fullWidth
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-              />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DateTimePicker
+                  value={expiresAt}
+                  onChange={(newValue) => setExpiresAt(newValue)}
+                  slotProps={{
+                    textField: { fullWidth: true, size: "small" },
+                  }}
+                />
+              </LocalizationProvider>
             </SettingForm>
             <Grid2 size={{ xs: 12, md: 2 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
               <Button
