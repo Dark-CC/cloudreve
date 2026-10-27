@@ -6,7 +6,7 @@
 set -eu
 
 DIR="${1:-.}"
-IMAGE="ghcr.io/dvorinka/cloudreve:latest"
+IMAGE="ghcr.io/dark-cc/cloudreve:latest"
 
 for f in docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do
     if [ -f "$DIR/$f" ]; then COMPOSE_FILE="$DIR/$f"; break; fi

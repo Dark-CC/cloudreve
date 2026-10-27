@@ -318,7 +318,7 @@ const Home = () => {
               </Box>
               <Divider />
               <List component="nav" aria-label="main mailbox folders" sx={{ mx: 2 }}>
-                <ListItemButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve")}>
+                <ListItemButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve")}>
                   <ListItemIcon>
                     <HomeIcon />
                   </ListItemIcon>
@@ -327,7 +327,7 @@ const Home = () => {
                     <OpenFilled />
                   </StyledListItemIcon>
                 </ListItemButton>
-                <ListItemButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve#readme")}>
+                <ListItemButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve#readme")}>
                   <ListItemIcon>
                     <Book />
                   </ListItemIcon>
@@ -336,7 +336,7 @@ const Home = () => {
                     <OpenFilled />
                   </StyledListItemIcon>
                 </ListItemButton>
-                <ListItemButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve/issues")}>
+                <ListItemButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve/issues")}>
                   <ListItemIcon>
                     <CommentMultiple />
                   </ListItemIcon>
@@ -345,7 +345,7 @@ const Home = () => {
                     <OpenFilled />
                   </StyledListItemIcon>
                 </ListItemButton>
-                <ListItemButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve/releases")}>
+                <ListItemButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve/releases")}>
                   <ListItemIcon>
                     <GitHub />
                   </ListItemIcon>
@@ -369,14 +369,14 @@ const Home = () => {
                 {t("summary.aboutForkDes")}
               </Typography>
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <SecondaryButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve/issues")}>
+                <SecondaryButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve/issues")}>
                   {t("summary.reportIssue")}
                 </SecondaryButton>
-                <SecondaryButton onClick={() => window.open("https://github.com/Dvorinka/cloudreve/releases")}>
+                <SecondaryButton onClick={() => window.open("https://github.com/Dark-CC/cloudreve/releases")}>
                   {t("summary.releases")}
                 </SecondaryButton>
                 <SecondaryButton
-                  onClick={() => window.open("https://github.com/Dvorinka/cloudreve/blob/master/ROADMAP.md")}
+                  onClick={() => window.open("https://github.com/Dark-CC/cloudreve/blob/baixiong/ROADMAP.md")}
                 >
                   {t("summary.roadmap")}
                 </SecondaryButton>

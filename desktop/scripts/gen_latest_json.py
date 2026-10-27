@@ -28,7 +28,7 @@ PLATFORM_MAP = [
     ("aarch64.AppImage", "linux-aarch64"),
 ]
 
-REPO = "Dvorinka/cloudreve"
+REPO = "Dark-CC/cloudreve"
 
 
 def main() -> int:

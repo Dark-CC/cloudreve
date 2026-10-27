@@ -1,6 +1,6 @@
 services:
   cloudreve:
-    image: ghcr.io/dvorinka/cloudreve:latest
+    image: ghcr.io/dark-cc/cloudreve:latest
     container_name: cloudreve-backend
     depends_on:
       - postgresql

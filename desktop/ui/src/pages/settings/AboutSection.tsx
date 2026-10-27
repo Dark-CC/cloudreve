@@ -35,12 +35,12 @@ export default function AboutSection() {
     {
       icon: <GitHubIcon fontSize="small" />,
       label: "GitHub",
-      href: "https://github.com/Dvorinka/cloudreve",
+      href: "https://github.com/Dark-CC/cloudreve",
     },
     {
       icon: <BugReportIcon fontSize="small" />,
       label: t("about.reportIssue"),
-      href: "https://github.com/Dvorinka/cloudreve/issues",
+      href: "https://github.com/Dark-CC/cloudreve/issues",
     },
     {
       icon: <ForumIcon fontSize="small" />,

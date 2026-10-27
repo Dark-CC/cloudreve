@@ -35,8 +35,8 @@ Uninstalling the app removes all locally stored credentials and settings. Data o
 
 ## Source code
 
-The full source is auditable: https://github.com/Dvorinka/cloudreve
+The full source is auditable: https://github.com/Dark-CC/cloudreve
 
 ## Contact
 
-Open an issue at https://github.com/Dvorinka/cloudreve/issues
+Open an issue at https://github.com/Dark-CC/cloudreve/issues

@@ -8,8 +8,8 @@
 <h4 align="center">Self-hosted file management and sharing platform — fully open source, actively maintained.</h4>
 
 <p align="center">
-  <a href="https://github.com/Dvorinka/cloudreve/actions"><img src="https://img.shields.io/github/actions/workflow/status/Dvorinka/cloudreve/ci.yml?branch=master" alt="CI"></a>
-  <a href="https://github.com/Dvorinka/cloudreve/releases"><img src="https://img.shields.io/github/v/release/Dvorinka/cloudreve?include_prereleases" alt="Release"></a>
+  <a href="https://github.com/Dark-CC/cloudreve/actions"><img src="https://img.shields.io/github/actions/workflow/status/Dark-CC/cloudreve/ci.yml?branch=baixiong" alt="CI"></a>
+  <a href="https://github.com/Dark-CC/cloudreve/releases"><img src="https://img.shields.io/github/v/release/Dark-CC/cloudreve?include_prereleases" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="GPL-3.0"></a>
 </p>
 
@@ -23,9 +23,9 @@
 
 | | |
 |---|---|
-| **Server** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dvorinka/cloudreve:latest` — or a standalone binary from [Releases](https://github.com/Dvorinka/cloudreve/releases) |
-| **Desktop** | Windows/macOS/Linux sync client — on-demand files, Explorer share menu, in-app updates: [latest desktop release](https://github.com/Dvorinka/cloudreve/releases/latest) |
-| **Android** | Signed APK (sideload) and AAB (Play): [android-v1.1.0](https://github.com/Dvorinka/cloudreve/releases/tag/android-v1.1.0) |
+| **Server** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dark-cc/cloudreve:latest` — or a standalone binary from [Releases](https://github.com/Dark-CC/cloudreve/releases) |
+| **Desktop** | Windows/macOS/Linux sync client — on-demand files, Explorer share menu, in-app updates: [latest desktop release](https://github.com/Dark-CC/cloudreve/releases/latest) |
+| **Android** | Signed APK (sideload) and AAB (Play): [android-v1.1.0](https://github.com/Dark-CC/cloudreve/releases/tag/android-v1.1.0) |
 
 ## What this fork does differently
 
@@ -53,7 +53,7 @@ database first, as with any upgrade.
 **Docker Compose** — one command (backs up your compose file, swaps the image, restarts):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Dvorinka/cloudreve/master/migrate.sh | sh -s -- /path/to/compose/dir
+curl -sSL https://raw.githubusercontent.com/Dark-CC/cloudreve/baixiong/migrate.sh | sh -s -- /path/to/compose/dir
 ```
 
 Or edit `docker-compose.yml` by hand — only the image changes, everything else stays identical to
@@ -63,7 +63,7 @@ the [upstream compose setup](https://github.com/cloudreve/docker-compose):
  services:
    cloudreve:
 -    image: cloudreve/cloudreve:v4
-+    image: ghcr.io/dvorinka/cloudreve:latest
++    image: ghcr.io/dark-cc/cloudreve:latest
 ```
 
 ```bash
@@ -76,16 +76,16 @@ docker compose pull && docker compose up -d
 docker stop cloudreve && docker rm cloudreve
 docker run -d --name cloudreve --restart unless-stopped \
   -p 5212:5212 -v backend_data:/cloudreve/data \
-  ghcr.io/dvorinka/cloudreve:latest
+  ghcr.io/dark-cc/cloudreve:latest
 ```
 
 **Binary** — stop the service, drop in the binary from
-[Releases](https://github.com/Dvorinka/cloudreve/releases), start. Your `data/` directory
+[Releases](https://github.com/Dark-CC/cloudreve/releases), start. Your `data/` directory
 (SQLite, uploads, `conf.ini`) is untouched.
 
 Notes:
 
-- Tags: `latest` / `slim` track the newest release; pin `ghcr.io/dvorinka/cloudreve:v4.20.0` for
+- Tags: `latest` / `slim` track the newest release; pin `ghcr.io/dark-cc/cloudreve:v4.20.0` for
   reproducibility. Slim drops aria2, LibreOffice, ffmpeg, and font/media tooling.
 - `CR_LICENSE_KEY` has no effect — Pro-class features are reimplemented as free features; the key
   is simply ignored.
@@ -172,8 +172,8 @@ Known limitations and the full plan: [ROADMAP.md](ROADMAP.md) · issue tracker h
 
 This project is community-maintained and contributions are genuinely welcome — code, translations,
 bug reports, ideas, documentation, testing, anything. If something is broken or missing,
-[open an issue](https://github.com/Dvorinka/cloudreve/issues) — every report gets looked at.
-If you want to fix it yourself, open a PR against `master`; CI must pass before merge.
+[open an issue](https://github.com/Dark-CC/cloudreve/issues) — every report gets looked at.
+If you want to fix it yourself, open a PR against `baixiong`; CI must pass before merge.
 
 This project only moves forward because people care enough to use it and report what they find.
 Thank you for being part of that.
