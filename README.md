@@ -8,7 +8,7 @@
 <h4 align="center">自托管文件管理与分享平台 — 完全开源，持续维护中。</h4>
 
 > 原仓库是 [cloudreve/cloudreve](https://github.com/cloudreve/cloudreve) 的原创作者积极维护分支。</P>
-> 本仓库是 [Dvorinka/cloudreve](https://github.com/Dvorinka/cloudreve) 的分支，目前由熊掌维护和更新并且支持新功能，修复了原分支的一些BUG和UI错位问题，交流群：[telegram](https://t.me/FullStackCloud)</P>
+> 本仓库是 [Dvorinka/cloudreve](https://github.com/Dvorinka/cloudreve) 的分支，目前由熊掌维护和更新并且支持新功能，修复了Dvorinka分支的一些BUG和UI错位问题，交流群：[Telegram](https://t.me/FullStackCloud)</P>
 > 所有原始工作归属 Cloudreve 原作者（cloudreve.org）。由于上游开发放缓，本分支将项目延续为
 > **完整、完全开源的发行版**：后端、Web 前端、Windows/macOS/Linux 桌面客户端以及原生 Android
 > 应用，并将所有 “Pro” 级功能以自由软件方式重新实现。署名说明见 [NOTICE](NOTICE)。
