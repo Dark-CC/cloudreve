@@ -4,192 +4,115 @@
     <img alt="Cloudreve" src="desktop/ui/src/assets/logo.svg" width="380">
   </picture>
 </p>
-<h3 align="center">Community Fork</h3>
-<h4 align="center">Self-hosted file management and sharing platform — fully open source, actively maintained.</h4>
+<h3 align="center">社区维护分支 - 熊掌版</h3>
+<h4 align="center">自托管文件管理与分享平台 — 完全开源，持续维护中。</h4>
 
-<p align="center">
-  <a href="https://github.com/Dark-CC/cloudreve/actions"><img src="https://img.shields.io/github/actions/workflow/status/Dark-CC/cloudreve/ci.yml?branch=baixiong" alt="CI"></a>
-  <a href="https://github.com/Dark-CC/cloudreve/releases"><img src="https://img.shields.io/github/v/release/Dark-CC/cloudreve?include_prereleases" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="GPL-3.0"></a>
-</p>
+> 原仓库是 [cloudreve/cloudreve](https://github.com/cloudreve/cloudreve) 的原创作者积极维护分支。</P>
+> 本仓库是 [Dvorinka/cloudreve](https://github.com/Dvorinka/cloudreve) 的分支，目前由熊掌维护和更新并且支持新功能，修复了Dvorinka分支的一些BUG和UI错位问题，交流群：[Telegram](https://t.me/FullStackCloud)</P>
+> 所有原始工作归属 Cloudreve 原作者（cloudreve.org）。由于上游开发放缓，本分支将项目延续为
+> **完整、完全开源的发行版**：后端、Web 前端、Windows/macOS/Linux 桌面客户端以及原生 Android
+> 应用，并将所有 “Pro” 级功能以自由软件方式重新实现。署名说明见 [NOTICE](NOTICE)。
 
-> **This is an actively maintained fork of [cloudreve/cloudreve](https://github.com/cloudreve/cloudreve).**
-> All original work is by the Cloudreve authors (cloudreve.org). This fork exists because upstream
-> development had slowed: it continues the project as a **complete, fully open-source distribution** —
-> backend, web frontend, desktop clients for Windows/macOS/Linux, and a native Android app — with every
-> "Pro"-class feature reimplemented as free software. See [NOTICE](NOTICE) for attribution.
-
-## Downloads
+## 下载
 
 | | |
 |---|---|
-| **Server** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dark-cc/cloudreve:latest` — or a standalone binary from [Releases](https://github.com/Dark-CC/cloudreve/releases) |
-| **Desktop** | Windows/macOS/Linux sync client — on-demand files, Explorer share menu, in-app updates: [latest desktop release](https://github.com/Dark-CC/cloudreve/releases/latest) |
-| **Android** | Signed APK (sideload) and AAB (Play): [android-v1.1.0](https://github.com/Dark-CC/cloudreve/releases/tag/android-v1.1.0) |
+| **服务端** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dark-cc/cloudreve:latest` — 或从 [Releases](https://github.com/Dark-CC/cloudreve/releases) 获取独立二进制 |
+| **桌面端** | Windows/macOS/Linux 同步客户端 — 按需文件、资源管理器分享菜单、应用内更新：[最新桌面版](https://github.com/Dark-CC/cloudreve/releases/latest) |
+| **Android** | 已签名 APK（侧载）与 AAB（Play）：[android-v1.1.0](https://github.com/Dark-CC/cloudreve/releases/tag/android-v1.1.0) |
 
-## What this fork does differently
+## 与上游的差异
 
-- **No Pro tier.** The upsell UI (`ProChip`/`ProDialog`) is removed. Pro-class capabilities are being
-  reimplemented as open features: share collaboration (upload/edit/preview-only/drop-box shares),
-  OIDC SSO, delegated admin roles — already shipped.
-- **Upstream issue backlog triaged and fixed.** All 137 migrated upstream issues are tracked in this
-  repo's issue tracker; ~70% are closed. WebDAV mounts/read-only/collision handling, stuck uploads,
-  recycle-bin fail-safes, SQLite WAL, MySQL `parseTime`, unix-socket migrations, and dozens more.
-- **Security hardening on top of upstream's fixes.** OAuth public clients no longer ship hardcoded
-  secrets (PKCE only, per RFC 8252); SSRF validation on remote-download URLs; delegated-admin access
-  is audit-logged; auth endpoints are rate-limited; the downloader layer was reviewed for process
-  execution and path-safety.
-- **One monorepo.** Backend + frontend + desktop + Android live here; no submodules.
-- **Tests and CI are real.** GitHub Actions run backend tests, frontend typecheck/build, and the
-  desktop matrix (Windows/macOS/Linux) on every PR.
+- **无 Pro 分层。** 已移除付费引导 UI（`ProChip`/`ProDialog`）；Pro 级功能以开源方式重新实现：
+  分享协作（可上传/可编辑/仅预览/投递箱分享）、OIDC SSO、委派管理员已落地。
+- **上游 issue 积压已分类修复。** 137 个迁移 issue 全部在本仓库跟踪，约 70% 已关闭，包括
+  WebDAV 挂载/只读/冲突处理、上传卡死、回收站保护、SQLite WAL、MySQL `parseTime`、
+  unix socket 迁移等。
+- **在上游修复之上的安全加固。** OAuth 公共客户端不再内置硬编码密钥（仅 PKCE，符合 RFC 8252）；
+  离线下载 URL 做 SSRF 校验；委派管理员操作记入审计日志；认证端点限流。
+- **单仓 monorepo。** 后端、前端、桌面端、Android 端同仓管理，无 submodule。
+- **测试与 CI 真实运行。** 每个 PR 执行后端测试、前端类型检查/构建、桌面端三平台构建。
 
-## Migrating from upstream Cloudreve
+## 仓库结构
 
-This fork is a drop-in replacement: same schema lineage (4.19.x → 4.20.x), same `/cloudreve/data`
-volume layout, same `CR_CONF_*` env vars, same port 5212. Existing accounts, files, shares, and settings
-carry over — schema migrations run automatically on first boot. Back up your data volume and
-database first, as with any upgrade.
+```
+.                    Go 后端 — Gin + ent ORM（SQLite/MySQL/PostgreSQL）
+frontend/            Web 前端 — React + TypeScript + Vite + MUI（已内嵌，无 submodule）
+desktop/             桌面客户端 — Tauri/Rust 同步引擎（Windows cfapi、Linux FUSE；
+                     macOS 接入在路线图中）
+android/             原生 Android 客户端 — Kotlin + Jetpack Compose（v1.1.0 已发布）
+.github/workflows/   CI（后端、前端、桌面端矩阵）+ 发布流水线
+```
 
-**Docker Compose** — one command (backs up your compose file, swaps the image, restarts):
+## 功能
+
+- 存储端：本地、远程节点、S3 兼容、OneDrive、OSS、COS、Qiniu、Upyun、KS3、OBS。
+- 客户端与存储端直传；分块、断点续传、并行上传。
+- 离线下载：aria2、qBittorrent、**yt-dlp** 三种提供方，多节点、按节点配置，
+  用户组级并发/体积配额。
+- 分享链接：过期时间、仅上传投递箱、在线编辑、仅预览、匿名上传、IP 限制访问。
+- 压缩包解压/打包、媒体元数据提取、元数据/标签检索。
+- 全存储端 WebDAV（本分支修复了只读用户组的权限执行问题）。
+- SSO：通用 OIDC 接入（授权码 + nonce、JWKS 校验、自动开户）、OAuth 公共客户端 PKCE、
+  Passkey、TOTP 两步验证。
+- 多用户多用户组；管理员任务列表支持 CIDR 创建者 IP 过滤；按用户回收站保留期；
+  按用户组离线下载配额。
+- 预览：图片（缩略图渐进加载到原图）、视频、音频、ePub、Markdown、图表、Office 文档、3D 模型。
+- PWA、深色模式、多语言、主题自定义、自定义 HTML 注入。
+- 桌面客户端：按需占位同步（Windows cfapi、Linux FUSE），资源管理器右键菜单
+  FileCloud 式分享对话框，应用内自动更新。
+- 服务端自更新：管理员可在后台一键升级。
+
+## 从源码构建
+
+依赖：Go ≥ 1.24、Node ≥ 20 + Yarn、（桌面端）Rust + Tauri 平台依赖。
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Dark-CC/cloudreve/baixiong/migrate.sh | sh -s -- /path/to/compose/dir
-```
-
-Or edit `docker-compose.yml` by hand — only the image changes, everything else stays identical to
-the [upstream compose setup](https://github.com/cloudreve/docker-compose):
-
-```diff
- services:
-   cloudreve:
--    image: cloudreve/cloudreve:v4
-+    image: ghcr.io/dark-cc/cloudreve:latest
-```
-
-```bash
-docker compose pull && docker compose up -d
-```
-
-**Plain docker** — same flags, new image:
-
-```bash
-docker stop cloudreve && docker rm cloudreve
-docker run -d --name cloudreve --restart unless-stopped \
-  -p 5212:5212 -v backend_data:/cloudreve/data \
-  ghcr.io/dark-cc/cloudreve:latest
-```
-
-**Binary** — stop the service, drop in the binary from
-[Releases](https://github.com/Dark-CC/cloudreve/releases), start. Your `data/` directory
-(SQLite, uploads, `conf.ini`) is untouched.
-
-Notes:
-
-- Tags: `latest` / `slim` track the newest release; pin `ghcr.io/dark-cc/cloudreve:v4.20.0` for
-  reproducibility. Slim drops aria2, LibreOffice, ffmpeg, and font/media tooling.
-- `CR_LICENSE_KEY` has no effect — Pro-class features are reimplemented as free features; the key
-  is simply ignored.
-- Migration is supported from upstream ≤ 4.19.x. If you run a newer upstream than our latest
-  release, wait for the next tag rather than downgrading the schema.
-
-## Repository layout
-
-```
-.                    Go backend — Gin + ent ORM (SQLite/MySQL/PostgreSQL)
-frontend/            Web SPA — React + TypeScript + Vite + MUI (vendored, no submodule)
-desktop/             Desktop client — Tauri/Rust sync engine (Windows cfapi, Linux FUSE;
-                     macOS hydration on the roadmap)
-android/             Native Android client — Kotlin + Jetpack Compose (v1.1.0 shipped)
-cli/                 Terminal client — TypeScript CLI on @cloudreve/sdk (vendored from
-                     cloudreve/cli; build with `bun install && bun run build`, binary: `cr`)
-docs/                Documentation site — VitePress, EN + ZH (vendored from cloudreve/docs;
-                     `npm ci && npm run dev`, build with `npm run build`)
-.github/workflows/   CI (backend, frontend, desktop matrix) + release pipeline
-```
-
-## Features
-
-- Storage providers: local, remote node, S3-compatible, OneDrive, OSS, COS, Qiniu, Upyun, KS3, OBS.
-- Direct upload/download between client and storage; chunked, resumable, parallel uploads.
-- Remote download: aria2, qBittorrent, **and yt-dlp** providers, multi-node with per-node settings,
-  group-level concurrent/size quotas.
-- Share links with expiration — plus fork additions: upload-only drop boxes, edit-in-place,
-  preview-only mode, anonymous upload, IP-restricted views.
-- Archive compress/extract, media metadata extraction, metadata/tag search.
-- WebDAV across all storage providers (read-only group enforcement fixed in this fork).
-- SSO: generic OIDC inbound consumer (auth-code + nonce, JWKS-verified, auto-provisioning),
-  OAuth public clients with PKCE, passkeys, TOTP 2FA.
-- Multi-user, multi-group; admin task list with CIDR-capable creator-IP filtering; per-user trash
-  retention; per-group remote-download quotas.
-- Preview: image (progressive thumbnail→full-res), video, audio, ePub, Markdown, diagrams,
-  Office documents (WOPI), 3D models.
-- PWA, dark mode, i18n (en-US, zh-CN, and more), theme customization, custom HTML injection.
-- Desktop client: on-demand placeholder sync (Windows cfapi, Linux FUSE), FileCloud-style share
-  dialog from the Explorer right-click menu, in-app self-updates.
-- Server self-update: admins can upgrade in place from the dashboard.
-
-## Build from source
-
-Prereqs: Go ≥ 1.24, Node ≥ 20 + Yarn, (desktop) Rust + platform Tauri deps.
-
-```bash
-# Frontend
+# 前端
 cd frontend && yarn install
-NODE_OPTIONS=--max-old-space-size=6144 yarn build   # emits build/ consumed by the Go embed
+NODE_OPTIONS=--max-old-space-size=6144 yarn build   # 产物由 Go embed 打包
 
-# Backend (repo root) — the binary serves frontend + API on :5212
+# 后端（仓库根目录）— 二进制同时托管前端与 API，监听 :5212
 go build -o cloudreve .
 ./cloudreve
 ```
 
-Desktop client: see `desktop/CLAUDE.md` (`cargo tauri build`, Windows-first; other platforms WIP).
+桌面客户端见 `desktop/CLAUDE.md`（`cargo tauri build`，Windows 优先）。
 
-## Development
+## 开发
 
 ```bash
-go build ./... && go vet ./... && go test ./...          # backend gate
-cd frontend && yarn tsc --noEmit && yarn build           # frontend gate
+go build ./... && go vet ./... && go test ./...          # 后端门禁
+cd frontend && yarn tsc --noEmit && yarn build           # 前端门禁
 ```
 
-`docker-compose.dev.yml` brings up postgres + redis + a source-built backend; `yarn dev` gives
-frontend hot reload. PRs land via feature branches — never push to `master` — and must pass all CI
-jobs before merge.
+`docker-compose.dev.yml` 可启动 postgres + redis + 源码构建的后端；`yarn dev` 提供前端热更新。
+PR 一律走功能分支，禁止直接推送 `master`，合并前必须通过全部 CI。
 
-## Status scorecard
+## 状态一览
 
-| Area | State |
+| 领域 | 状态 |
 |---|---|
-| Backend / frontend | Stable — 4.20.x line, all CI green |
-| Upstream issues | ~70% of the 137 migrated issues closed; remainder are feature-scale, Pro-surface, or device-bound |
-| Code health | desloppify strict score 77.1 (was 18.9); 73 review items dispositioned |
-| Desktop client | Shipped for Windows (cfapi sync + Explorer share menu) and Linux (FUSE hydration); in-app updater live |
-| Android client | Shipped — v1.1.0 signed APK/AAB on Releases |
-| Pro-free features | Share collaboration ✓, OIDC SSO ✓, delegated admins ✓; storage-policy migration, VAS/billing, audit surface in progress |
+| 后端 / 前端 | 稳定 — 4.20.x 基线，CI 全绿 |
+| 上游 issue | 137 个迁移 issue 约 70% 已关闭；其余为大型功能、Pro 表面或依赖设备 |
+| 代码健康 | desloppify 严格分 77.1（原 18.9）；73 项评审全部处置 |
+| 桌面客户端 | 已发布 Windows（cfapi 同步 + 资源管理器分享菜单）与 Linux（FUSE 按需加载）；应用内更新已上线 |
+| Android 客户端 | 已发布 — v1.1.0 已签名 APK/AAB，见 Releases |
+| Pro 免费化 | 分享协作 ✓、OIDC SSO ✓、委派管理员 ✓；存储策略迁移、VAS/计费、审计界面进行中 |
 
-Known limitations and the full plan: [ROADMAP.md](ROADMAP.md) · issue tracker has honest per-issue status.
+完整计划与已知限制见 [ROADMAP.md](ROADMAP.md)；issue 跟踪器中每项均有真实状态说明。
 
-## Contributing
+## 安全
 
-This project is community-maintained and contributions are genuinely welcome — code, translations,
-bug reports, ideas, documentation, testing, anything. If something is broken or missing,
-[open an issue](https://github.com/Dark-CC/cloudreve/issues) — every report gets looked at.
-If you want to fix it yourself, open a PR against `baixiong`; CI must pass before merge.
+请通过本仓库 GitHub 的 “Report a vulnerability” 私下报告漏洞，勿开公开 issue。
+上游已公布的 16 个 GHSA 在本基线均已修复；新增改动合并前均经 SSRF、路径穿越、
+进程执行与会话熵审查。
 
-This project only moves forward because people care enough to use it and report what they find.
-Thank you for being part of that.
+## 致谢
 
-## Security
+Cloudreve 由 **Aaron Liu 及 Cloudreve 贡献者** 创建（cloudreve.org）。本分支是在同一
+GPL-3.0 许可下的独立延续 — 署名而非背书。完整声明见 [NOTICE](NOTICE)。
 
-Report vulnerabilities privately via GitHub's "Report a vulnerability" on this repo — do not open a
-public issue. All 16 published upstream GHSAs are patched at our baseline; our own additions are
-reviewed for SSRF, path traversal, process execution, and session entropy before merge.
+## 许可证
 
-## Credits
-
-Cloudreve was created by **Aaron Liu and the Cloudreve contributors** (cloudreve.org). This fork is
-an independent continuation under the same GPL-3.0 license — attribution, not endorsement. See
-[NOTICE](NOTICE) for the full attribution statement.
-
-## License
-
-[GPL-3.0](LICENSE) — same as upstream. Contributions are licensed identically.
+[GPL-3.0](LICENSE) — 与上游一致，贡献按同一许可提交。
