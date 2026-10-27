@@ -2,6 +2,7 @@ import {
   Box,
   Chip,
   Collapse,
+  Container,
   IconButton,
   Stack,
   Table,
@@ -109,8 +110,9 @@ const EventList = () => {
 
   return (
     <PageContainer>
-      <PageHeader title={t("nav.events")} />
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+      <Container maxWidth="xl">
+        <PageHeader title={t("nav.events")} />
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <DenseSelect
           size="small"
           value={type}
@@ -163,6 +165,7 @@ const EventList = () => {
         onRowsPerPageChange={(size) => setPageSize(size.toString())}
         onChange={(_e, value) => setPage(value.toString())}
       />
+      </Container>
     </PageContainer>
   );
 };

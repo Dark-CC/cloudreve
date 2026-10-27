@@ -1,4 +1,4 @@
-import { Stack } from "@mui/material";
+import { Grid2 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,11 +30,11 @@ const ManualCreditAdjust = () => {
   };
 
   return (
-    <Stack spacing={2} direction={{ xs: "column", lg: "row" }} alignItems={{ lg: "flex-end" }}>
-      <SettingForm title={t("vas.adjustEmail")} lgWidth={4}>
+    <Grid2 container spacing={1} sx={{ width: "100%", alignItems: "flex-end" }}>
+      <SettingForm noContainer title={t("vas.adjustEmail")} lgWidth={4}>
         <DenseFilledTextField fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
       </SettingForm>
-      <SettingForm title={t("vas.adjustDelta")} lgWidth={3}>
+      <SettingForm noContainer title={t("vas.adjustDelta")} lgWidth={3}>
         <DenseFilledTextField
           fullWidth
           type="number"
@@ -43,13 +43,20 @@ const ManualCreditAdjust = () => {
         />
         <NoMarginHelperText>{t("vas.adjustDeltaDes")}</NoMarginHelperText>
       </SettingForm>
-      <SettingForm title={t("vas.adjustNote")} lgWidth={4}>
+      <SettingForm noContainer title={t("vas.adjustNote")} lgWidth={4}>
         <DenseFilledTextField fullWidth value={des} onChange={(e) => setDes(e.target.value)} />
       </SettingForm>
-      <SecondaryButton variant="contained" onClick={onSubmit} disabled={submitting || !email.trim() || delta === 0}>
-        {t("vas.adjustSubmit")}
-      </SecondaryButton>
-    </Stack>
+      <Grid2 size={{ xs: 12, lg: 1 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <SecondaryButton
+          variant="contained"
+          onClick={onSubmit}
+          disabled={submitting || !email.trim() || delta === 0}
+          sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          {t("vas.adjustSubmit")}
+        </SecondaryButton>
+      </Grid2>
+    </Grid2>
   );
 };
 
