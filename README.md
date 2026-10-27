@@ -4,7 +4,7 @@
     <img alt="Cloudreve" src="desktop/ui/src/assets/logo.svg" width="380">
   </picture>
 </p>
-<h3 align="center">社区维护分支</h3>
+<h3 align="center">社区维护分支 - 熊掌版</h3>
 <h4 align="center">自托管文件管理与分享平台 — 完全开源，持续维护中。</h4>
 
 > 原仓库是 [cloudreve/cloudreve](https://github.com/cloudreve/cloudreve) 的原创作者积极维护分支。
