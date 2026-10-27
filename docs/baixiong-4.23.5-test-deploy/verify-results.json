@@ -1,0 +1,77 @@
+[
+  {
+    "name": "登录 Admin 组",
+    "ok": true,
+    "detail": "group=Admin"
+  },
+  {
+    "name": "task 表格包在 Container(maxWidth xl) 内",
+    "ok": true,
+    "detail": "container=x=241 w=1342 | table x=266 w=1292"
+  },
+  {
+    "name": "event 表格包在 Container(maxWidth xl) 内",
+    "ok": true,
+    "detail": "container=x=241 w=1342 | table x=266 w=1292"
+  },
+  {
+    "name": "abuse 表格包在 Container(maxWidth xl) 内",
+    "ok": true,
+    "detail": "container=x=241 w=1342 | table x=266 w=1292"
+  },
+  {
+    "name": "event/abuse/task 三页表格几何一致",
+    "ok": true,
+    "detail": "x: task=266 event=266 abuse=266 | w: task=1292 event=1292 abuse=1292"
+  },
+  {
+    "name": "表格几何与修复标准一致 (x≈266, w≈1292 @1600px)",
+    "ok": true,
+    "detail": "task x=266 w=1292"
+  },
+  {
+    "name": "弹窗约 900px 宽且水平居中",
+    "ok": true,
+    "detail": "w=900 center=800"
+  },
+  {
+    "name": "四字段单行排列、底部对齐、无挤压(≥100px, 修复前会挤压换行)",
+    "ok": true,
+    "detail": "bottoms=[433.6,431.6,433.6,433.6] widths=[code=207 group=207 maxUses=135.3 expires=135.3]"
+  },
+  {
+    "name": "「新建」按钮与字段底对齐",
+    "ok": true,
+    "detail": "btn bottom=433.6 fields bottom=433.6"
+  },
+  {
+    "name": "过期时间为 MUI DateTimePicker（非原生 datetime-local）",
+    "ok": true,
+    "detail": "日历图标按钮=true input type=text"
+  },
+  {
+    "name": "点击「过期时间」弹出 MUI 日历面板",
+    "ok": true,
+    "detail": "MuiPickersLayout 可见, calendar=true"
+  },
+  {
+    "name": "VAS 找到 3 个字段",
+    "ok": true,
+    "detail": "[\"text@383.3px\",\"number@285.5px\",\"text@383.3px\"]"
+  },
+  {
+    "name": "VAS 三字段单行、块底对齐、宽度正常(≥250px, 修复前 52/69px)",
+    "ok": true,
+    "detail": "widths=[383.3,285.5,383.3] blockBottoms=[1949.9,1949.9,1949.9] 按钮底对齐=true (Apply)"
+  },
+  {
+    "name": "移动端 event 页无横向溢出",
+    "ok": true,
+    "detail": "overflow=0px"
+  },
+  {
+    "name": "无页面 JS 错误",
+    "ok": true,
+    "detail": ""
+  }
+]
