@@ -175,10 +175,10 @@
     "toLightMode": "라이트",
     "myProfile": "개인 프로필",
     "dashboard": "관리 패널",
-    "shop": "샵",
+    "shop": "스토어",
     "addAccount": "계정 추가",
     "signedOut": "로그아웃됨",
-    "discover": "발견"
+    "discover": "공유 광장"
   },
   "fileManager": {
     "continueInDesktop": "인증 성공, 데스크톱 클라이언트에서 계속하세요.",

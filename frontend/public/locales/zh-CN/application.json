@@ -143,7 +143,7 @@
     "remoteDownload": "离线下载",
     "connect": "连接与挂载",
     "taskQueue": "后台任务",
-    "shop": "商城",
+    "shop": "购买商城",
     "setting": "设置",
     "videos": "视频",
     "photos": "图片",
@@ -175,7 +175,7 @@
     "dashboard": "管理面板",
     "addAccount": "添加账号",
     "signedOut": "已退出登录",
-    "discover": "发现"
+    "discover": "分享广场"
   },
   "fileManager": {
     "continueInDesktop": "授权成功，请在桌面客户端中继续操作。",

@@ -175,10 +175,10 @@
     "toLightMode": "ライト",
     "myProfile": "マイページ",
     "dashboard": "管理パネル",
-    "shop": "ショップ",
+    "shop": "ストア",
     "addAccount": "アカウントを追加",
     "signedOut": "ログアウトしました",
-    "discover": "発見"
+    "discover": "シェア広場"
   },
   "fileManager": {
     "continueInDesktop": "認証に成功しました。デスクトップクライアントで操作を続けてください。",

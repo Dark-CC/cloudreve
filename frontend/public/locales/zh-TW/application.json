@@ -175,10 +175,10 @@
     "toLightMode": "淺色",
     "myProfile": "個人主頁",
     "dashboard": "管理面板",
-    "shop": "商城",
+    "shop": "購買商城",
     "addAccount": "新增賬號",
     "signedOut": "已退出登入",
-    "discover": "發現"
+    "discover": "分享廣場"
   },
   "fileManager": {
     "continueInDesktop": "授權成功，請在桌面客戶端中繼續操作。",

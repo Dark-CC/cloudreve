@@ -118,7 +118,7 @@ const NewGroupDialog = ({ open, onClose }: NewGroupDialogProps) => {
                     copyFromSrc.current = g;
                   }}
                   emptyValue={"0"}
-                  emptyText={"group.notCopy"}
+                  emptyText={t("group.notCopy")}
                 />
               </FormControl>
             </SettingForm>
