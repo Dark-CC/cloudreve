@@ -16,7 +16,7 @@ than behind a license key.
 
 ## Workflow
 
-1. Branch from `master` — never push to `master` directly.
+1. Branch from `baixiong` — never push to `master` directly.
 2. Keep changes idiomatic: Gin + ent on the backend, React + MUI + Redux conventions in `frontend/`,
    existing provider/interface seams over new abstractions.
 3. Run the pre-push gate, all of it:
@@ -24,7 +24,7 @@ than behind a license key.
    - `cd frontend && yarn tsc --noEmit && yarn build` (use `NODE_OPTIONS=--max-old-space-size=6144`
      if Vite hits the default heap limit)
    - Boot the binary and smoke the endpoints you touched.
-4. Open the PR against `Dvorinka/cloudreve` `master` and wait for all CI jobs (backend, frontend,
+4. Open the PR against `Dark-CC/cloudreve` `baixiong` and wait for all CI jobs (backend, frontend,
    desktop matrix) to go green.
 
 ## Style notes

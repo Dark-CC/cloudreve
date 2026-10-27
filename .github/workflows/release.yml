@@ -4,7 +4,10 @@ name: Release
 #   - server binaries + archives + checksums (GoReleaser) + GHCR docker images
 #   - desktop bundles: Linux .deb/.AppImage, Windows NSIS .exe, macOS .dmg/.app.tar.gz
 #   - Android release APK + AAB (signed with ANDROID_KEYSTORE_* secrets when set)
+# Desktop and Android jobs are gated behind the DESKTOP_RELEASES / ANDROID_RELEASES
+# repository variables (plus their signing secrets); server releases always run.
 # The desktop-* / android-v* tags still exist for platform-only releases.
+# The release body is taken from docs/release-notes/<tag>.md (enforced below).
 on:
   push:
     tags: ['v*']
@@ -24,6 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify release notes exist
+        run: |
+          NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ ! -f "$NOTES" ]; then
+            echo "::error::Release notes missing: $NOTES. Every release tag must ship docs/release-notes/<tag>.md"
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -44,11 +54,21 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          # Release body comes from the checked-in notes file so every release
+          # ships a hand-written changelog (docs/release-notes/<tag>.md).
+          args: release --clean --release-notes docs/release-notes/${{ github.ref_name }}.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   desktop:
+    # Desktop bundles embed a Tauri updater signature (createUpdaterArtifacts),
+    # which hard-requires the TAURI_SIGNING_PRIVATE_KEY secret, and the Windows
+    # sparse identity package needs SPARSE_SIGNING_PFX_*. Since this fork's
+    # repository starts without those secrets, the whole job is gated behind a
+    # repository variable instead: set vars.DESKTOP_RELEASES=enabled (plus the
+    # signing secrets) to turn desktop releases on. Server releases are not
+    # affected.
+    if: vars.DESKTOP_RELEASES == 'enabled'
     strategy:
       fail-fast: false
       matrix:
@@ -84,7 +104,7 @@ jobs:
       # cloudreve-identity.cer and the NSIS hook (installer-hooks.nsh) files
       # them into $INSTDIR when present. Same step as desktop-release.yml.
       - name: Build signed sparse identity package
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.SPARSE_SIGNING_PFX_BASE64 != ''
         shell: pwsh
         env:
           SPARSE_SIGNING_PFX_BASE64: ${{ secrets.SPARSE_SIGNING_PFX_BASE64 }}
@@ -165,6 +185,10 @@ jobs:
           gh release upload "$TAG" latest.json --clobber
 
   android:
+    # Release APK/AAB need the ANDROID_KEYSTORE_* secrets; without them Gradle
+    # falls back to a debug signature, which should not ship in a release.
+    # Gate behind vars.ANDROID_RELEASES=enabled (plus the keystore secrets).
+    if: vars.ANDROID_RELEASES == 'enabled'
     runs-on: ubuntu-latest
     defaults:
       run:

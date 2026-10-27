@@ -20,7 +20,7 @@ import (
 
 const (
 	// ReleaseRepo is the GitHub repository releases are fetched from.
-	ReleaseRepo     = "Dvorinka/cloudreve"
+	ReleaseRepo     = "Dark-CC/cloudreve"
 	releaseAPI      = "https://api.github.com/repos/" + ReleaseRepo + "/releases"
 	releaseTTL      = 6 * time.Hour
 	cacheKey        = "server_update_latest"

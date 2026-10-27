@@ -4,7 +4,7 @@ pkgver=0.2.0
 pkgrel=1
 pkgdesc='Cloudreve Desktop Sync Client'
 arch=('x86_64')
-url='https://github.com/Dvorinka/cloudreve'
+url='https://github.com/Dark-CC/cloudreve'
 license=('MIT')
 # Arch's global makepkg.conf may enable LTO. The Rust `ring` crate embeds
 # native C/ASM objects in its rlib, and rust-lld can fail to link those objects
@@ -27,7 +27,7 @@ makedepends=(
 )
 # The desktop sources live in the desktop/ subdirectory of the monorepo.
 # Until desktop release tags exist, build from the pinned master snapshot.
-source=("${pkgname}::git+https://github.com/Dvorinka/cloudreve.git")
+source=("${pkgname}::git+https://github.com/Dark-CC/cloudreve.git")
 sha256sums=('SKIP')
 
 prepare() {
