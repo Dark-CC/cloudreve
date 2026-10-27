@@ -45,7 +45,7 @@ tauri-plugin-opener = "2"
 # release. Cargo.lock is gitignored, so CI resolves fresh on every run.
 tauri-plugin-deep-link = "=2.6.1"
 tauri-plugin-dialog = "2.7.1"
-tauri-plugin-prevent-default = "4"
+tauri-plugin-prevent-default = "6"
 tauri-plugin-os = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-frame = "1.1.6"
