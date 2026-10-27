@@ -16,9 +16,9 @@
 
 | | |
 |---|---|
-| **服务端** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dvorinka/cloudreve:latest` — 或从 [Releases](https://github.com/Dvorinka/cloudreve/releases) 获取独立二进制 |
-| **桌面端** | Windows/macOS/Linux 同步客户端 — 按需文件、资源管理器分享菜单、应用内更新：[最新桌面版](https://github.com/Dvorinka/cloudreve/releases/latest) |
-| **Android** | 已签名 APK（侧载）与 AAB（Play）：[android-v1.1.0](https://github.com/Dvorinka/cloudreve/releases/tag/android-v1.1.0) |
+| **服务端** | `docker run -d -p 5212:5212 -v backend_data:/cloudreve/data ghcr.io/dark-cc/cloudreve:latest` — 或从 [Releases](https://github.com/Dark-CC/cloudreve/releases) 获取独立二进制 |
+| **桌面端** | Windows/macOS/Linux 同步客户端 — 按需文件、资源管理器分享菜单、应用内更新：[最新桌面版](https://github.com/Dark-CC/cloudreve/releases/latest) |
+| **Android** | 已签名 APK（侧载）与 AAB（Play）：[android-v1.1.0](https://github.com/Dark-CC/cloudreve/releases/tag/android-v1.1.0) |
 
 ## 与上游的差异
 

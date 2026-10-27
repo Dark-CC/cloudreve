@@ -18,4 +18,4 @@ FEATURES
 OPEN SOURCE
 Fully open source — audit the code, self-host the server, own your data.
 
-Requires a self-hosted Cloudreve server (v4+). Source code and documentation: https://github.com/Dvorinka/cloudreve
+Requires a self-hosted Cloudreve server (v4+). Source code and documentation: https://github.com/Dark-CC/cloudreve

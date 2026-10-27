@@ -26,7 +26,7 @@ type UpdateInfo = {
 
 type Phase = "checking" | "available" | "downloading" | "ready" | "uptodate" | "error";
 
-const RELEASES_URL = "https://github.com/Dvorinka/cloudreve/releases";
+const RELEASES_URL = "https://github.com/Dark-CC/cloudreve/releases";
 
 export default function Update() {
   const { t } = useTranslation();

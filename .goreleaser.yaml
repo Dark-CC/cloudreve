@@ -91,7 +91,7 @@ dockers:
       - .build/aria2.supervisor.conf
       - .build/entrypoint.sh
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-amd64"
   - dockerfile: Dockerfile
     use: buildx
     build_flag_templates:
@@ -103,7 +103,7 @@ dockers:
       - .build/aria2.supervisor.conf
       - .build/entrypoint.sh
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-arm64"
   - dockerfile: Dockerfile.slim
     use: buildx
     build_flag_templates:
@@ -113,7 +113,7 @@ dockers:
     goarch: amd64
     goamd64: v1
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-amd64"
   - dockerfile: Dockerfile.slim
     use: buildx
     build_flag_templates:
@@ -122,26 +122,26 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-arm64"
 
 docker_manifests:
-  - name_template: "ghcr.io/dvorinka/cloudreve:latest"
+  - name_template: "ghcr.io/dark-cc/cloudreve:latest"
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/dvorinka/cloudreve:v4"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dark-cc/cloudreve:v4"
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dark-cc/cloudreve:{{ .Tag }}"
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/dvorinka/cloudreve:slim"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dark-cc/cloudreve:slim"
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
-  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-arm64"
+  - name_template: "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim"
     image_templates:
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
-      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dark-cc/cloudreve:{{ .Tag }}-slim-arm64"

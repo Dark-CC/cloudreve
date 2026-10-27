@@ -1,6 +1,6 @@
 # Cloudreve Fork — Analysis & Roadmap
 
-Fork: `Dvorinka/cloudreve` · Upstream: `cloudreve/cloudreve` · Baseline: `4.19.1` (exact upstream HEAD, zero divergence)
+Fork: `Dark-CC/cloudreve` · Upstream: `cloudreve/cloudreve` · Baseline: `4.19.1` (exact upstream HEAD, zero divergence)
 
 Original work by the Cloudreve authors (cloudreve.org). This fork continues it as a fully open-source project — every "Pro" feature reimplemented and free, desktop client on all platforms, native Android app.
 
@@ -90,7 +90,7 @@ All 22 reference shots vendored to `output/playwright/pro-features/`. What each 
 
 ### 1.4 Org repo decisions — **monorepo**
 
-Everything ships from `Dvorinka/cloudreve`. No submodules, no sibling repos.
+Everything ships from `Dark-CC/cloudreve`. No submodules, no sibling repos.
 
 ```
 cloudreve/           Go backend (existing code, repo root)

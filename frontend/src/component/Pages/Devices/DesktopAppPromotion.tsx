@@ -62,7 +62,7 @@ const DesktopAppPromotion = () => {
             <Button
               variant="contained"
               size="large"
-              href="https://github.com/Dvorinka/cloudreve/releases/latest"
+              href="https://github.com/Dark-CC/cloudreve/releases/latest"
               target="_blank"
               rel="noopener noreferrer"
               startIcon={<ArrowDown />}
