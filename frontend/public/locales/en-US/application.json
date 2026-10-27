@@ -77,7 +77,6 @@
       "sso_no_email": "The identity provider did not return an email address.",
       "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
     },
-    "browsePublicShares": "Browse public shares",
     "inputBackupCode": "Enter one of your recovery codes",
     "useBackupCode": "Use a recovery code instead",
     "use2FACode": "Use authenticator code instead"

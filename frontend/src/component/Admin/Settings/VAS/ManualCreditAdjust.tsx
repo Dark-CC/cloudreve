@@ -30,7 +30,7 @@ const ManualCreditAdjust = () => {
   };
 
   return (
-    <Grid2 container spacing={1} sx={{ width: "100%", alignItems: "flex-end" }}>
+    <Grid2 container spacing={1} sx={{ width: "100%", alignItems: "flex-start" }}>
       <SettingForm noContainer title={t("vas.adjustEmail")} lgWidth={4}>
         <DenseFilledTextField fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
       </SettingForm>
@@ -46,7 +46,8 @@ const ManualCreditAdjust = () => {
       <SettingForm noContainer title={t("vas.adjustNote")} lgWidth={4}>
         <DenseFilledTextField fullWidth value={des} onChange={(e) => setDes(e.target.value)} />
       </SettingForm>
-      <Grid2 size={{ xs: 12, lg: 1 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
+      {/* alignSelf center: 与输入框行垂直居中（顶对齐后字段块因 helper 文案高度不一，按钮在行内居中恰好对齐输入框） */}
+      <Grid2 size={{ xs: 12, lg: 1 }} sx={{ display: "flex", justifyContent: "flex-end", alignSelf: { lg: "center" } }}>
         <SecondaryButton
           variant="contained"
           onClick={onSubmit}

@@ -80,7 +80,6 @@
       "sso_no_email": "Le fournisseur d'identité n'a pas renvoyé d'adresse e-mail.",
       "sso_account_unavailable": "Aucun compte n'est disponible pour cette identité. L'inscription est peut-être restreinte."
     },
-    "browsePublicShares": "Parcourir les partages publics",
     "inputBackupCode": "Saisissez l'un de vos codes de récupération",
     "useBackupCode": "Utiliser un code de récupération à la place",
     "use2FACode": "Utiliser le code de l'authentificateur à la place"

@@ -77,7 +77,6 @@
       "sso_no_email": "Dostawca tożsamości nie zwrócił adresu e-mail.",
       "sso_account_unavailable": "Brak dostępnego konta dla tej tożsamości. Rejestracja może być ograniczona."
     },
-    "browsePublicShares": "Przeglądaj udostępnienia publiczne",
     "inputBackupCode": "Wpisz jeden z kodów odzyskiwania",
     "useBackupCode": "Użyj kodu odzyskiwania",
     "use2FACode": "Użyj kodu z authenticatora"

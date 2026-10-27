@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -33,7 +34,17 @@ func (service *UpdateCheckService) Check(c *gin.Context) (*UpdateCheckResult, er
 	dep := dependency.FromContext(c)
 	rel, err := updatecheck.LatestRelease(c, dep.KV())
 	if err != nil {
-		return nil, serializer.NewError(serializer.CodeParamErr, "Failed to check for updates: "+err.Error(), err)
+		if errors.Is(err, updatecheck.ErrNoRelease) {
+			// No server release exists at all — treat as up to date instead of
+			// surfacing an error to the admin dashboard.
+			rel = &updatecheck.ReleaseInfo{
+				Version: updatecheck.CurrentVersion(),
+				Current: updatecheck.CurrentVersion(),
+				Newer:   false,
+			}
+		} else {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Failed to check for updates: "+err.Error(), err)
+		}
 	}
 	ok, reason := updatecheck.SelfUpdateSupported()
 	return &UpdateCheckResult{
@@ -55,6 +66,10 @@ func (service *UpdateApplyService) Apply(c *gin.Context) (*updatecheck.ReleaseIn
 	dep := dependency.FromContext(c)
 	rel, err := updatecheck.LatestRelease(c, dep.KV())
 	if err != nil {
+		if errors.Is(err, updatecheck.ErrNoRelease) {
+			// Nothing to apply — same answer as running the latest version.
+			return nil, serializer.NewError(serializer.CodeParamErr, "Already on the latest version", nil)
+		}
 		return nil, serializer.NewError(serializer.CodeParamErr, "Failed to check for updates: "+err.Error(), err)
 	}
 	if !rel.Newer {

@@ -77,7 +77,6 @@
       "sso_no_email": "身份提供方未返回郵箱地址。",
       "sso_account_unavailable": "此身份沒有可用賬號，註冊可能受限。"
     },
-    "browsePublicShares": "瀏覽公開分享",
     "inputBackupCode": "請輸入您的備用恢復程式碼",
     "useBackupCode": "改用備用恢復程式碼",
     "use2FACode": "改用驗證器驗證碼"
