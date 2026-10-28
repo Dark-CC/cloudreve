@@ -938,9 +938,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Canal de paiement personnalisé",
+    "providerUnsupported": "Nécessite la prise en charge du backend"
   },
   "giftCodes": {
     "giftCodesSettings": "Codes cadeaux",
@@ -1977,15 +1978,7 @@
     "trafficSize": "Quantité de trafic (octets)",
     "trafficSizeDes": "Octets de trafic en lien direct accordés à l'achat ; les packs sont permanents.",
     "subAddressChars": "Caractères de sous-adresse",
-    "subAddressCharsDes": "Caractères traités comme séparateurs de sous-adresse dans la partie locale de l'e-mail (ex. <code>+-.</code> pour les alias de type Gmail/iCloud). Vide par défaut à <code>+</code>.",
-    "manualAdjust": "Ajustement manuel des crédits",
-    "adjustEmail": "E-mail de l'utilisateur",
-    "adjustDelta": "Changement de points",
-    "adjustDeltaDes": "Positif ajoute des crédits, négatif en déduit",
-    "adjustNote": "Note",
-    "adjustSubmit": "Appliquer",
-    "adjustSuccess": "Crédits ajustés",
-    "adjustFailed": "Échec de l'ajustement des crédits"
+    "subAddressCharsDes": "Caractères traités comme séparateurs de sous-adresse dans la partie locale de l'e-mail (ex. <code>+-.</code> pour les alias de type Gmail/iCloud). Vide par défaut à <code>+</code>."
   },
   "pro": {
     "title": "Fonctionnalités exclusives de la version Pro",

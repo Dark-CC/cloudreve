@@ -937,9 +937,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Custom payment channel",
+    "providerUnsupported": "Requires backend support"
   },
   "giftCodes": {
     "giftCodesSettings": "Gift Codes",
@@ -1975,15 +1976,7 @@
     "appForum": "User forum URL",
     "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid.",
     "subAddressChars": "Sub-address characters",
-    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>.",
-    "manualAdjust": "Manual Credit Adjustment",
-    "adjustEmail": "User Email",
-    "adjustDelta": "Points Change",
-    "adjustDeltaDes": "Positive adds credits, negative deducts",
-    "adjustNote": "Note",
-    "adjustSubmit": "Apply",
-    "adjustSuccess": "Credits adjusted",
-    "adjustFailed": "Failed to adjust credits"
+    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>."
   },
   "pro": {
     "title": "Pro edition exclusive features",

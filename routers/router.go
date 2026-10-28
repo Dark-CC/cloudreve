@@ -1435,12 +1435,6 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.FromUri[adminsvc.SingleGiftCodeService](adminsvc.SingleGiftCodeParamCtx{}),
 						controllers.AdminDeleteGiftCode,
 					)
-					// 手动调整用户积分
-					vas.POST("credit",
-						middleware.RequiredScopes(types.ScopeAdminWrite),
-						controllers.FromJSON[adminsvc.AdjustCreditService](adminsvc.AdjustCreditParamCtx{}),
-						controllers.AdminAdjustCredit,
-					)
 					// 列出商品
 					vas.GET("sku",
 						controllers.FromQuery[adminsvc.SkuListService](adminsvc.SkuListParamCtx{}),

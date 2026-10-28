@@ -1,17 +1,13 @@
 package admin
 
 import (
-	"errors"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
-	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
-	"github.com/cloudreve/Cloudreve/v4/inventory/types"
-	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
 )
@@ -55,14 +51,6 @@ type (
 		ID int `uri:"id" json:"id" binding:"required"`
 	}
 	SingleGiftCodeParamCtx struct{}
-
-	// AdjustCreditService performs a manual balance adjustment on a user.
-	AdjustCreditService struct {
-		Email string `json:"email" binding:"required,email"`
-		Delta int64  `json:"delta" binding:"required"`
-		Des   string `json:"des" binding:"omitempty,max=255"`
-	}
-	AdjustCreditParamCtx struct{}
 
 	GiftCodeListResponse struct {
 		Codes []*ent.GiftCode `json:"codes"`
@@ -153,25 +141,5 @@ func (service *SingleSkuService) Delete(c *gin.Context) error {
 	if err := dependency.FromContext(c).VasClient().DeleteSkus(c, []int{service.ID}); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete product", err)
 	}
-	return nil
-}
-
-func (service *AdjustCreditService) Create(c *gin.Context) error {
-	dep := dependency.FromContext(c)
-
-	target, err := dep.UserClient().GetByEmail(c, service.Email)
-	if err != nil {
-		return serializer.NewError(serializer.CodeNotFound, "User not found", err)
-	}
-
-	if err := dep.VasClient().CreditAdjust(c, target.ID, service.Delta, credittxn.TypeAdjust, "", service.Des); err != nil {
-		if errors.Is(err, inventory.ErrInsufficientPoints) {
-			return serializer.NewError(serializer.CodeParamErr, "Adjustment would overdraw the balance", err)
-		}
-		return serializer.NewError(serializer.CodeDBError, "Failed to adjust credits", err)
-	}
-
-	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventPointsChange,
-		activity.Extra(map[string]any{"target_user": target.ID, "delta": service.Delta, "des": service.Des}))
 	return nil
 }

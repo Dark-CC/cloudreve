@@ -122,6 +122,11 @@ func normalizeSlug(c *gin.Context, dep dependency.Dep, raw *string, existedID in
 // Upsert 创建或更新分享
 func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, error) {
 	dep := dependency.FromContext(c)
+
+	// Paid shares need the credit system switched on.
+	if service.PricePoints > 0 && !dep.SettingProvider().ScoreEnabled(c) {
+		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Credit system is disabled", nil)
+	}
 	user := inventory.UserFromContext(c)
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()

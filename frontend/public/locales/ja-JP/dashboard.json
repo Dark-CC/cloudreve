@@ -937,9 +937,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "カスタム決済チャネル",
+    "providerUnsupported": "バックエンドの対応が必要です"
   },
   "giftCodes": {
     "giftCodesSettings": "ギフトコード",
@@ -1975,15 +1976,7 @@
     "trafficSize": "トラフィック量 (バイト)",
     "trafficSizeDes": "購入時に付与される直接リンクトラフィックのバイト数。パックは永久です。",
     "subAddressChars": "サブアドレス文字",
-    "subAddressCharsDes": "メールのローカル部でサブアドレス区切りとして扱う文字 (例: Gmail/iCloud風エイリアスには <code>+-.</code>)。空だと既定の <code>+</code> になります。",
-    "manualAdjust": "手動クレジット調整",
-    "adjustEmail": "ユーザーのメール",
-    "adjustDelta": "ポイント変動",
-    "adjustDeltaDes": "正の値でクレジット追加、負の値で減算",
-    "adjustNote": "メモ",
-    "adjustSubmit": "適用",
-    "adjustSuccess": "クレジットを調整しました",
-    "adjustFailed": "クレジットの調整に失敗しました"
+    "subAddressCharsDes": "メールのローカル部でサブアドレス区切りとして扱う文字 (例: Gmail/iCloud風エイリアスには <code>+-.</code>)。空だと既定の <code>+</code> になります。"
   },
   "pro": {
     "title": "Pro版限定機能",

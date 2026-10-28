@@ -111,9 +111,17 @@ type SiteConfig struct {
 	ShopNav bool `json:"shop_nav"`
 
 	// PaymentEnabled exposes whether cash checkout (Stripe) is configured.
-	// PaymentCurrency is the charge currency used for SKU cash prices.
-	PaymentEnabled  bool   `json:"payment_enabled,omitempty"`
-	PaymentCurrency string `json:"payment_currency,omitempty"`
+	// PaymentCurrency is the charge currency used for SKU cash prices;
+	// Mark/Unit let clients render prices in the site-wide display currency.
+	PaymentEnabled     bool   `json:"payment_enabled,omitempty"`
+	PaymentCurrency    string `json:"payment_currency,omitempty"`
+	PaymentCurrencyMark string `json:"payment_currency_mark,omitempty"`
+	PaymentCurrencyUnit int    `json:"payment_currency_unit,omitempty"`
+
+	// ScoreEnabled reports whether the credit system is on: paid shares can
+	// be created and purchased with credits. No omitempty: the default is
+	// enabled, so an explicit false must serialize.
+	ScoreEnabled bool `json:"score_enabled"`
 
 	//EmailActive          bool      `json:"emailActive"`
 	//QQLogin              bool      `json:"QQLogin"`
@@ -295,6 +303,9 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		AbuseCaptcha:               settings.AbuseCaptchaEnabled(c),
 		PaymentEnabled:             paymentCfg.Enabled && paymentCfg.SecretKey != "",
 		PaymentCurrency:            paymentCfg.Currency,
+		PaymentCurrencyMark:        paymentCfg.CurrencyMark,
+		PaymentCurrencyUnit:        paymentCfg.CurrencyUnit,
+		ScoreEnabled:               settings.ScoreEnabled(c),
 		UploadDedup:                settings.DBFS(c).DedupScope != "off",
 		TaskNodes:                  taskNodes,
 		AllowSelectNode:            allowSelect,

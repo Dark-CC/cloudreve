@@ -938,9 +938,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Canale di pagamento personalizzato",
+    "providerUnsupported": "Richiede il supporto del backend"
   },
   "giftCodes": {
     "giftCodesSettings": "Codici Regalo",
@@ -1977,15 +1978,7 @@
     "trafficSize": "Quantità di traffico (byte)",
     "trafficSizeDes": "Byte di traffico a link diretto concessi all'acquisto; i pacchetti sono permanenti.",
     "subAddressChars": "Caratteri sotto-indirizzo",
-    "subAddressCharsDes": "Caratteri trattati come separatori di sotto-indirizzo nella parte locale dell'email (es. <code>+-.</code> per alias stile Gmail/iCloud). Vuoto predefinito a <code>+</code>.",
-    "manualAdjust": "Rettifica manuale crediti",
-    "adjustEmail": "Email utente",
-    "adjustDelta": "Cambio punti",
-    "adjustDeltaDes": "Positivo aggiunge crediti, negativo li deduce",
-    "adjustNote": "Nota",
-    "adjustSubmit": "Applica",
-    "adjustSuccess": "Crediti rettificati",
-    "adjustFailed": "Rettifica crediti non riuscita"
+    "subAddressCharsDes": "Caratteri trattati come separatori di sotto-indirizzo nella parte locale dell'email (es. <code>+-.</code> per alias stile Gmail/iCloud). Vuoto predefinito a <code>+</code>."
   },
   "pro": {
     "title": "Funzioni esclusive della versione Pro",

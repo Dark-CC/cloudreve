@@ -938,9 +938,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Пользовательский платёжный канал",
+    "providerUnsupported": "Требуется поддержка на сервере"
   },
   "giftCodes": {
     "giftCodesSettings": "Подарочные коды",
@@ -1977,15 +1978,7 @@
     "trafficSize": "Объём трафика (байт)",
     "trafficSizeDes": "Байты трафика прямых ссылок, начисляемые при покупке; пакеты бессрочные.",
     "subAddressChars": "Символы подадреса",
-    "subAddressCharsDes": "Символы, считающиеся разделителями подадреса в локальной части email (например, <code>+-.</code> для алиасов в стиле Gmail/iCloud). Пусто по умолчанию — <code>+</code>.",
-    "manualAdjust": "Ручная корректировка баллов",
-    "adjustEmail": "Email пользователя",
-    "adjustDelta": "Изменение баллов",
-    "adjustDeltaDes": "Положительное значение добавляет баллы, отрицательное — списывает",
-    "adjustNote": "Заметка",
-    "adjustSubmit": "Применить",
-    "adjustSuccess": "Баллы скорректированы",
-    "adjustFailed": "Не удалось скорректировать баллы"
+    "subAddressCharsDes": "Символы, считающиеся разделителями подадреса в локальной части email (например, <code>+-.</code> для алиасов в стиле Gmail/iCloud). Пусто по умолчанию — <code>+</code>."
   },
   "pro": {
     "title": "Функции Pro-версии",

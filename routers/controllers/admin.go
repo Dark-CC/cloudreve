@@ -324,15 +324,6 @@ func AdminDeleteGiftCode(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
-func AdminAdjustCredit(c *gin.Context) {
-	service := ParametersFromContext[*admin.AdjustCreditService](c, admin.AdjustCreditParamCtx{})
-	err := service.Create(c)
-	if respondErr(c, err) {
-		return
-	}
-	c.JSON(200, serializer.Response{})
-}
-
 func AdminListSkus(c *gin.Context) {
 	service := ParametersFromContext[*admin.SkuListService](c, admin.SkuListParamCtx{})
 	res, err := service.List(c)

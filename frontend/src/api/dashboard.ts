@@ -739,12 +739,6 @@ export interface CreateGiftCodeService {
   des?: string;
 }
 
-export interface AdjustCreditService {
-  email: string;
-  delta: number;
-  des?: string;
-}
-
 export type AbuseTargetType = "share" | "user";
 export type AbuseReportStatus = "open" | "resolved" | "dismissed";
 

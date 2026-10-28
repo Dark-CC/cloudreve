@@ -937,9 +937,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "أليباي",
+    "providerCustom": "قناة دفع مخصصة",
+    "providerUnsupported": "يتطلب دعم الخادم"
   },
   "giftCodes": {
     "giftCodesSettings": "رموز الهدايا",
@@ -1975,15 +1976,7 @@
     "trafficSize": "كمية الحركة (بايت)",
     "trafficSizeDes": "بايتات حركة الروابط المباشرة الممنوحة عند الشراء؛ الحزم دائمة.",
     "subAddressChars": "أحرف العنوان الفرعي",
-    "subAddressCharsDes": "أحرف تُعامل كفواصل عنوان فرعي في الجزء المحلي من البريد (مثل <code>+-.</code> لأسماء Gmail/iCloud المستعارة). الفارغ يفترض <code>+</code>.",
-    "manualAdjust": "تعديل يدوي للنقاط",
-    "adjustEmail": "بريد المستخدم",
-    "adjustDelta": "تغيير النقاط",
-    "adjustDeltaDes": "الموجب يضيف نقاطًا، السالب يخصم",
-    "adjustNote": "ملاحظة",
-    "adjustSubmit": "تطبيق",
-    "adjustSuccess": "تم تعديل النقاط",
-    "adjustFailed": "تعذّر تعديل النقاط"
+    "subAddressCharsDes": "أحرف تُعامل كفواصل عنوان فرعي في الجزء المحلي من البريد (مثل <code>+-.</code> لأسماء Gmail/iCloud المستعارة). الفارغ يفترض <code>+</code>."
   },
   "pro": {
     "title": "ميزات حصرية للإصدار الاحترافي",
