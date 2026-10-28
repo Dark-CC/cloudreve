@@ -703,8 +703,8 @@
     "shareTargetsCount_few": "{{count}} cele",
     "shareTargetsCount_many": "{{count}} celów",
     "shareTargetsCount_other": "{{count}} celu",
-    "publicListing": "W katalogu publicznym",
-    "publicListingDes": "Pokaż to udostępnienie na stronie Odkrywaj, widoczne dla każdego, w tym anonimowych odwiedzających. Niedostępne dla udostępnień chronionych hasłem.",
+    "publicListing": "Opublikuj w Galerii udostępnień",
+    "publicListingDes": "Pokaż to udostępnienie w Galerii udostępnień, widoczne dla każdego, w tym anonimowych odwiedzających. Niedostępne dla udostępnień chronionych hasłem.",
     "hideReadme": "Ukryj plik readme",
     "hideReadmeDes": "Nie pokazuj samego pliku README na liście udostępnienia. Odwiedzający nadal widzą wyrenderowany readme.",
     "dontAskAgain": "Nie pytaj ponownie",
@@ -1243,6 +1243,6 @@
   "discover": {
     "searchPlaceholder": "Szukaj w udostępnieniach publicznych",
     "empty": "Brak publicznych udostępnień",
-    "emptyDescription": "Udostępnienia pojawiają się tutaj, gdy ich właściciele opublikują je w katalogu publicznym."
+    "emptyDescription": "Udostępnienia pojawiają się tutaj, gdy ich właściciele opublikują je w Galerii udostępnień."
   }
 }

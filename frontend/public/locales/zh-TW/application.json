@@ -704,8 +704,8 @@
     "shareTargets": "分享物件",
     "shareTargetsCount_one": "已選擇 {{count}} 個專案",
     "shareTargetsCount_other": "已選擇 {{count}} 個專案",
-    "publicListing": "收錄到公開目錄",
-    "publicListingDes": "將此分享顯示在“發現”頁，任何人（包括未登入訪客）可見。帶密碼的分享不可用。",
+    "publicListing": "公開到分享廣場",
+    "publicListingDes": "將此分享顯示在「分享廣場」，任何人（包括未登入訪客）可見。帶密碼的分享不可用。",
     "hideReadme": "隱藏 README 檔案",
     "hideReadmeDes": "在分享檔案列表中隱藏 README 檔案本身，訪客仍可看到渲染後的說明內容。",
     "dontAskAgain": "不再詢問",
@@ -1242,6 +1242,6 @@
   "discover": {
     "searchPlaceholder": "搜尋公開分享",
     "empty": "尚無公開分享",
-    "emptyDescription": "當分享擁有者將其列入公開目錄時，分享會顯示在這裡。"
+    "emptyDescription": "當分享擁有者將其公開到分享廣場時，分享會顯示在這裡。"
   }
 }

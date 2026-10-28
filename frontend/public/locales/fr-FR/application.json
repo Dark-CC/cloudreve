@@ -756,8 +756,8 @@
     "shareTargets": "Cibles du partage",
     "shareTargetsCount_one": "{{count}} cible",
     "shareTargetsCount_other": "{{count}} cibles",
-    "publicListing": "Lister dans le répertoire public",
-    "publicListingDes": "Afficher ce partage sur la page Découvrir, visible par tous, y compris les visiteurs anonymes. Non disponible pour les partages protégés par mot de passe.",
+    "publicListing": "Publier sur la Place de partage",
+    "publicListingDes": "Afficher ce partage sur la Place de partage, visible par tous, y compris les visiteurs anonymes. Non disponible pour les partages protégés par mot de passe.",
     "hideReadme": "Masquer le fichier readme",
     "hideReadmeDes": "Garder le fichier README hors de la liste du partage. Les visiteurs voient toujours le readme rendu.",
     "dontAskAgain": "Ne plus demander",
@@ -1432,6 +1432,6 @@
   "discover": {
     "searchPlaceholder": "Rechercher des partages publics",
     "empty": "Aucun partage public pour le moment",
-    "emptyDescription": "Les partages apparaissent ici lorsque leurs propriétaires les publient dans le répertoire public."
+    "emptyDescription": "Les partages apparaissent ici lorsque leurs propriétaires les publient sur la Place de partage."
   }
 }

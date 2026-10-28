@@ -1496,7 +1496,7 @@
     "weightedPolicies": "Selección ponderada de políticas",
     "weightedPoliciesDes": "Cuando está activado, las subidas sin preferencia explícita de política se enrutan a la política permitida con más capacidad libre que quepa el archivo. Solo se ponderan las políticas con límite de capacidad total.",
     "sharePublicList": "Directorio público de shares",
-    "sharePublicListDes": "Cuando está activado, los usuarios pueden incluir sus enlaces de share en el directorio público (página Descubrir). Los shares protegidos con contraseña no se pueden listar."
+    "sharePublicListDes": "Cuando está activado, los usuarios pueden publicar sus enlaces de share en la Plaza de compartir. Los shares protegidos con contraseña no se pueden publicar."
   },
   "user": {
     "createdAt": "Creado en",

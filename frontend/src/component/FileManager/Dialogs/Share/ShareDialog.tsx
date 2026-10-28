@@ -14,9 +14,15 @@ import AutoHeight from "../../../Common/AutoHeight.tsx";
 import { FilledTextField, SmallFormControlLabel } from "../../../Common/StyledComponents.tsx";
 import DraggableDialog from "../../../Dialogs/DraggableDialog.tsx";
 import CopyOutlined from "../../../Icons/CopyOutlined.tsx";
+import SettingsOutlined from "../../../Icons/SettingsOutlined.tsx";
 import Share from "../../../Icons/Share.tsx";
 import { FileManagerIndex } from "../../FileManager.tsx";
-import ShareSettingContent, { downloadOptions, expireOptions, ShareSetting } from "./ShareSetting.tsx";
+import ShareSettingContent, {
+  downloadOptions,
+  expireOptions,
+  ShareSetting,
+  summarizeAdvanced,
+} from "./ShareSetting.tsx";
 
 const shareSettingStorageKey = "cloudreve.share_setting";
 
@@ -114,6 +120,11 @@ const ShareDialog = () => {
 
   const [loading, setLoading] = useState(false);
   const [setting, setSetting] = useState<ShareSetting>(() => initialSetting(privateByDefault));
+  // Advanced-options view toggle: undefined means "auto" — open when the
+  // loaded setting already carries advanced options (Pro parity: the gear
+  // in the dialog actions switches between access and advanced views).
+  const [advancedToggled, setAdvancedToggled] = useState<boolean | undefined>(undefined);
+  const advancedOpen = advancedToggled ?? !!summarizeAdvanced(setting, t);
   const [shareLink, setShareLink] = useState<string>("");
   const [includePassword, setIncludePassword] = useState(true);
   const shareLinkPassword = useMemo(() => {
@@ -141,6 +152,7 @@ const ShareDialog = () => {
       }
       setShareLink("");
       setIncludePassword(true);
+      setAdvancedToggled(undefined);
     }
   }, [open]);
 
@@ -213,16 +225,26 @@ const ShareDialog = () => {
         }}
         cancelText={shareLink ? t("common:close") : undefined}
         secondaryAction={
-          shareLink
-            ? // @ts-ignore
-              navigator.share && (
-                <Tooltip title={t("application:modals.sendLink")}>
-                  <IconButton onClick={() => sendLink(target?.name ?? "", finalShareLink)}>
-                    <Share />
-                  </IconButton>
-                </Tooltip>
-              )
-            : undefined
+          !shareLink ? (
+            <Tooltip title={t("application:modals.additionalOptions")}>
+              <IconButton
+                aria-label={t("application:modals.additionalOptions")}
+                onClick={() => setAdvancedToggled(!advancedOpen)}
+                color={advancedOpen ? "primary" : "default"}
+              >
+                <SettingsOutlined />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            // @ts-ignore
+            navigator.share && (
+              <Tooltip title={t("application:modals.sendLink")}>
+                <IconButton onClick={() => sendLink(target?.name ?? "", finalShareLink)}>
+                  <Share />
+                </IconButton>
+              </Tooltip>
+            )
+          )
         }
       >
         <DialogContent sx={{ pb: 0 }}>
@@ -231,7 +253,7 @@ const ShareDialog = () => {
               <CSSTransition
                 addEndListener={(node, done) => node.addEventListener("transitionend", done, false)}
                 classNames="fade"
-                key={`${shareLink}`}
+                key={`${shareLink}-${advancedOpen}`}
               >
                 <Box>
                   {!shareLink && (
@@ -251,6 +273,7 @@ const ShareDialog = () => {
                         onSettingChange={setSetting}
                         setting={setting}
                         file={multiCount > 0 ? undefined : target}
+                        advancedOpen={advancedOpen}
                       />
                     </>
                   )}

@@ -703,8 +703,8 @@
     "shareNoteDes": "この共有を識別するためのプライベートメモ。マイ共有でのみ表示されます。",
     "shareTargets": "共有対象",
     "shareTargetsCount_other": "{{count}} 件の対象",
-    "publicListing": "公開ディレクトリに掲載",
-    "publicListingDes": "この共有を発見ページに表示し、匿名の訪問者を含む誰でも閲覧できます。パスワード保護の共有では使用できません。",
+    "publicListing": "シェア広場に公開",
+    "publicListingDes": "この共有をシェア広場に表示し、匿名の訪問者を含む誰でも閲覧できます。パスワード保護の共有では使用できません。",
     "hideReadme": "readmeファイルを非表示",
     "hideReadmeDes": "READMEファイル自体を共有一覧から外します。訪問者にはレンダリングされたreadmeが引き続き表示されます。",
     "shareTargetsCount_one": "{{count}} 件の対象",
@@ -1244,6 +1244,6 @@
   "discover": {
     "searchPlaceholder": "公開共有を検索",
     "empty": "公開共有はまだありません",
-    "emptyDescription": "所有者が公開ディレクトリに登録した共有がここに表示されます。"
+    "emptyDescription": "所有者がシェア広場に公開した共有がここに表示されます。"
   }
 }

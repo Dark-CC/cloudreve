@@ -753,8 +753,8 @@
     "shareTargets": "Freigabeziele",
     "shareTargetsCount_one": "{{count}} Ziel",
     "shareTargetsCount_other": "{{count}} Ziele",
-    "publicListing": "Im öffentlichen Verzeichnis auflisten",
-    "publicListingDes": "Diese Freigabe auf der Entdecken-Seite anzeigen, für jeden sichtbar, auch für anonyme Besucher. Nicht verfügbar für passwortgeschützte Freigaben.",
+    "publicListing": "Im Share-Platz veröffentlichen",
+    "publicListingDes": "Diese Freigabe auf dem Share-Platz anzeigen, für jeden sichtbar, auch für anonyme Besucher. Nicht verfügbar für passwortgeschützte Freigaben.",
     "hideReadme": "Readme-Datei ausblenden",
     "hideReadmeDes": "Die README-Datei selbst aus der Freigabeliste heraushalten. Besucher sehen weiterhin die gerenderte Readme.",
     "dontAskAgain": "Nicht erneut fragen",
@@ -1429,6 +1429,6 @@
   "discover": {
     "searchPlaceholder": "Öffentliche Freigaben suchen",
     "empty": "Noch keine öffentlichen Freigaben",
-    "emptyDescription": "Freigaben erscheinen hier, wenn ihre Besitzer sie im öffentlichen Verzeichnis listen."
+    "emptyDescription": "Freigaben erscheinen hier, wenn ihre Besitzer sie im Share-Platz veröffentlichen."
   }
 }

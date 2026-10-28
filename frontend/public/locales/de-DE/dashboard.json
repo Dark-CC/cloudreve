@@ -1521,7 +1521,7 @@
     "weightedPolicies": "Gewichtete Richtlinienauswahl",
     "weightedPoliciesDes": "Wenn aktiviert, werden Uploads ohne explizite Richtlinienwahl zur erlaubten Richtlinie mit dem höchsten Gewicht geroutet.",
     "sharePublicList": "Öffentliches Freigabeverzeichnis",
-    "sharePublicListDes": "Wenn aktiviert, können Benutzer ihre Freigabelinks ins öffentliche Verzeichnis (Entdecken-Seite) aufnehmen."
+    "sharePublicListDes": "Wenn aktiviert, können Benutzer ihre Freigabelinks im Share-Platz veröffentlichen. Passwortgeschützte Freigaben können nicht veröffentlicht werden."
   },
   "user": {
     "createdAt": "Erstellt am",
