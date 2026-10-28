@@ -1,15 +1,4 @@
-import {
-  Box,
-  Chip,
-  FormControl,
-  FormControlLabel,
-  Menu,
-  MenuItem,
-  Stack,
-  Switch,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, FormControl, FormControlLabel, Menu, MenuItem, Stack, Switch, Typography } from "@mui/material";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isTrueVal } from "../../../../session/utils.ts";
@@ -39,8 +28,8 @@ const commonCurrencies = [
 ];
 
 // Providers the fork backend understands. Pro additionally offers WeChat,
-// Alipay and custom channels; they stay listed but disabled until the
-// backend grows support for them.
+// Alipay and custom channels; they are not shown until the backend grows
+// support for them.
 
 const VAS = () => {
   const { t } = useTranslation("dashboard");
@@ -114,11 +103,7 @@ const VAS = () => {
               title={
                 <Stack direction="row" spacing={1} alignItems="center">
                   <span>{t("settings.currencyCode")}</span>
-                  <SecondaryButton
-                    size="small"
-                    sx={{ ml: 1 }}
-                    onClick={(e) => setCurrencyAnchor(e.currentTarget)}
-                  >
+                  <SecondaryButton size="small" sx={{ ml: 1 }} onClick={(e) => setCurrencyAnchor(e.currentTarget)}>
                     {t("settings.selectCurrency")}
                   </SecondaryButton>
                 </Stack>
@@ -129,9 +114,7 @@ const VAS = () => {
                 <DenseFilledTextField
                   value={values.payment_currency_code ?? "usd"}
                   slotProps={{ htmlInput: { maxLength: 3 } }}
-                  onChange={(e) =>
-                    setSettings({ payment_currency_code: e.target.value.trim().toUpperCase() })
-                  }
+                  onChange={(e) => setSettings({ payment_currency_code: e.target.value.trim().toUpperCase() })}
                 />
                 <NoMarginHelperText>{t("settings.currencyCodeDes")}</NoMarginHelperText>
               </FormControl>
@@ -170,10 +153,7 @@ const VAS = () => {
           </Typography>
           <SettingSectionContent>
             <SettingForm lgWidth={12}>
-              <SecondaryButton
-                variant="contained"
-                onClick={(e) => setProviderAnchor(e.currentTarget)}
-              >
+              <SecondaryButton variant="contained" onClick={(e) => setProviderAnchor(e.currentTarget)}>
                 {t("settings.addPaymentProvider")}
               </SecondaryButton>
 
@@ -204,9 +184,7 @@ const VAS = () => {
                         value={values.payment_stripe_publishable_key ?? ""}
                         onChange={(e) => setSettings({ payment_stripe_publishable_key: e.target.value })}
                       />
-                      <NoMarginHelperText>
-                        {t("settings.paymentStripePublishableKeyDes")}
-                      </NoMarginHelperText>
+                      <NoMarginHelperText>{t("settings.paymentStripePublishableKeyDes")}</NoMarginHelperText>
                     </FormControl>
                   </SettingForm>
                   <SettingForm title={t("settings.paymentStripeSecretKey")} lgWidth={5}>
@@ -226,9 +204,7 @@ const VAS = () => {
                         type="password"
                         value={values.payment_stripe_webhook_secret ?? ""}
                         placeholder={t("settings.secretKeepHint")}
-                        onChange={(e) =>
-                          setSettings({ payment_stripe_webhook_secret: e.target.value })
-                        }
+                        onChange={(e) => setSettings({ payment_stripe_webhook_secret: e.target.value })}
                       />
                       <NoMarginHelperText>
                         {t("settings.paymentStripeWebhookSecretDes", {
@@ -333,11 +309,7 @@ const VAS = () => {
         ))}
       </Menu>
 
-      <Menu
-        anchorEl={providerAnchor}
-        open={Boolean(providerAnchor)}
-        onClose={() => setProviderAnchor(null)}
-      >
+      <Menu anchorEl={providerAnchor} open={Boolean(providerAnchor)} onClose={() => setProviderAnchor(null)}>
         <MenuItem
           disabled={stripeEnabled}
           onClick={() => {
@@ -347,17 +319,8 @@ const VAS = () => {
         >
           {t("settings.stripeProvider")}
         </MenuItem>
-        {[
-          { key: "providerWechatPay", label: t("vas.wechatPay") },
-          { key: "providerAlipay", label: t("settings.providerAlipay") },
-          { key: "providerCustom", label: t("settings.providerCustom") },
-        ].map((p) => (
-          <Tooltip key={p.key} title={t("settings.providerUnsupported")} placement="left">
-            <span>
-              <MenuItem disabled>{p.label}</MenuItem>
-            </span>
-          </Tooltip>
-        ))}
+        {/* WeChat Pay / Alipay / custom channels: backend support pending,
+            hidden from the picker until implemented. */}
       </Menu>
     </Box>
   );
