@@ -867,6 +867,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "Без аутентификации",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "Captcha ID из <0>консоли GeeTest</0>. Используйте капчу GeeTest 4.0.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1496,7 +1501,7 @@
     "weightedPolicies": "Взвешенный выбор политик",
     "weightedPoliciesDes": "Если включено, загрузки без явного выбора политики направляются в разрешённую политику с наибольшим свободным местом, вмещающую файл. Учитываются только политики с общим лимитом ёмкости.",
     "sharePublicList": "Публичный каталог ссылок",
-    "sharePublicListDes": "Если включено, пользователи могут включать свои ссылки в публичный каталог (страница «Обзор»). Ссылки с паролем не могут быть опубликованы."
+    "sharePublicListDes": "Если включено, пользователи могут публиковать свои ссылки на «Площадке публикаций». Ссылки, защищённые паролем, публиковать нельзя."
   },
   "user": {
     "createdAt": "Дата создания",

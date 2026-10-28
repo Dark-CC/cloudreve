@@ -866,6 +866,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "بدون مصادقة",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "Captcha ID من <0>لوحة تحكم GeeTest</0>. استخدم كابتشا GeeTest 4.0.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "اختيار السياسات المرجّح",
     "weightedPoliciesDes": "عند التفعيل، تُوجَّه الرفعات دون تفضيل سياسة صريح إلى السياسة المسموح بها ذات أكبر سعة حرة تتسع للملف. تُوزَّن فقط السياسات ذات حد سعة إجمالي.",
     "sharePublicList": "دليل المشاركات العامة",
-    "sharePublicListDes": "عند التفعيل، يمكن للمستخدمين إدراج روابط مشاركتهم في الدليل العام (صفحة اكتشف). لا يمكن إدراج المشاركات المحمية بكلمة مرور."
+    "sharePublicListDes": "عند التفعيل، يمكن للمستخدمين نشر روابط مشاركتهم في ساحة المشاركة. لا يمكن نشر المشاركات المحمية بكلمة مرور."
   },
   "user": {
     "createdAt": "تم الإنشاء في",

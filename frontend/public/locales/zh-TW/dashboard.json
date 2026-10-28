@@ -866,6 +866,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "不使用認證",
     "tcaptcha": "騰訊驗證碼",
+    "geetest": "極驗 GeeTest",
+    "geetestCaptchaId": "驗證 ID（Captcha ID）",
+    "geetestCaptchaIdDes": "在 <0>極驗控制檯</0> 獲取的驗證 ID。需選擇「行為驗證 4.0」類型的驗證。",
+    "geetestCaptchaKey": "驗證 Key（Captcha Key）",
+    "geetestCaptchaKeyDes": "在 <0>極驗控制檯</0> 獲取的驗證 Key，用於服務端二次校驗。",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "按容量加權選擇策略",
     "weightedPoliciesDes": "啟用後，未指定策略偏好的上傳會被分配到剩餘容量最多且可容納該檔案的可切換儲存策略。僅參與設定了總容量限制的策略。",
     "sharePublicList": "公開分享目錄",
-    "sharePublicListDes": "開啟後，使用者可以將分享連結收錄到公開目錄（發現頁）。帶密碼的分享無法被收錄。"
+    "sharePublicListDes": "開啟後，使用者可以將分享連結公開到分享廣場。帶密碼的分享無法被公開。"
   },
   "user": {
     "createdAt": "建立日期",

@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/pkg/geetest"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/recaptcha"
 	request2 "github.com/cloudreve/Cloudreve/v4/pkg/request"
@@ -21,9 +23,13 @@ import (
 )
 
 type req struct {
-	Captcha string `json:"captcha"`
-	Ticket  string `json:"ticket"`
-	Randstr string `json:"randstr"`
+	Captcha       string `json:"captcha"`
+	Ticket        string `json:"ticket"`
+	Randstr       string `json:"randstr"`
+	CaptchaOutput string `json:"captcha_output"`
+	LotNumber     string `json:"lot_number"`
+	PassToken     string `json:"pass_token"`
+	GenTime       string `json:"gen_time"`
 }
 
 const (
@@ -219,6 +225,53 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 				if !capRes.Success {
 					l.Warning("Cap verification failed: validation returned false")
 					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", nil))
+					c.Abort()
+					return
+				}
+
+				break
+			case setting.CaptchaGeetest:
+				captchaSetting := settings.GeeTestCaptcha(c)
+				if captchaSetting.CaptchaID == "" || captchaSetting.CaptchaKey == "" {
+					l.Warning("GeeTest verification failed: missing configuration")
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha configuration error", nil))
+					c.Abort()
+					return
+				}
+
+				if service.CaptchaOutput == "" || service.LotNumber == "" ||
+					service.PassToken == "" || service.GenTime == "" {
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaNotMatch, nil))
+					c.Abort()
+					return
+				}
+
+				genTime, err := strconv.ParseInt(service.GenTime, 10, 64)
+				if err != nil {
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaNotMatch, err))
+					c.Abort()
+					return
+				}
+
+				r := dep.RequestClient(
+					request2.WithContext(c),
+					request2.WithLogger(logging.FromContext(c)),
+				)
+				ok, err := geetest.Verify(c, r, captchaSetting, &geetest.ValidateParams{
+					LotNumber:     service.LotNumber,
+					CaptchaOutput: service.CaptchaOutput,
+					PassToken:     service.PassToken,
+					GenTime:       genTime,
+				})
+				if err != nil {
+					l.Warning("GeeTest verification failed: %s", err)
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				if !ok {
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaRefresh, nil))
 					c.Abort()
 					return
 				}

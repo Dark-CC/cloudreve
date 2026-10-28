@@ -562,6 +562,11 @@
     "reCaptchaV2": "reCAPTCHA V2",
     "turnstile": "Cloudflare Turnstile",
     "tcaptcha": "腾讯验证码",
+    "geetest": "极验 GeeTest",
+    "geetestCaptchaId": "验证 ID（Captcha ID）",
+    "geetestCaptchaIdDes": "在 <0>极验控制台</0> 获取的验证 ID。需选择「行为验证 4.0」类型的验证。",
+    "geetestCaptchaKey": "验证 Key（Captcha Key）",
+    "geetestCaptchaKeyDes": "在 <0>极验控制台</0> 获取的验证 Key，用于服务端二次校验。",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "按容量加权选择策略",
     "weightedPoliciesDes": "启用后，未指定策略偏好的上传会被分配到剩余容量最多且可容纳该文件的可切换存储策略。仅参与设置了总容量限制的策略。",
     "sharePublicList": "公开分享目录",
-    "sharePublicListDes": "开启后，用户可以将分享链接收录到公开目录（发现页）。带密码的分享无法被收录。"
+    "sharePublicListDes": "开启后，用户可以将分享链接公开到分享广场。带密码的分享无法被公开。"
   },
   "user": {
     "createdAt": "创建时间",

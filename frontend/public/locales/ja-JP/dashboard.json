@@ -866,6 +866,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "認証なし",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "<0>GeeTestコンソール</0>で取得したCaptcha ID。GeeTest 4.0（行為検証4.0）を選択してください。",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "重み付きポリシー選択",
     "weightedPoliciesDes": "有効にすると、明示的なポリシー指定のないアップロードは、ファイルが収まる最も空き容量のある許可ポリシーにルーティングされます。総容量上限のあるポリシーのみ重み付けされます。",
     "sharePublicList": "公開共有ディレクトリ",
-    "sharePublicListDes": "有効にすると、ユーザーは自身の共有リンクを公開ディレクトリ (発見ページ) に掲載できます。パスワード保護の共有は掲載できません。"
+    "sharePublicListDes": "有効にすると、ユーザーは共有リンクをシェア広場に公開できます。パスワード保護の共有は公開できません。"
   },
   "user": {
     "createdAt": "作成日",

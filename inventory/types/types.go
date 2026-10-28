@@ -31,6 +31,10 @@ type (
 		// PreferredPolicy is the user's default storage policy, chosen from
 		// the policies allowed for their group. 0 means the group default.
 		PreferredPolicy int `json:"preferred_policy,omitempty"`
+		// NotifyStoragePolicyChange controls the per-user toast reminder when
+		// entering a directory whose effective storage policy differs from
+		// the previously listed one (Pro-aligned UX).
+		NotifyStoragePolicyChange bool `json:"notify_storage_policy_change,omitempty"`
 		// DismissedAnnouncement stores the announcement content the user last
 		// dismissed. When the admin edits the announcement it differs from
 		// this value and the modal is shown again.

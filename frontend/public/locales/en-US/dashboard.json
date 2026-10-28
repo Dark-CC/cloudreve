@@ -562,6 +562,11 @@
     "reCaptchaV2": "reCAPTCHA V2",
     "turnstile": "Cloudflare Turnstile",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "The Captcha ID from the <0>GeeTest console</0>. Use a GeeTest 4.0 captcha.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "Weighted policy selection",
     "weightedPoliciesDes": "When enabled, uploads without an explicit policy preference are routed to the allowed policy with the most free capacity that fits the file. Only policies with a total capacity limit are weighed.",
     "sharePublicList": "Public share directory",
-    "sharePublicListDes": "When enabled, users can opt their share links into the public directory (Discover page). Password-protected shares cannot be listed."
+    "sharePublicListDes": "When enabled, users can publish their share links to the Share Plaza. Password-protected shares cannot be published."
   },
   "user": {
     "createdAt": "Created at",

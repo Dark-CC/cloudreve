@@ -155,6 +155,9 @@ export interface UserSettings {
   vault_unlocked: boolean;
   // Bound mobile number, masked for display (e.g. "+86****34").
   phone?: string;
+  // Toast reminder when entering a directory with a different effective
+  // storage policy. Default (unset) is off.
+  notify_storage_policy_change?: boolean;
 }
 
 export interface LinkedAccount {
@@ -192,6 +195,9 @@ export interface PatchUserSetting {
   preferred_policy?: string;
   // Marks the current site announcement as seen.
   dismiss_announcement?: boolean;
+  // Toast reminder when entering a directory with a different effective
+  // storage policy. Default (unset) is off.
+  notify_storage_policy_change?: boolean;
 }
 
 export interface PasskeyCredentialOption {

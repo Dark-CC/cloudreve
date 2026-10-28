@@ -867,6 +867,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "Keine Authentifizierung",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha-ID",
+    "geetestCaptchaIdDes": "Die Captcha-ID aus der <0>GeeTest-Konsole</0>. Verwenden Sie einen GeeTest-4.0-Captcha.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1521,7 +1526,7 @@
     "weightedPolicies": "Gewichtete Richtlinienauswahl",
     "weightedPoliciesDes": "Wenn aktiviert, werden Uploads ohne explizite Richtlinienwahl zur erlaubten Richtlinie mit dem höchsten Gewicht geroutet.",
     "sharePublicList": "Öffentliches Freigabeverzeichnis",
-    "sharePublicListDes": "Wenn aktiviert, können Benutzer ihre Freigabelinks ins öffentliche Verzeichnis (Entdecken-Seite) aufnehmen."
+    "sharePublicListDes": "Wenn aktiviert, können Benutzer ihre Freigabelinks im Share-Platz veröffentlichen. Passwortgeschützte Freigaben können nicht veröffentlicht werden."
   },
   "user": {
     "createdAt": "Erstellt am",

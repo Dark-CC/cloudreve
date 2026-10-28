@@ -549,7 +549,13 @@
     "relocateStart": "Realocar",
     "policySaved": "Política de armazenamento atualizada",
     "policyInherit": "Herdar (usar padrão da pasta pai ou do grupo)",
-    "policyGroupDefault": "Padrão do grupo"
+    "policyGroupDefault": "Padrão do grupo",
+    "switchDirPolicy": "Alternar política de armazenamento da pasta",
+    "policySwitched": "Alternado para {{name}}",
+    "policyCleared": "Política de armazenamento removida – a pasta volta a herdar da pasta pai",
+    "policyFollowParent": "Herdar da pasta pai",
+    "policyEffective": "Em vigor: {{name}}",
+    "enteredPolicyDir": "Esta pasta usa a política de armazenamento: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Incluir senha no link de compartilhamento",
@@ -756,8 +762,8 @@
     "shareTargets": "Destinos do compartilhamento",
     "shareTargetsCount_one": "{{count}} destino",
     "shareTargetsCount_other": "{{count}} destinos",
-    "publicListing": "Listar no diretório público",
-    "publicListingDes": "Mostrar este compartilhamento na página Descobrir, visível para qualquer pessoa, inclusive visitantes anônimos. Indisponível para compartilhamentos protegidos por senha.",
+    "publicListing": "Publicar na Praça de compartilhamento",
+    "publicListingDes": "Mostrar este compartilhamento na Praça de compartilhamento, visível para qualquer pessoa, inclusive visitantes anônimos. Indisponível para compartilhamentos protegidos por senha.",
     "hideReadme": "Ocultar arquivo readme",
     "hideReadmeDes": "Mantenha o arquivo README fora da lista do compartilhamento. Visitantes ainda veem o readme renderizado.",
     "dontAskAgain": "Não perguntar novamente",
@@ -1256,7 +1262,12 @@
     "archiveDownloadMethod": "Método de download em lote",
     "archiveDownloadMethodDes": "Como pastas e seleções de vários arquivos são baixadas. Escolha «Perguntar sempre» para decidir a cada download.",
     "archiveDownloadAsk": "Perguntar sempre",
-    "downloadDesktopApp": "Baixar para Windows"
+    "downloadDesktopApp": "Baixar para Windows",
+    "notifyPolicyChange": "Aviso de mudança de política de armazenamento",
+    "notifyPolicyChangeDes": "Notificar ao entrar em uma pasta com política de armazenamento diferente",
+    "notifyPolicyChangeOn": "Ligado",
+    "notifyPolicyChangeOff": "Desligado",
+    "storage": "Armazenamento"
   },
   "vas": {
     "points": "Pontos",
@@ -1309,7 +1320,12 @@
     "report": "Denunciar abuso",
     "reportTarget": "Alvo da denúncia",
     "reportReason": "Razão",
-    "reportReasonOptions": ["Violação de direitos autorais", "Conteúdo prejudicial", "Spam", "Outro"],
+    "reportReasonOptions": [
+      "Violação de direitos autorais",
+      "Conteúdo prejudicial",
+      "Spam",
+      "Outro"
+    ],
     "reportDescription": "Descrição adicional",
     "reportAbuseSuccess": "Denúncia enviada.",
     "migrateStoragePolicy": "Migrar política de armazenamento",
@@ -1432,6 +1448,6 @@
   "discover": {
     "searchPlaceholder": "Pesquisar compartilhamentos públicos",
     "empty": "Nenhum compartilhamento público ainda",
-    "emptyDescription": "Compartilhamentos aparecem aqui quando seus donos os listam no diretório público."
+    "emptyDescription": "Compartilhamentos aparecem aqui quando seus donos os publicam na Praça de compartilhamento."
   }
 }
