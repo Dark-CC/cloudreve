@@ -29,6 +29,7 @@ const (
 	CaptchaTcaptcha  = CaptchaType("tcaptcha")
 	CaptchaTurnstile = CaptchaType("turnstile")
 	CaptchaCap       = CaptchaType("cap")
+	CaptchaGeetest   = CaptchaType("geetest")
 )
 
 type ReCaptcha struct {
@@ -53,6 +54,12 @@ type Cap struct {
 	SiteKey     string
 	SecretKey   string
 	AssetServer string
+}
+
+// GeeTest holds the GeeTest v4 (行为验证 4.0) application config.
+type GeeTest struct {
+	CaptchaID  string
+	CaptchaKey string
 }
 
 type SMTP struct {
