@@ -188,9 +188,12 @@ func (s *PreferredPolicyService) Update(c *gin.Context) (*StoragePolicyBrief, er
 	if policy == nil {
 		err = fc.RemoveMetadata(c, model, dbfs.MetadataPreferredPolicy)
 	} else {
+		// Store the marker as PUBLIC metadata so file list responses include it
+		// (lists only eager-load public metadata); the owner's UI needs it to
+		// show the current directory binding. Value is an opaque policy hashid.
 		err = fc.UpsertMetadata(c, model, map[string]string{
 			dbfs.MetadataPreferredPolicy: hashid.EncodePolicyID(dep.HashIDEncoder(), policy.ID),
-		}, map[string]bool{dbfs.MetadataPreferredPolicy: true})
+		}, nil)
 	}
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update metadata", err)

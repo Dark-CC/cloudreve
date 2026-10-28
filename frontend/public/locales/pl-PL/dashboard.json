@@ -1496,7 +1496,7 @@
     "weightedPolicies": "Ważony wybór polityk",
     "weightedPoliciesDes": "Gdy włączone, przesyłania bez jawnego wyboru polityki są kierowane do dozwolonej polityki z największą wolną pojemnością mieszczącą plik. Ważone są tylko polityki z całkowitym limitem pojemności.",
     "sharePublicList": "Publiczny katalog udostępnień",
-    "sharePublicListDes": "Gdy włączone, użytkownicy mogą opcjonalnie dodawać swoje linki udostępnienia do publicznego katalogu (strona Odkrywaj). Udostępnienia chronione hasłem nie mogą być wymienione."
+    "sharePublicListDes": "Po włączeniu użytkownicy mogą publikować swoje linki udostępnienia w Galerii udostępnień. Udostępnienia chronione hasłem nie mogą być publikowane."
   },
   "user": {
     "createdAt": "Utworzono",

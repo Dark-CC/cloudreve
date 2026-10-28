@@ -1,6 +1,6 @@
 import i18next from "i18next";
 import { enqueueSnackbar } from "notistack";
-import { getAllowedPolicies, getUserInfo, sendSignout } from "../../api/api.ts";
+import { getAllowedPolicies, getUserInfo, getUserSettings, sendSignout } from "../../api/api.ts";
 import { LoginResponse, User } from "../../api/user.ts";
 import { DefaultCloseAction } from "../../component/Common/Snackbar/snackbar.tsx";
 import { router } from "../../router";
@@ -12,6 +12,7 @@ import {
   closeMusicPlayer,
   setDarkMode,
   setDrawerWidth,
+  setNotifyPolicyChange,
   setPolicyOptionCache,
   setPreferredTheme,
   setUserInfoCache,
@@ -48,6 +49,12 @@ export function setTargetSession(session: LoginResponse): AppThunk {
     // failing request never blocks login.
     dispatch(getAllowedPolicies())
       .then((policies) => dispatch(setPolicyOptionCache(policies)))
+      .catch(() => {});
+    // Load the per-user "storage policy change reminder" preference so the
+    // file manager knows whether to toast when entering directories bound
+    // to a different policy. Fire-and-forget for the same reason.
+    dispatch(getUserSettings())
+      .then((settings) => dispatch(setNotifyPolicyChange(!!settings.notify_storage_policy_change)))
       .catch(() => {});
     dispatch(clearSessionCache({ index: 0, value: undefined }));
     refreshTimeZone();
