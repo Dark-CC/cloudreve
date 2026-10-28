@@ -12,6 +12,7 @@ import ViewOptionPopover from "./ViewOptionPopover.tsx";
 import MoreHorizontal from "../../Icons/MoreHorizontal.tsx";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 import MoreActionMenu from "./MoreActionMenu.tsx";
+import StoragePolicySwitchButton from "./StoragePolicySwitchButton.tsx";
 
 export const ActionButton = styled(Button)(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
@@ -65,6 +66,7 @@ const TopActions = () => {
             {isMobile ? <ArrowSort fontSize={"small"} /> : t("application:fileManager.sortMethod")}
           </ActionButton>
         )}
+        {isMobile && <StoragePolicySwitchButton />}
         {isMobile && (
           <ActionButton {...bindTrigger(morePopupState)}>
             <MoreHorizontal fontSize={"small"} />

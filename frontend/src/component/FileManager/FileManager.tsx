@@ -1,10 +1,16 @@
 import { Box, Stack, useMediaQuery, useTheme } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { getAllowedPolicies } from "../../api/api.ts";
+import { useSnackbar } from "notistack";
+import { useTranslation } from "react-i18next";
+import { getAllowedPolicies, getUserSettings } from "../../api/api.ts";
 import useNavigation from "../../hooks/useNavigation.tsx";
 import { clearSelected } from "../../redux/fileManagerSlice.ts";
-import { resetDialogs, setPolicyOptionCache } from "../../redux/globalStateSlice.ts";
+import {
+  resetDialogs,
+  setNotifyPolicyChange,
+  setPolicyOptionCache,
+} from "../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks.ts";
 import { resetFm, selectAll, shortCutDelete } from "../../redux/thunks/filemanager.ts";
 import SessionManager from "../../session/index.ts";
@@ -37,6 +43,17 @@ export const FileManager = ({ index = 0, initialPath, skipRender }: FileManagerP
   useNavigation(index, initialPath);
 
   const policyCache = useAppSelector((state) => state.globalState.policyOptionCache);
+  const notifyPolicyChange = useAppSelector((state) => state.globalState.notifyPolicyChange);
+  const currentPath = useAppSelector((state) => state.fileManager[index].path);
+  const currentFs = useAppSelector((state) => state.fileManager[index].current_fs);
+  const effectivePolicyId = useAppSelector((state) => state.fileManager[index].list?.storage_policy?.id);
+  const effectivePolicyName = useAppSelector((state) => state.fileManager[index].list?.storage_policy?.name);
+  const { enqueueSnackbar } = useSnackbar();
+  const { t } = useTranslation();
+  // Last (path, policy) seen by the reminder effect; kept in a ref so the
+  // effect can tell genuine navigations from policy switches (a switch
+  // refreshes the same listing and must not double-toast).
+  const lastPolicyHint = useRef<{ path?: string; policyId?: string }>({});
 
   useEffect(() => {
     if (index == FileManagerIndex.main) {
@@ -48,11 +65,41 @@ export const FileManager = ({ index = 0, initialPath, skipRender }: FileManagerP
           .then((policies) => dispatch(setPolicyOptionCache(policies)))
           .catch(() => {});
       }
+      // Same for the "policy change reminder" preference.
+      if (notifyPolicyChange === undefined && SessionManager.currentLoginOrNull()) {
+        dispatch(getUserSettings())
+          .then((settings) => dispatch(setNotifyPolicyChange(!!settings.notify_storage_policy_change)))
+          .catch(() => {});
+      }
       return () => {
         dispatch(resetFm(index));
       };
     }
   }, []);
+
+  // Pro-aligned reminder: when the user navigates into a directory whose
+  // effective storage policy differs from the previously listed one, show a
+  // one-line toast (opt-in via user settings; only in "my" filesystem where
+  // the user's policies apply).
+  useEffect(() => {
+    if (index != FileManagerIndex.main || currentFs != "my" || !currentPath) {
+      lastPolicyHint.current = {};
+      return;
+    }
+    if (
+      notifyPolicyChange &&
+      effectivePolicyId &&
+      lastPolicyHint.current.path &&
+      lastPolicyHint.current.path != currentPath &&
+      lastPolicyHint.current.policyId != effectivePolicyId
+    ) {
+      enqueueSnackbar(t("application:fileManager.enteredPolicyDir", { name: effectivePolicyName }), {
+        variant: "info",
+        autoHideDuration: 4000,
+      });
+    }
+    lastPolicyHint.current = { path: currentPath, policyId: effectivePolicyId };
+  }, [currentPath, effectivePolicyId, notifyPolicyChange]);
 
   const selectAllRef = useHotkeys<HTMLElement>(
     ["Control+a", "Meta+a"],

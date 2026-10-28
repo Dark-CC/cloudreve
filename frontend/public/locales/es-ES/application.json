@@ -546,7 +546,13 @@
     "relocateStart": "Reubicar",
     "policySaved": "Política de almacenamiento actualizada",
     "policyInherit": "Heredar (padre o predeterminado del grupo)",
-    "policyGroupDefault": "Predeterminado del grupo"
+    "policyGroupDefault": "Predeterminado del grupo",
+    "switchDirPolicy": "Cambiar la política de almacenamiento del directorio",
+    "policySwitched": "Cambiado a {{name}}",
+    "policyCleared": "Política de almacenamiento eliminada: el directorio hereda de nuevo del directorio padre",
+    "policyFollowParent": "Heredar del directorio padre",
+    "policyEffective": "Vigente actualmente: {{name}}",
+    "enteredPolicyDir": "Este directorio usa la política de almacenamiento: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Incluir contraseña en enlace compartido",
@@ -1253,7 +1259,11 @@
     "archiveDownloadMethod": "Método de descarga por lotes",
     "archiveDownloadMethodDes": "Cómo se descargan las carpetas y las selecciones múltiples. Elige «Preguntar siempre» para decidir en cada descarga.",
     "archiveDownloadAsk": "Preguntar siempre",
-    "downloadDesktopApp": "Descargar para Windows"
+    "downloadDesktopApp": "Descargar para Windows",
+    "notifyPolicyChange": "Aviso de cambio de política de almacenamiento",
+    "notifyPolicyChangeDes": "Avisar al entrar en un directorio con una política de almacenamiento distinta",
+    "notifyPolicyChangeOn": "Activado",
+    "notifyPolicyChangeOff": "Desactivado"
   },
   "vas": {
     "points": "Puntos",
@@ -1306,7 +1316,12 @@
     "report": "Reportar abuso",
     "reportTarget": "Objeto del reporte",
     "reportReason": "Razón",
-    "reportReasonOptions": ["Infracción de derechos de autor", "Contenido dañino", "Información basura", "Otro"],
+    "reportReasonOptions": [
+      "Infracción de derechos de autor",
+      "Contenido dañino",
+      "Información basura",
+      "Otro"
+    ],
     "reportDescription": "Descripción adicional",
     "reportAbuseSuccess": "Reporte enviado",
     "migrateStoragePolicy": "Transferir política de almacenamiento",

@@ -38,6 +38,9 @@ type UserSettings struct {
 	PreferredViewers        map[string]string `json:"preferred_viewers,omitempty"`
 	TrashRetention          int               `json:"trash_retention,omitempty"`
 	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
+	// NotifyStoragePolicyChange enables the toast reminder shown when
+	// entering a directory with a different effective storage policy.
+	NotifyStoragePolicyChange bool          `json:"notify_storage_policy_change,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
 	// VaultEnabled reports whether the private space is set up.
@@ -76,6 +79,9 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		ShareDefaultPrivate: u.Settings.ShareDefaultPrivate,
 		PreferredViewers:    u.Settings.PreferredViewers,
 		TrashRetention:      u.Settings.TrashRetention,
+		// PreferredPolicy is intentionally omitted here — GET /user/setting/policy
+		// serializes it (hashid-encoded) alongside the allowed policy options.
+		NotifyStoragePolicyChange: u.Settings.NotifyStoragePolicyChange,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
 		}),

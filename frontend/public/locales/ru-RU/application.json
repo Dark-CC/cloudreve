@@ -549,7 +549,13 @@
     "relocateStart": "Переместить",
     "policySaved": "Политика хранения обновлена",
     "policyInherit": "Наследовать (родительская или групповая по умолчанию)",
-    "policyGroupDefault": "Групповая по умолчанию"
+    "policyGroupDefault": "Групповая по умолчанию",
+    "switchDirPolicy": "Сменить политику хранения папки",
+    "policySwitched": "Переключено на {{name}}",
+    "policyCleared": "Политика хранения снята — папка снова наследует от родительской",
+    "policyFollowParent": "Наследовать от родительской папки",
+    "policyEffective": "Текущая: {{name}}",
+    "enteredPolicyDir": "Эта папка использует политику хранения: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Включить пароль в ссылку на публикацию",
@@ -1258,7 +1264,11 @@
     "archiveDownloadMethod": "Способ пакетной загрузки",
     "archiveDownloadMethodDes": "Способ скачивания папок и нескольких файлов. Выберите «Спрашивать каждый раз», чтобы выбирать при каждой загрузке.",
     "archiveDownloadAsk": "Спрашивать каждый раз",
-    "downloadDesktopApp": "Скачать для Windows"
+    "downloadDesktopApp": "Скачать для Windows",
+    "notifyPolicyChange": "Напоминание о смене политики хранения",
+    "notifyPolicyChangeDes": "Уведомлять при входе в папку с другой политикой хранения",
+    "notifyPolicyChangeOn": "Вкл",
+    "notifyPolicyChangeOff": "Выкл"
   },
   "vas": {
     "points": "Очки",
@@ -1311,7 +1321,12 @@
     "report": "Сообщить о злоупотреблении",
     "reportTarget": "Объект жалобы",
     "reportReason": "Причина",
-    "reportReasonOptions": ["Нарушение авторских прав", "Вредоносный контент", "Спам", "Другое"],
+    "reportReasonOptions": [
+      "Нарушение авторских прав",
+      "Вредоносный контент",
+      "Спам",
+      "Другое"
+    ],
     "reportDescription": "Дополнительное описание",
     "reportAbuseSuccess": "Жалоба подана",
     "migrateStoragePolicy": "Перенести политику хранения",

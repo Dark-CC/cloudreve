@@ -511,7 +511,13 @@
     "downloadProgress": "{{completed}} / {{total}} ملفات تم تنزيلها ({{percent}}%)",
     "downloadComplete": "اكتمل التنزيل!",
     "downloadCompleteSummary": "{{count}} ملف · {{size}}",
-    "downloaded": "تم التنزيل"
+    "downloaded": "تم التنزيل",
+    "switchDirPolicy": "تبديل سياسة تخزين المجلد",
+    "policySwitched": "تم التبديل إلى {{name}}",
+    "policyCleared": "تمت إزالة سياسة التخزين، سيرث المجلد من المجلد الأب",
+    "policyFollowParent": "وراثة من المجلد الأب",
+    "policyEffective": "السارية الآن: {{name}}",
+    "enteredPolicyDir": "المجلد الحالي يستخدم سياسة التخزين: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "اضافة كلمة المرور في رابط المشاركة",
@@ -1184,7 +1190,11 @@
     "archiveDownloadMethod": "طريقة التنزيل الجماعي",
     "archiveDownloadMethodDes": "كيفية تنزيل المجلدات والتحديدات المتعددة. اختر «السؤال في كل مرة» للاختيار عند كل تنزيل.",
     "archiveDownloadAsk": "السؤال في كل مرة",
-    "downloadDesktopApp": "تنزيل لنظام Windows"
+    "downloadDesktopApp": "تنزيل لنظام Windows",
+    "notifyPolicyChange": "تذكير بتغيير سياسة التخزين",
+    "notifyPolicyChangeDes": "عند دخول مجلد سياسة تخزينه مختلفة عن السابق",
+    "notifyPolicyChangeOn": "مُفعّل",
+    "notifyPolicyChangeOff": "معطّل"
   },
   "vas": {
     "points": "النقاط",
@@ -1195,7 +1205,12 @@
     "validDurationDays": "{{num}} يوم",
     "reportTarget": "الذي تريد الإبلاغ عنه",
     "reportReason": "السبب",
-    "reportReasonOptions": ["انتهاك حقوق الطبع والنشر", "محتوى ضار", "غير المرغوب به", "أخرى"],
+    "reportReasonOptions": [
+      "انتهاك حقوق الطبع والنشر",
+      "محتوى ضار",
+      "غير المرغوب به",
+      "أخرى"
+    ],
     "reportDescription": "وصف إضافي",
     "reportAbuseSuccess": "تم رفع التقرير."
   },

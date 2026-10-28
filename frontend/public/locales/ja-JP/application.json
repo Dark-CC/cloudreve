@@ -514,7 +514,13 @@
     "relocateStart": "再配置",
     "policySaved": "ストレージポリシーを更新しました",
     "policyInherit": "継承（親またはグループの既定値を使用）",
-    "policyGroupDefault": "グループの既定値"
+    "policyGroupDefault": "グループの既定値",
+    "switchDirPolicy": "フォルダーのストレージポリシーを切り替え",
+    "policySwitched": "{{name}} に切り替えました",
+    "policyCleared": "ストレージポリシーを解除しました。フォルダーは親フォルダーから継承します",
+    "policyFollowParent": "親フォルダーから継承",
+    "policyEffective": "現在の適用: {{name}}",
+    "enteredPolicyDir": "このフォルダーのストレージポリシー: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "共有リンクにパスワードを含める",
@@ -1185,7 +1191,11 @@
     "archiveDownloadMethod": "一括ダウンロード方法",
     "archiveDownloadMethodDes": "フォルダや複数ファイルのダウンロード方法。「毎回確認」を選ぶとダウンロードごとに選択できます。",
     "archiveDownloadAsk": "毎回確認",
-    "downloadDesktopApp": "Windows 版をダウンロード"
+    "downloadDesktopApp": "Windows 版をダウンロード",
+    "notifyPolicyChange": "ストレージポリシー変更の通知",
+    "notifyPolicyChangeDes": "以前と異なるストレージポリシーのフォルダーに入った際に通知します",
+    "notifyPolicyChangeOn": "オン",
+    "notifyPolicyChangeOff": "オフ"
   },
   "vas": {
     "points": "ポイント",
@@ -1196,7 +1206,12 @@
     "validDurationDays": "{{num}} 日",
     "reportTarget": "報告対象",
     "reportReason": "理由",
-    "reportReasonOptions": ["著作権侵害", "有害なコンテンツ", "スパム", "その他"],
+    "reportReasonOptions": [
+      "著作権侵害",
+      "有害なコンテンツ",
+      "スパム",
+      "その他"
+    ],
     "reportDescription": "詳細説明",
     "reportAbuseSuccess": "報告を受け付けました"
   },

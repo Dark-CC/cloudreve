@@ -1,4 +1,4 @@
-import { Box, FormControl, ListItemText, SelectChangeEvent, Stack, styled, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, FormControl, FormHelperText, ListItemText, SelectChangeEvent, Stack, styled, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { getAllowedPolicies, sendUpdateUserSetting } from "../../../api/api.ts";
 import { StoragePolicyBrief } from "../../../api/explorer.ts";
 import { Capacity, UserSettings } from "../../../api/user.ts";
+import { setNotifyPolicyChange } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { updateUserCapacity } from "../../../redux/thunks/filemanager.ts";
 import { loadSiteConfig } from "../../../redux/thunks/site.ts";
@@ -117,6 +118,7 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
   });
   const [policies, setPolicies] = useState<StoragePolicyBrief[]>([]);
   const [preferred, setPreferred] = useState(setting.preferred_policy ?? "");
+  const [notifyChange, setNotifyChange] = useState(!!setting.notify_storage_policy_change);
   const [saving, setSaving] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
@@ -134,6 +136,17 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
       .then(() => {
         enqueueSnackbar(t("setting.policySaved"), { variant: "success", action: DefaultCloseAction });
       })
+      .finally(() => setSaving(false));
+  };
+
+  const onNotifyChangeChange = (_e: React.MouseEvent<HTMLElement>, v: boolean | null) => {
+    if (v === null) {
+      return;
+    }
+    setNotifyChange(v);
+    setSaving(true);
+    dispatch(sendUpdateUserSetting({ notify_storage_policy_change: v }))
+      .then(() => dispatch(setNotifyPolicyChange(v)))
       .finally(() => setSaving(false));
   };
 
@@ -162,6 +175,23 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
             </DenseSelect>
             <NoMarginHelperText>{t("setting.preferredPolicyDes")}</NoMarginHelperText>
           </FormControl>
+        </SettingForm>
+      )}
+      {policies.length > 0 && (
+        <SettingForm title={t("setting.notifyPolicyChange")}>
+          <ToggleButtonGroup
+            color="primary"
+            value={notifyChange}
+            exclusive
+            disabled={saving}
+            onChange={onNotifyChangeChange}
+            size={"small"}
+            aria-label="Storage policy change reminder"
+          >
+            <ToggleButton value={true}>{t("setting.notifyPolicyChangeOn")}</ToggleButton>
+            <ToggleButton value={false}>{t("setting.notifyPolicyChangeOff")}</ToggleButton>
+          </ToggleButtonGroup>
+          <FormHelperText>{t("setting.notifyPolicyChangeDes")}</FormHelperText>
         </SettingForm>
       )}
     </Stack>

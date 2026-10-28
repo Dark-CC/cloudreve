@@ -329,12 +329,13 @@ export const getActionOpt = (
     display.hasReadable &&
     canManageVersion(targets[0], display.orCapability);
   // Storage-policy actions apply only to files the user owns; share visitors
-  // cannot re-home entities they do not own. When the effective group allows a
-  // single policy there is nothing to switch — hide both items
-  // (cloudreve/cloudreve#3058).
+  // cannot re-home entities they do not own. The directory binding entry is
+  // always shown regardless of how many policies the group allows (Pro form:
+  // the entry doubles as a read-only indicator of the current binding), while
+  // relocation is only meaningful when there is more than one policy to move
+  // between (cloudreve/cloudreve#3058).
   const multiplePolicies = allowedPolicyCount === undefined || allowedPolicyCount > 1;
   display.showDirPolicy =
-    multiplePolicies &&
     targets.length == 1 &&
     !!currentUser &&
     targets[0].owned &&

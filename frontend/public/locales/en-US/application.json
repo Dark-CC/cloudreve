@@ -512,7 +512,13 @@
     "relocateStart": "Relocate",
     "policySaved": "Storage policy updated",
     "policyInherit": "Inherit (use parent or group default)",
-    "policyGroupDefault": "Group default"
+    "policyGroupDefault": "Group default",
+    "switchDirPolicy": "Switch directory storage policy",
+    "policySwitched": "Switched to {{name}}",
+    "policyCleared": "Storage policy cleared – the directory inherits from its parent again",
+    "policyFollowParent": "Follow parent directory",
+    "policyEffective": "Currently effective: {{name}}",
+    "enteredPolicyDir": "This directory uses storage policy: {{name}}"
   },
   "modals": {
     "paidShare": "Paid share",
@@ -1199,7 +1205,11 @@
     "archiveDownloadMethod": "Batch download method",
     "archiveDownloadMethodDes": "How folders and multi-file selections are downloaded. Choose \"Ask every time\" to pick per download.",
     "archiveDownloadAsk": "Ask every time",
-    "downloadDesktopApp": "Download for Windows"
+    "downloadDesktopApp": "Download for Windows",
+    "notifyPolicyChange": "Storage policy change reminder",
+    "notifyPolicyChangeDes": "Notify when entering a directory using a different storage policy",
+    "notifyPolicyChangeOn": "On",
+    "notifyPolicyChangeOff": "Off"
   },
   "vas": {
     "points": "Points",
@@ -1210,7 +1220,12 @@
     "validDurationDays": "{{num}} days",
     "reportTarget": "Report target",
     "reportReason": "Reason",
-    "reportReasonOptions": ["Copyright infringement", "Harmful content", "Spam", "Other"],
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ],
     "reportDescription": "Additional description",
     "reportAbuseSuccess": "Report submitted."
   },
