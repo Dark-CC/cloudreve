@@ -631,6 +631,8 @@ var DefaultSettings = map[string]string{
 	"captcha_cap_site_key":                       "",
 	"captcha_cap_secret_key":                     "",
 	"captcha_cap_asset_server":                   "jsdelivr",
+	"captcha_geetest_captcha_id":                "",
+	"captcha_geetest_captcha_key":               "",
 	"thumb_width":                                "400",
 	"thumb_height":                               "300",
 	"thumb_entity_suffix":                        "{blob_path}/{blob_name}._thumb",
