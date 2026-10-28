@@ -37,6 +37,7 @@ import Globe from "../../../Icons/Globe.tsx";
 import RenameOutlined from "../../../Icons/RenameOutlined.tsx";
 import TableSettingsOutlined from "../../../Icons/TableSettings.tsx";
 import Timer from "../../../Icons/Timer.tsx";
+import { useAppSelector } from "../../../../redux/hooks.ts";
 
 const Accordion = styled(MuiAccordion)(() => ({
   border: "0px solid rgba(0, 0, 0, .125)",
@@ -174,6 +175,10 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange, advanced
 
   const [expanded, setExpanded] = useState<string | undefined>(undefined);
   const [roleMenuAnchor, setRoleMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const scoreEnabled = useAppSelector(
+    (state) => state.siteConfig.basic.config.score_enabled !== false
+  );
 
   const isFolder = file?.type == FileType.folder;
   const isFile = file?.type == FileType.file;
@@ -519,44 +524,46 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange, advanced
           </FormControl>
         </StyledListItemButton>
       )}
-      <Accordion expanded={expanded === "price"} onChange={handleExpand("price")}>
-        <AccordionSummary aria-controls="panel-price-content" id="panel-price-header">
-          <StyledListItemButton>
-            <ListItemIcon>
-              <CoinStack />
-            </ListItemIcon>
-            <ListItemText
-              primary={t("application:modals.paidShare")}
-              secondary={
-                setting.price_points
-                  ? t("application:modals.paidSharePrice", { price: setting.price_points })
-                  : undefined
-              }
-            />
-          </StyledListItemButton>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            {t("application:modals.paidShareDes")}
-          </Typography>
-          <FormControl variant="standard" fullWidth>
-            <FilledTextField
-              label={t("application:modals.paidSharePriceLabel")}
-              type="number"
-              slotProps={{
-                htmlInput: {
-                  min: 0,
-                },
-              }}
-              value={setting.price_points ?? 0}
-              onChange={(e) => {
-                const v = Math.max(0, Math.floor(Number(e.target.value) || 0));
-                onSettingChange({ ...setting, price_points: v > 0 ? v : undefined });
-              }}
-            />
-          </FormControl>
-        </AccordionDetails>
-      </Accordion>
+      {scoreEnabled && (
+        <Accordion expanded={expanded === "price"} onChange={handleExpand("price")}>
+          <AccordionSummary aria-controls="panel-price-content" id="panel-price-header">
+            <StyledListItemButton>
+              <ListItemIcon>
+                <CoinStack />
+              </ListItemIcon>
+              <ListItemText
+                primary={t("application:modals.paidShare")}
+                secondary={
+                  setting.price_points
+                    ? t("application:modals.paidSharePrice", { price: setting.price_points })
+                    : undefined
+                }
+              />
+            </StyledListItemButton>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              {t("application:modals.paidShareDes")}
+            </Typography>
+            <FormControl variant="standard" fullWidth>
+              <FilledTextField
+                label={t("application:modals.paidSharePriceLabel")}
+                type="number"
+                slotProps={{
+                  htmlInput: {
+                    min: 0,
+                  },
+                }}
+                value={setting.price_points ?? 0}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                  onSettingChange({ ...setting, price_points: v > 0 ? v : undefined });
+                }}
+              />
+            </FormControl>
+          </AccordionDetails>
+        </Accordion>
+      )}
       <Accordion expanded={expanded === "use_custom_link"} onChange={handleExpand("use_custom_link")}>
         <AccordionSummary aria-controls="panel-slug-content" id="panel-slug-header">
           <StyledListItemButton>

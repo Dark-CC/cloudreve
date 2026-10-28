@@ -943,9 +943,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Benutzerdefinierter Zahlungskanal",
+    "providerUnsupported": "Erfordert Backend-Unterstützung"
   },
   "giftCodes": {
     "giftCodesSettings": "Geschenkcodes",
@@ -2008,14 +2009,6 @@
     "trafficSizeDes": "Bytes Direktlink-Traffic, die beim Kauf gutgeschrieben werden; Pakete sind permanent.",
     "subAddressChars": "Sub-Adressen-Zeichen",
     "subAddressCharsDes": "Zeichen, die als Sub-Adressen-Trenner im lokalen Teil der E-Mail gelten (z. B. <code>+-.</code>).",
-    "manualAdjust": "Manuelle Punkteanpassung",
-    "adjustEmail": "Benutzer-E-Mail",
-    "adjustDelta": "Punkteänderung",
-    "adjustDeltaDes": "Positiv schreibt gut, negativ zieht ab",
-    "adjustNote": "Notiz",
-    "adjustSubmit": "Anwenden",
-    "adjustSuccess": "Punkte angepasst",
-    "adjustFailed": "Punkteanpassung fehlgeschlagen",
     "paymentId": "Zahlungs-ID"
   },
   "abuseReport": {

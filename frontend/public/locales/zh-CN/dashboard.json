@@ -942,9 +942,10 @@
     "paymentStripeSecretKeyDes": "Stripe 密钥（sk_live_… / sk_test_…），不会暴露给用户",
     "paymentStripeWebhookSecret": "Webhook 签名密钥",
     "paymentStripeWebhookSecretDes": "Webhook 端点 {{url}} 的签名密钥（whsec_…）",
-    "paymentStripeCurrency": "货币",
-    "paymentStripeCurrencyDes": "现金价格使用的 ISO 4217 货币代码（如 usd、eur、cny）",
-    "secretKeepHint": "留空则保持当前值"
+    "secretKeepHint": "留空则保持当前值",
+    "providerAlipay": "支付宝",
+    "providerCustom": "自定义支付渠道",
+    "providerUnsupported": "需后端支持"
   },
   "giftCodes": {
     "giftCodesSettings": "礼品码",
@@ -1980,15 +1981,7 @@
     "appForum": "用户论坛 URL",
     "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。",
     "subAddressChars": "子地址字符",
-    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。",
-    "manualAdjust": "手动积分调整",
-    "adjustEmail": "用户邮箱",
-    "adjustDelta": "积分变动",
-    "adjustDeltaDes": "正数为增加，负数为扣减",
-    "adjustNote": "备注",
-    "adjustSubmit": "应用",
-    "adjustSuccess": "积分已调整",
-    "adjustFailed": "积分调整失败"
+    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。"
   },
   "pro": {
     "title": "Pro 版本专属功能",

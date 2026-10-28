@@ -323,6 +323,9 @@ type (
 		// ShareScoreRate returns the fraction (0..1) of a paid share's
 		// points price the owner receives as income.
 		ShareScoreRate(ctx context.Context) float64
+		// ScoreEnabled reports whether the credit system is on: users may
+		// price shares and purchase them with credits.
+		ScoreEnabled(ctx context.Context) bool
 		// Payment returns the cash-checkout (Stripe) configuration.
 		Payment(ctx context.Context) *PaymentSettings
 	}
@@ -331,13 +334,16 @@ type (
 
 // PaymentSettings carries the Stripe cash-checkout configuration. Enabled
 // requires a secret key; the webhook secret is required before webhook
-// fulfillment is accepted.
+// fulfillment is accepted. CurrencyCode/Mark/Unit describe the site-wide
+// display currency shared by all payment providers.
 type PaymentSettings struct {
 	Enabled        bool
 	SecretKey      string
 	WebhookSecret  string
 	PublishableKey string
 	Currency       string
+	CurrencyMark   string
+	CurrencyUnit   int
 }
 
 // NewProvider creates a new setting provider.
@@ -1032,14 +1038,28 @@ func (s *settingProvider) ShareScoreRate(ctx context.Context) float64 {
 	return s.getFloat64(ctx, "share_score_rate", 100) / 100
 }
 
-// Payment implements Provider.Payment.
+// ScoreEnabled implements Provider.ScoreEnabled.
+func (s *settingProvider) ScoreEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "score_enabled", true)
+}
+
+// Payment implements Provider.Payment. The charge currency comes from the
+// site-wide payment_currency_code key; deployments upgraded from versions
+// that only had payment_stripe_currency keep their old value until the new
+// key is saved.
 func (s *settingProvider) Payment(ctx context.Context) *PaymentSettings {
+	currency := s.getString(ctx, "payment_currency_code", "")
+	if currency == "" {
+		currency = s.getString(ctx, "payment_stripe_currency", "usd")
+	}
 	return &PaymentSettings{
 		Enabled:        s.getBoolean(ctx, "payment_stripe_enabled", false),
 		SecretKey:      s.getString(ctx, "payment_stripe_secret_key", ""),
 		WebhookSecret:  s.getString(ctx, "payment_stripe_webhook_secret", ""),
 		PublishableKey: s.getString(ctx, "payment_stripe_publishable_key", ""),
-		Currency:       s.getString(ctx, "payment_stripe_currency", "usd"),
+		Currency:       currency,
+		CurrencyMark:   s.getString(ctx, "payment_currency_mark", "$"),
+		CurrencyUnit:   int(s.getFloat64(ctx, "payment_currency_unit", 100)),
 	}
 }
 

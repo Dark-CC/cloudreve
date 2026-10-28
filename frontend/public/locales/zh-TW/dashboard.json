@@ -942,9 +942,10 @@
     "paymentStripeSecretKeyDes": "Stripe 密鑰（sk_live_… / sk_test_…），不會暴露給使用者",
     "paymentStripeWebhookSecret": "Webhook 簽名密鑰",
     "paymentStripeWebhookSecretDes": "Webhook 端點 {{url}} 的簽名密鑰（whsec_…）",
-    "paymentStripeCurrency": "貨幣",
-    "paymentStripeCurrencyDes": "現金價格使用的 ISO 4217 貨幣代碼（如 usd、eur、twd）",
-    "secretKeepHint": "留空則保持目前值"
+    "secretKeepHint": "留空則保持目前值",
+    "providerAlipay": "支付寶",
+    "providerCustom": "自訂支付渠道",
+    "providerUnsupported": "需後端支援"
   },
   "giftCodes": {
     "giftCodesSettings": "禮品碼",
@@ -1980,15 +1981,7 @@
     "trafficSize": "流量大小（位元組）",
     "trafficSizeDes": "購買後增加的直鏈流量位元組數；流量包永久有效。",
     "subAddressChars": "子地址字元",
-    "subAddressCharsDes": "郵箱使用者名稱部分中視為子地址分隔符的字元（如 <code>+-.</code>，覆蓋 Gmail/iCloud 風格別名）。留空預設為 <code>+</code>。",
-    "manualAdjust": "手動積分調整",
-    "adjustEmail": "使用者郵箱",
-    "adjustDelta": "積分變動",
-    "adjustDeltaDes": "正數為增加，負數為扣減",
-    "adjustNote": "備註",
-    "adjustSubmit": "應用",
-    "adjustSuccess": "積分已調整",
-    "adjustFailed": "積分調整失敗"
+    "subAddressCharsDes": "郵箱使用者名稱部分中視為子地址分隔符的字元（如 <code>+-.</code>，覆蓋 Gmail/iCloud 風格別名）。留空預設為 <code>+</code>。"
   },
   "pro": {
     "title": "Pro 版本專屬功能",

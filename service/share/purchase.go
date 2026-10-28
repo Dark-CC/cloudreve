@@ -40,6 +40,9 @@ func (s *SharePurchaseService) Purchase(c *gin.Context) (*SharePurchaseResponse,
 	if share.PricePoints <= 0 {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Share is free", nil)
 	}
+	if !dep.SettingProvider().ScoreEnabled(c) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Credit system is disabled", nil)
+	}
 	if share.Edges.User.ID == u.ID {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Cannot purchase own share", nil)
 	}

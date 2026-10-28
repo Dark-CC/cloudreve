@@ -34,6 +34,12 @@ const Shop = () => {
   const [buying, setBuying] = useState<string | undefined>(undefined);
   const paymentEnabled = useAppSelector((state) => state.siteConfig.basic.config.payment_enabled === true);
   const paymentCurrency = useAppSelector((state) => state.siteConfig.basic.config.payment_currency ?? "usd");
+  const paymentCurrencyMark = useAppSelector(
+    (state) => state.siteConfig.basic.config.payment_currency_mark,
+  );
+  const paymentCurrencyUnit = useAppSelector(
+    (state) => state.siteConfig.basic.config.payment_currency_unit ?? 100,
+  );
 
   const loadInfo = () => {
     dispatch(getCredit()).then((res) => setInfo(res));
@@ -104,7 +110,11 @@ const Shop = () => {
     s.type === "stream_traffic" ? t("shop.streamTrafficPack") : t("shop.downloadTrafficPack");
 
   const formatPrice = (s: ShopSku) =>
-    new Intl.NumberFormat(undefined, { style: "currency", currency: paymentCurrency }).format(s.price / 100);
+    paymentCurrencyMark
+      ? `${paymentCurrencyMark}${(s.price / paymentCurrencyUnit).toFixed(2)}`
+      : new Intl.NumberFormat(undefined, { style: "currency", currency: paymentCurrency }).format(
+          s.price / paymentCurrencyUnit,
+        );
 
   const onCheckout = (s: ShopSku) => {
     setBuying(s.id);

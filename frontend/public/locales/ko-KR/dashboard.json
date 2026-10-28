@@ -943,9 +943,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "커스텀 결제 채널",
+    "providerUnsupported": "백엔드 지원이 필요합니다"
   },
   "giftCodes": {
     "giftCodesSettings": "기프트 코드",
@@ -1982,14 +1983,6 @@
     "trafficSizeDes": "구매 시 부여되는 직접 링크 트래픽 바이트 수입니다. 팩은 영구입니다.",
     "subAddressChars": "서브주소 문자",
     "subAddressCharsDes": "이메일 로컬 부분에서 서브주소 구분자로 처리되는 문자입니다 (예: Gmail/iCloud식 별칭에는 <code>+-.</code>). 비워 두면 기본값 <code>+</code>.",
-    "manualAdjust": "수동 크레딧 조정",
-    "adjustEmail": "사용자 이메일",
-    "adjustDelta": "포인트 변동",
-    "adjustDeltaDes": "양수는 크레딧 추가, 음수는 차감",
-    "adjustNote": "메모",
-    "adjustSubmit": "적용",
-    "adjustSuccess": "크레딧이 조정되었습니다",
-    "adjustFailed": "크레딧 조정에 실패했습니다",
     "paymentId": "결제 ID"
   },
   "pro": {

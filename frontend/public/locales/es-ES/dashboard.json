@@ -943,9 +943,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Canal de pago personalizado",
+    "providerUnsupported": "Requiere soporte del backend"
   },
   "giftCodes": {
     "giftCodesSettings": "Códigos de Regalo",
@@ -1982,15 +1983,7 @@
     "trafficSize": "Cantidad de tráfico (bytes)",
     "trafficSizeDes": "Bytes de tráfico de enlace directo concedidos al comprar; los packs son permanentes.",
     "subAddressChars": "Caracteres de sub-dirección",
-    "subAddressCharsDes": "Caracteres tratados como separadores de sub-dirección en la parte local del correo (p. ej. <code>+-.</code> para alias estilo Gmail/iCloud). Vacío por defecto a <code>+</code>.",
-    "manualAdjust": "Ajuste manual de créditos",
-    "adjustEmail": "Correo del usuario",
-    "adjustDelta": "Cambio de puntos",
-    "adjustDeltaDes": "Positivo añade créditos, negativo los descuenta",
-    "adjustNote": "Nota",
-    "adjustSubmit": "Aplicar",
-    "adjustSuccess": "Créditos ajustados",
-    "adjustFailed": "Error al ajustar créditos"
+    "subAddressCharsDes": "Caracteres tratados como separadores de sub-dirección en la parte local del correo (p. ej. <code>+-.</code> para alias estilo Gmail/iCloud). Vacío por defecto a <code>+</code>."
   },
   "pro": {
     "title": "Funciones exclusivas de la edición Pro",

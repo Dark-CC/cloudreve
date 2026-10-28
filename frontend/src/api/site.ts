@@ -62,6 +62,9 @@ export interface SiteConfig {
   shop_nav?: boolean;
   payment_enabled?: boolean;
   payment_currency?: string;
+  payment_currency_mark?: string;
+  payment_currency_unit?: number;
+  score_enabled?: boolean;
   thumbnail_width?: number;
   thumbnail_height?: number;
   custom_props?: CustomProps[];

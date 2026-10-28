@@ -314,13 +314,16 @@ const Settings = () => {
               {tab === SettingsPageTab.VAS && (
                 <SettingsWrapper
                   settings={[
+                    "score_enabled",
                     "share_score_rate",
                     "shop_nav",
+                    "payment_currency_code",
+                    "payment_currency_mark",
+                    "payment_currency_unit",
                     "payment_stripe_enabled",
                     "payment_stripe_publishable_key",
                     "payment_stripe_secret_key",
                     "payment_stripe_webhook_secret",
-                    "payment_stripe_currency",
                   ]}
                 >
                   <VAS />

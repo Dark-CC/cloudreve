@@ -942,9 +942,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Niestandardowy kanał płatności",
+    "providerUnsupported": "Wymaga obsługi backendu"
   },
   "giftCodes": {
     "giftCodesSettings": "Kody podarunkowe",
@@ -1980,15 +1981,7 @@
     "trafficSize": "Ilość ruchu (bajty)",
     "trafficSizeDes": "Bajty ruchu bezpośrednich linków przyznawane przy zakupie; pakiety są dożywotnie.",
     "subAddressChars": "Znaki subadresu",
-    "subAddressCharsDes": "Znaki traktowane jako separatory subadresu w lokalnej części e-mail (np. <code>+-.</code> dla aliasów w stylu Gmail/iCloud). Puste domyślnie to <code>+</code>.",
-    "manualAdjust": "Ręczna korekta punktów",
-    "adjustEmail": "E-mail użytkownika",
-    "adjustDelta": "Zmiana punktów",
-    "adjustDeltaDes": "Dodatnia dodaje punkty, ujemna odejmuje",
-    "adjustNote": "Notatka",
-    "adjustSubmit": "Zastosuj",
-    "adjustSuccess": "Punkty skorygowane",
-    "adjustFailed": "Nie udało się skorygować punktów"
+    "subAddressCharsDes": "Znaki traktowane jako separatory subadresu w lokalnej części e-mail (np. <code>+-.</code> dla aliasów w stylu Gmail/iCloud). Puste domyślnie to <code>+</code>."
   },
   "pro": {
     "title": "Ekskluzywne funkcje edycji Pro",

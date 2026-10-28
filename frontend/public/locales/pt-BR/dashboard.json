@@ -943,9 +943,10 @@
     "paymentStripeSecretKeyDes": "Stripe secret key (sk_live_… / sk_test_…). Never exposed to users.",
     "paymentStripeWebhookSecret": "Webhook signing secret",
     "paymentStripeWebhookSecretDes": "Signing secret (whsec_…) for webhook endpoint {{url}}",
-    "paymentStripeCurrency": "Currency",
-    "paymentStripeCurrencyDes": "ISO 4217 currency code for cash prices (e.g. usd, eur)",
-    "secretKeepHint": "Leave empty to keep the current value"
+    "secretKeepHint": "Leave empty to keep the current value",
+    "providerAlipay": "Alipay",
+    "providerCustom": "Canal de pagamento personalizado",
+    "providerUnsupported": "Requer suporte do backend"
   },
   "giftCodes": {
     "giftCodesSettings": "Códigos de Presente",
@@ -1982,15 +1983,7 @@
     "trafficSize": "Quantidade de tráfego (bytes)",
     "trafficSizeDes": "Bytes de tráfego de link direto concedidos na compra; pacotes são permanentes.",
     "subAddressChars": "Caracteres de sub-endereço",
-    "subAddressCharsDes": "Caracteres tratados como separadores de sub-endereço na parte local do e-mail (ex.: <code>+-.</code> para apelidos estilo Gmail/iCloud). Vazio usa o padrão <code>+</code>.",
-    "manualAdjust": "Ajuste manual de créditos",
-    "adjustEmail": "E-mail do usuário",
-    "adjustDelta": "Alteração de pontos",
-    "adjustDeltaDes": "Positivo adiciona créditos, negativo deduz",
-    "adjustNote": "Nota",
-    "adjustSubmit": "Aplicar",
-    "adjustSuccess": "Créditos ajustados",
-    "adjustFailed": "Falha ao ajustar créditos"
+    "subAddressCharsDes": "Caracteres tratados como separadores de sub-endereço na parte local do e-mail (ex.: <code>+-.</code> para apelidos estilo Gmail/iCloud). Vazio usa o padrão <code>+</code>."
   },
   "pro": {
     "title": "Funcionalidades exclusivas da versão Pro",

@@ -6,7 +6,6 @@ import {
   AbuseReportListResponse,
   ReportAbuseService,
   UpdateAbuseReportService,
-  AdjustCreditService,
   AdminListGroupResponse,
   AdminListService,
   ListShareResponse as AdminListShareResponse,
@@ -3266,16 +3265,3 @@ export function adminUpdateAbuseReport(id: string, args: UpdateAbuseReportServic
   };
 }
 
-export function adminAdjustCredit(args: AdjustCreditService): ThunkResponse<void> {
-  return async (dispatch, _getState) => {
-    return await dispatch(
-      send(
-        "/admin/vas/credit",
-        { method: "POST", data: args },
-        {
-          ...defaultOpts,
-        },
-      ),
-    );
-  };
-}
