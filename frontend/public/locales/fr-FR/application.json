@@ -1266,7 +1266,8 @@
     "notifyPolicyChange": "Rappel de changement de politique de stockage",
     "notifyPolicyChangeDes": "Notifier en entrant dans un dossier utilisant une autre politique de stockage",
     "notifyPolicyChangeOn": "Activé",
-    "notifyPolicyChangeOff": "Désactivé"
+    "notifyPolicyChangeOff": "Désactivé",
+    "storage": "Stockage"
   },
   "vas": {
     "points": "Points",

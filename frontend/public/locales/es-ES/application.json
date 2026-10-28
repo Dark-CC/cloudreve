@@ -1263,7 +1263,8 @@
     "notifyPolicyChange": "Aviso de cambio de política de almacenamiento",
     "notifyPolicyChangeDes": "Avisar al entrar en un directorio con una política de almacenamiento distinta",
     "notifyPolicyChangeOn": "Activado",
-    "notifyPolicyChangeOff": "Desactivado"
+    "notifyPolicyChangeOff": "Desactivado",
+    "storage": "Almacenamiento"
   },
   "vas": {
     "points": "Puntos",

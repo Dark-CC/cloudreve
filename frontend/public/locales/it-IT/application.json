@@ -1266,7 +1266,8 @@
     "notifyPolicyChange": "Promemoria cambio criterio di archiviazione",
     "notifyPolicyChangeDes": "Avvisa quando entri in una cartella con un criterio di archiviazione diverso",
     "notifyPolicyChangeOn": "Attivo",
-    "notifyPolicyChangeOff": "Disattivo"
+    "notifyPolicyChangeOff": "Disattivo",
+    "storage": "Archiviazione"
   },
   "vas": {
     "points": "Punti",

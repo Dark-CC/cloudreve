@@ -2,14 +2,12 @@ import { Box, FormControl, FormHelperText, ListItemText, SelectChangeEvent, Stac
 import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { getAllowedPolicies, sendUpdateUserSetting } from "../../../api/api.ts";
 import { StoragePolicyBrief } from "../../../api/explorer.ts";
 import { Capacity, UserSettings } from "../../../api/user.ts";
 import { setNotifyPolicyChange } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { updateUserCapacity } from "../../../redux/thunks/filemanager.ts";
-import { loadSiteConfig } from "../../../redux/thunks/site.ts";
 import { sizeToString } from "../../../util";
 import { DefaultCloseAction } from "../../Common/Snackbar/snackbar.tsx";
 import { DenseSelect } from "../../Common/StyledComponents.tsx";
@@ -108,7 +106,6 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const theme = useTheme();
-  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const capacity = useAppSelector((state) => state.fileManager[0].capacity);
 
@@ -124,7 +121,6 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
 
   useEffect(() => {
     dispatch(updateUserCapacity(0));
-    dispatch(loadSiteConfig("vas"));
     dispatch(getAllowedPolicies()).then((res) => setPolicies(res ?? []));
   }, []);
 
@@ -186,7 +182,7 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
             disabled={saving}
             onChange={onNotifyChangeChange}
             size={"small"}
-            aria-label="Storage policy change reminder"
+            aria-label={t("setting.notifyPolicyChange")}
           >
             <ToggleButton value={true}>{t("setting.notifyPolicyChangeOn")}</ToggleButton>
             <ToggleButton value={false}>{t("setting.notifyPolicyChangeOff")}</ToggleButton>

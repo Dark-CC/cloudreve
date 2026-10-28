@@ -1194,7 +1194,8 @@
     "notifyPolicyChange": "Powiadomienie o zmianie zasady przechowywania",
     "notifyPolicyChangeDes": "Powiadamiaj przy wejściu do folderu z inną zasadą przechowywania",
     "notifyPolicyChangeOn": "Wł.",
-    "notifyPolicyChangeOff": "Wył."
+    "notifyPolicyChangeOff": "Wył.",
+    "storage": "Pamięć"
   },
   "vas": {
     "points": "Punkty",

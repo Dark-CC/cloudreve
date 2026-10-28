@@ -1195,7 +1195,8 @@
     "notifyPolicyChange": "ストレージポリシー変更の通知",
     "notifyPolicyChangeDes": "以前と異なるストレージポリシーのフォルダーに入った際に通知します",
     "notifyPolicyChangeOn": "オン",
-    "notifyPolicyChangeOff": "オフ"
+    "notifyPolicyChangeOff": "オフ",
+    "storage": "ストレージ"
   },
   "vas": {
     "points": "ポイント",

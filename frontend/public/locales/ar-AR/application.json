@@ -1194,7 +1194,8 @@
     "notifyPolicyChange": "تذكير بتغيير سياسة التخزين",
     "notifyPolicyChangeDes": "عند دخول مجلد سياسة تخزينه مختلفة عن السابق",
     "notifyPolicyChangeOn": "مُفعّل",
-    "notifyPolicyChangeOff": "معطّل"
+    "notifyPolicyChangeOff": "معطّل",
+    "storage": "التخزين"
   },
   "vas": {
     "points": "النقاط",

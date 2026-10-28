@@ -46,6 +46,10 @@ export const FileManager = ({ index = 0, initialPath, skipRender }: FileManagerP
   const notifyPolicyChange = useAppSelector((state) => state.globalState.notifyPolicyChange);
   const currentPath = useAppSelector((state) => state.fileManager[index].path);
   const currentFs = useAppSelector((state) => state.fileManager[index].current_fs);
+  // Both fields come from the same list response, so the reminder effect below
+  // always sees the (path, policy) pair as the server resolved it — never the
+  // navigation path paired with the previous listing's stale policy.
+  const listedPath = useAppSelector((state) => state.fileManager[index].list?.parent?.path);
   const effectivePolicyId = useAppSelector((state) => state.fileManager[index].list?.storage_policy?.id);
   const effectivePolicyName = useAppSelector((state) => state.fileManager[index].list?.storage_policy?.name);
   const { enqueueSnackbar } = useSnackbar();
@@ -82,24 +86,24 @@ export const FileManager = ({ index = 0, initialPath, skipRender }: FileManagerP
   // one-line toast (opt-in via user settings; only in "my" filesystem where
   // the user's policies apply).
   useEffect(() => {
-    if (index != FileManagerIndex.main || currentFs != "my" || !currentPath) {
-      lastPolicyHint.current = {};
+    if (index != FileManagerIndex.main || currentFs != "my" || !currentPath || !listedPath || !effectivePolicyId) {
       return;
     }
+    const prev = lastPolicyHint.current;
     if (
       notifyPolicyChange &&
-      effectivePolicyId &&
-      lastPolicyHint.current.path &&
-      lastPolicyHint.current.path != currentPath &&
-      lastPolicyHint.current.policyId != effectivePolicyId
+      prev.path &&
+      prev.path != listedPath &&
+      prev.policyId &&
+      prev.policyId != effectivePolicyId
     ) {
       enqueueSnackbar(t("application:fileManager.enteredPolicyDir", { name: effectivePolicyName }), {
         variant: "info",
         autoHideDuration: 4000,
       });
     }
-    lastPolicyHint.current = { path: currentPath, policyId: effectivePolicyId };
-  }, [currentPath, effectivePolicyId, notifyPolicyChange]);
+    lastPolicyHint.current = { path: listedPath, policyId: effectivePolicyId };
+  }, [listedPath, effectivePolicyId, notifyPolicyChange, currentFs, currentPath, index]);
 
   const selectAllRef = useHotkeys<HTMLElement>(
     ["Control+a", "Meta+a"],

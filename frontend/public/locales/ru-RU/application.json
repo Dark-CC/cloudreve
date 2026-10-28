@@ -1268,7 +1268,8 @@
     "notifyPolicyChange": "Напоминание о смене политики хранения",
     "notifyPolicyChangeDes": "Уведомлять при входе в папку с другой политикой хранения",
     "notifyPolicyChangeOn": "Вкл",
-    "notifyPolicyChangeOff": "Выкл"
+    "notifyPolicyChangeOff": "Выкл",
+    "storage": "Хранилище"
   },
   "vas": {
     "points": "Очки",

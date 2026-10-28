@@ -1263,7 +1263,8 @@
     "notifyPolicyChange": "Wechsel der Speicherrichtlinie melden",
     "notifyPolicyChangeDes": "Beim Betreten eines Ordners mit abweichender Speicherrichte hinweisen",
     "notifyPolicyChangeOn": "Ein",
-    "notifyPolicyChangeOff": "Aus"
+    "notifyPolicyChangeOff": "Aus",
+    "storage": "Speicher"
   },
   "vas": {
     "points": "Punkte",

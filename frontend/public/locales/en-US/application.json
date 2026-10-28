@@ -1209,7 +1209,8 @@
     "notifyPolicyChange": "Storage policy change reminder",
     "notifyPolicyChangeDes": "Notify when entering a directory using a different storage policy",
     "notifyPolicyChangeOn": "On",
-    "notifyPolicyChangeOff": "Off"
+    "notifyPolicyChangeOff": "Off",
+    "storage": "Storage"
   },
   "vas": {
     "points": "Points",

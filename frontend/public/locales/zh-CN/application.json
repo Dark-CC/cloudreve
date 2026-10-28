@@ -1209,7 +1209,8 @@
     "notifyPolicyChange": "存储策略变更提醒",
     "notifyPolicyChangeDes": "进入与之前不同的存储策略目录时提醒我",
     "notifyPolicyChangeOn": "开启",
-    "notifyPolicyChangeOff": "关闭"
+    "notifyPolicyChangeOff": "关闭",
+    "storage": "存储"
   },
   "vas": {
     "points": "积分",

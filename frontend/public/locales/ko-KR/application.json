@@ -1266,7 +1266,8 @@
     "notifyPolicyChange": "저장 정책 변경 알림",
     "notifyPolicyChangeDes": "이전과 다른 저장 정책의 폴더에 들어갈 때 알림",
     "notifyPolicyChangeOn": "켜기",
-    "notifyPolicyChangeOff": "끄기"
+    "notifyPolicyChangeOff": "끄기",
+    "storage": "스토리지"
   },
   "vas": {
     "points": "포인트",

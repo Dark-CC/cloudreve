@@ -40,7 +40,7 @@ type UserSettings struct {
 	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
 	// NotifyStoragePolicyChange enables the toast reminder shown when
 	// entering a directory with a different effective storage policy.
-	NotifyStoragePolicyChange bool          `json:"notify_storage_policy_change,omitempty"`
+	NotifyStoragePolicyChange bool `json:"notify_storage_policy_change"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
 	// VaultEnabled reports whether the private space is set up.

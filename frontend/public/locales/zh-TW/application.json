@@ -1193,7 +1193,8 @@
     "notifyPolicyChange": "儲存策略變更提醒",
     "notifyPolicyChangeDes": "進入與先前不同的儲存策略目錄時提醒我",
     "notifyPolicyChangeOn": "開啟",
-    "notifyPolicyChangeOff": "關閉"
+    "notifyPolicyChangeOff": "關閉",
+    "storage": "儲存"
   },
   "vas": {
     "points": "積分",

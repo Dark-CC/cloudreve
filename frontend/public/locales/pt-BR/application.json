@@ -1266,7 +1266,8 @@
     "notifyPolicyChange": "Aviso de mudança de política de armazenamento",
     "notifyPolicyChangeDes": "Notificar ao entrar em uma pasta com política de armazenamento diferente",
     "notifyPolicyChangeOn": "Ligado",
-    "notifyPolicyChangeOff": "Desligado"
+    "notifyPolicyChangeOff": "Desligado",
+    "storage": "Armazenamento"
   },
   "vas": {
     "points": "Pontos",
