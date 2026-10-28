@@ -66,6 +66,10 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 		return fmt.Errorf("failed applying schema patches: %w", err)
 	}
 
+	// Port legacy Pro group↔storage-policy bindings (no-op without Pro
+	// heritage; runs after Schema.Create so group_allowed_policies exists).
+	repairProGroupPolicyBindings(l, client, ctx)
+
 	client.Setting.Create().SetName(DBVersionPrefix + requiredDbVersion).SetValue("installed").Save(ctx)
 	return nil
 }

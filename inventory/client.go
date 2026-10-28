@@ -44,6 +44,9 @@ func InitializeDBClient(l logging.Logger,
 		if err := client.Schema.Create(ctx); err != nil {
 			return nil, fmt.Errorf("failed to apply additive schema changes: %w", err)
 		}
+		// Databases ported from Pro by older fork builds carry the version
+		// mark yet still miss the group↔policy bindings — heal them here too.
+		repairProGroupPolicyBindings(l, client, ctx)
 		l.Info("Database schema is up to date.")
 	}
 

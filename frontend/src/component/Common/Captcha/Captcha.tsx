@@ -2,6 +2,7 @@ import { CaptchaType } from "../../../api/site.ts";
 import { useAppSelector } from "../../../redux/hooks.ts";
 import CapCaptcha from "./CapCaptcha.tsx";
 import DefaultCaptcha from "./DefaultCaptcha.tsx";
+import GeeTestCaptcha from "./GeeTestCaptcha.tsx";
 import ReCaptchaV2 from "./ReCaptchaV2.tsx";
 import TCaptcha from "./TCaptcha.tsx";
 import TurnstileCaptcha from "./TurnstileCaptcha.tsx";
@@ -29,6 +30,8 @@ export const Captcha = (props: CaptchaProps) => {
       return <TurnstileCaptcha {...props} />;
     case CaptchaType.CAP:
       return <CapCaptcha {...props} />;
+    case CaptchaType.GEETEST:
+      return <GeeTestCaptcha {...props} />;
     default:
       return <DefaultCaptcha {...props} />;
   }

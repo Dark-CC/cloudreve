@@ -60,6 +60,8 @@ type (
 		TurnstileCaptcha(ctx context.Context) *Turnstile
 		// CapCaptcha returns the Cap settings.
 		CapCaptcha(ctx context.Context) *Cap
+		// GeeTestCaptcha returns the GeeTest v4 captcha settings.
+		GeeTestCaptcha(ctx context.Context) *GeeTest
 		// EmailActivationEnabled returns true if email activation is required.
 		EmailActivationEnabled(ctx context.Context) bool
 		// DefaultGroup returns the default group ID for new users.
@@ -991,6 +993,13 @@ func (s *settingProvider) CapCaptcha(ctx context.Context) *Cap {
 		SiteKey:     s.getString(ctx, "captcha_cap_site_key", ""),
 		SecretKey:   s.getString(ctx, "captcha_cap_secret_key", ""),
 		AssetServer: s.getString(ctx, "captcha_cap_asset_server", "jsdelivr"),
+	}
+}
+
+func (s *settingProvider) GeeTestCaptcha(ctx context.Context) *GeeTest {
+	return &GeeTest{
+		CaptchaID:  s.getString(ctx, "captcha_geetest_captcha_id", ""),
+		CaptchaKey: s.getString(ctx, "captcha_geetest_captcha_key", ""),
 	}
 }
 

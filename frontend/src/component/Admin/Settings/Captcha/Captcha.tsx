@@ -9,6 +9,7 @@ import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
 import CapCaptcha from "./CapCaptcha.tsx";
+import GeeTestCaptcha from "./GeeTestCaptcha.tsx";
 import GraphicCaptcha from "./GraphicCaptcha.tsx";
 import ReCaptcha from "./ReCaptcha.tsx";
 import TCaptcha from "./TCaptcha.tsx";
@@ -160,6 +161,15 @@ const Captcha = () => {
                       {t("settings.cap")}
                     </ListItemText>
                   </SquareMenuItem>
+                  <SquareMenuItem value={CaptchaType.GEETEST}>
+                    <ListItemText
+                      slotProps={{
+                        primary: { variant: "body2" },
+                      }}
+                    >
+                      {t("settings.geetest")}
+                    </ListItemText>
+                  </SquareMenuItem>
                 </DenseSelect>
                 <NoMarginHelperText>{t("settings.captchaTypeDes")}</NoMarginHelperText>
               </FormControl>
@@ -178,6 +188,9 @@ const Captcha = () => {
             </Collapse>
             <Collapse in={values.captcha_type === CaptchaType.CAP} unmountOnExit>
               <CapCaptcha setSettings={setSettings} values={values} />
+            </Collapse>
+            <Collapse in={values.captcha_type === CaptchaType.GEETEST} unmountOnExit>
+              <GeeTestCaptcha setSettings={setSettings} values={values} />
             </Collapse>
           </SettingSectionContent>
         </SettingSection>
