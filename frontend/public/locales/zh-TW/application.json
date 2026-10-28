@@ -514,7 +514,13 @@
     "relocateStart": "遷移",
     "policySaved": "儲存策略已更新",
     "policyInherit": "繼承（使用父目錄或使用者組預設）",
-    "policyGroupDefault": "使用者組預設"
+    "policyGroupDefault": "使用者組預設",
+    "switchDirPolicy": "切換目錄儲存策略",
+    "policySwitched": "已切換至 {{name}}",
+    "policyCleared": "已解除目錄儲存策略，將恢復繼承上層目錄",
+    "policyFollowParent": "跟隨上層目錄（繼承）",
+    "policyEffective": "目前生效：{{name}}",
+    "enteredPolicyDir": "目前目錄使用儲存策略：{{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "在連結中包含密碼",
@@ -1183,7 +1189,12 @@
     "archiveDownloadMethod": "批量下載方式",
     "archiveDownloadMethodDes": "下載資料夾或多選檔案時使用的方式。選擇「每次詢問」可在每次下載時手動選擇。",
     "archiveDownloadAsk": "每次詢問",
-    "downloadDesktopApp": "下載 Windows 客戶端"
+    "downloadDesktopApp": "下載 Windows 客戶端",
+    "notifyPolicyChange": "儲存策略變更提醒",
+    "notifyPolicyChangeDes": "進入與先前不同的儲存策略目錄時提醒我",
+    "notifyPolicyChangeOn": "開啟",
+    "notifyPolicyChangeOff": "關閉",
+    "storage": "儲存"
   },
   "vas": {
     "points": "積分",
@@ -1194,7 +1205,12 @@
     "validDurationDays": "{{num}} 天",
     "reportTarget": "舉報對象",
     "reportReason": "原因",
-    "reportReasonOptions": ["侵權", "有害內容", "垃圾訊息", "其他"],
+    "reportReasonOptions": [
+      "侵權",
+      "有害內容",
+      "垃圾訊息",
+      "其他"
+    ],
     "reportDescription": "補充說明",
     "reportAbuseSuccess": "舉報已提交"
   },

@@ -511,7 +511,13 @@
     "relocateStart": "迁移",
     "policySaved": "存储策略已更新",
     "policyInherit": "继承（使用父目录或用户组默认）",
-    "policyGroupDefault": "用户组默认"
+    "policyGroupDefault": "用户组默认",
+    "switchDirPolicy": "切换目录存储策略",
+    "policySwitched": "已切换至 {{name}}",
+    "policyCleared": "已解除目录存储策略，将恢复继承上级目录",
+    "policyFollowParent": "跟随上级目录（继承）",
+    "policyEffective": "当前生效：{{name}}",
+    "enteredPolicyDir": "当前目录使用存储策略：{{name}}"
   },
   "modals": {
     "paidShare": "付费分享",
@@ -1199,7 +1205,12 @@
     "archiveDownloadMethod": "批量下载方式",
     "archiveDownloadMethodDes": "下载文件夹或多选文件时使用的方式。选择“每次询问”可在每次下载时手动选择。",
     "archiveDownloadAsk": "每次询问",
-    "downloadDesktopApp": "下载 Windows 客户端"
+    "downloadDesktopApp": "下载 Windows 客户端",
+    "notifyPolicyChange": "存储策略变更提醒",
+    "notifyPolicyChangeDes": "进入与之前不同的存储策略目录时提醒我",
+    "notifyPolicyChangeOn": "开启",
+    "notifyPolicyChangeOff": "关闭",
+    "storage": "存储"
   },
   "vas": {
     "points": "积分",
@@ -1210,7 +1221,12 @@
     "validDurationDays": "{{num}} 天",
     "reportTarget": "举报对象",
     "reportReason": "原因",
-    "reportReasonOptions": ["侵权", "有害内容", "垃圾信息", "其他"],
+    "reportReasonOptions": [
+      "侵权",
+      "有害内容",
+      "垃圾信息",
+      "其他"
+    ],
     "reportDescription": "补充说明",
     "reportAbuseSuccess": "举报已提交"
   },

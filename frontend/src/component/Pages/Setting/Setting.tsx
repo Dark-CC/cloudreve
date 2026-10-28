@@ -1,4 +1,4 @@
-import { AccountBalanceWalletOutlined, PersonOutline } from "@mui/icons-material";
+import { CloudOutlined, AccountBalanceWalletOutlined, PersonOutline } from "@mui/icons-material";
 import { Box, Container } from "@mui/material";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -18,12 +18,14 @@ import FinanceSetting from "./FinanceSetting.tsx";
 import PreferenceSetting from "./PreferenceSetting.tsx";
 import ProfileSetting from "./ProfileSetting.tsx";
 import SecuritySetting from "./Security/SecuritySetting.tsx";
+import StorageSetting from "./StorageSetting.tsx";
 import Tag from "../../Icons/Tag.tsx";
 import TagSetting from "./TagSetting.tsx";
 
 export enum SettingPageTab {
   Profile = "profile",
   Preference = "preference",
+  Storage = "storage",
   Security = "security",
   Finance = "finance",
   Tags = "tags",
@@ -61,6 +63,11 @@ const Setting = () => {
           label: t("application:setting.preference"),
           value: SettingPageTab.Preference,
           icon: <EditSetting />,
+        },
+        {
+          label: t("application:setting.storage"),
+          value: SettingPageTab.Storage,
+          icon: <CloudOutlined />,
         },
         {
           label: t("application:setting.security"),
@@ -121,6 +128,7 @@ const Setting = () => {
                     <ProfileSetting setting={setting} setSetting={setSetting} />
                   )}
                   {tab == SettingPageTab.Preference && <PreferenceSetting setting={setting} setSetting={setSetting} />}
+                  {tab == SettingPageTab.Storage && <StorageSetting setting={setting} />}
                   {tab == SettingPageTab.Security && <SecuritySetting setting={setting} setSetting={setSetting} />}
                   {tab == SettingPageTab.Finance && <FinanceSetting />}
                   {tab == SettingPageTab.Tags && <TagSetting />}

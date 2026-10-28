@@ -549,7 +549,13 @@
     "relocateStart": "Déplacer",
     "policySaved": "Politique de stockage mise à jour",
     "policyInherit": "Hériter (parent ou défaut du groupe)",
-    "policyGroupDefault": "Défault du groupe"
+    "policyGroupDefault": "Défault du groupe",
+    "switchDirPolicy": "Changer la politique de stockage du dossier",
+    "policySwitched": "Basculé vers {{name}}",
+    "policyCleared": "Politique de stockage retirée – le dossier hérite à nouveau du dossier parent",
+    "policyFollowParent": "Hériter du dossier parent",
+    "policyEffective": "Actuellement appliquée : {{name}}",
+    "enteredPolicyDir": "Ce dossier utilise la politique de stockage : {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Inclure le mot de passe dans le lien de partage",
@@ -1256,7 +1262,12 @@
     "archiveDownloadMethod": "Méthode de téléchargement groupé",
     "archiveDownloadMethodDes": "Méthode utilisée pour télécharger les dossiers et sélections multiples. Choisissez « Demander à chaque fois » pour décider à chaque téléchargement.",
     "archiveDownloadAsk": "Demander à chaque fois",
-    "downloadDesktopApp": "Télécharger pour Windows"
+    "downloadDesktopApp": "Télécharger pour Windows",
+    "notifyPolicyChange": "Rappel de changement de politique de stockage",
+    "notifyPolicyChangeDes": "Notifier en entrant dans un dossier utilisant une autre politique de stockage",
+    "notifyPolicyChangeOn": "Activé",
+    "notifyPolicyChangeOff": "Désactivé",
+    "storage": "Stockage"
   },
   "vas": {
     "points": "Points",
@@ -1309,7 +1320,12 @@
     "report": "Signaler un abus",
     "reportTarget": "Cible du signalement",
     "reportReason": "Raison",
-    "reportReasonOptions": ["Violation de droits d'auteur", "Contenu nuisible", "Spam", "Autre"],
+    "reportReasonOptions": [
+      "Violation de droits d'auteur",
+      "Contenu nuisible",
+      "Spam",
+      "Autre"
+    ],
     "reportDescription": "Description supplémentaire",
     "reportAbuseSuccess": "Signalement soumis.",
     "migrateStoragePolicy": "Migrer la stratégie de stockage",

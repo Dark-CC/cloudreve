@@ -546,7 +546,13 @@
     "relocateStart": "Umziehen",
     "policySaved": "Speicherrichtlinie aktualisiert",
     "policyInherit": "Erben (übergeordnete oder Gruppenvorgabe)",
-    "policyGroupDefault": "Gruppenvorgabe"
+    "policyGroupDefault": "Gruppenvorgabe",
+    "switchDirPolicy": "Speicherrichtlinie des Ordners wechseln",
+    "policySwitched": "Gewechselt zu {{name}}",
+    "policyCleared": "Speicherrichtlinie entfernt – der Ordner erbt wieder vom übergeordneten Ordner",
+    "policyFollowParent": "Vom übergeordneten Ordner erben",
+    "policyEffective": "Aktuell aktiv: {{name}}",
+    "enteredPolicyDir": "Dieser Ordner verwendet die Speicherrichtlinie: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Passwort in Link einbeziehen",
@@ -1253,7 +1259,12 @@
     "archiveDownloadMethod": "Methode für Massendownloads",
     "archiveDownloadMethodDes": "Wie Ordner und Mehrfachauswahlen heruntergeladen werden. „Jedes Mal fragen“ lässt die Wahl bei jedem Download offen.",
     "archiveDownloadAsk": "Jedes Mal fragen",
-    "downloadDesktopApp": "Für Windows herunterladen"
+    "downloadDesktopApp": "Für Windows herunterladen",
+    "notifyPolicyChange": "Wechsel der Speicherrichtlinie melden",
+    "notifyPolicyChangeDes": "Beim Betreten eines Ordners mit abweichender Speicherrichte hinweisen",
+    "notifyPolicyChangeOn": "Ein",
+    "notifyPolicyChangeOff": "Aus",
+    "storage": "Speicher"
   },
   "vas": {
     "points": "Punkte",
@@ -1306,7 +1317,12 @@
     "report": "Missbrauch melden",
     "reportTarget": "Meldeobjekt",
     "reportReason": "Grund",
-    "reportReasonOptions": ["Urheberrechtsverletzung", "Schädlicher Inhalt", "Spam", "Andere"],
+    "reportReasonOptions": [
+      "Urheberrechtsverletzung",
+      "Schädlicher Inhalt",
+      "Spam",
+      "Andere"
+    ],
     "reportDescription": "Zusätzliche Beschreibung",
     "reportAbuseSuccess": "Meldung eingereicht",
     "migrateStoragePolicy": "Speicherrichtlinie übertragen",
