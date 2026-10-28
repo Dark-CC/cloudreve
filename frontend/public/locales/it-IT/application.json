@@ -758,8 +758,8 @@
     "shareTargets": "Destinatari condivisione",
     "shareTargetsCount_one": "{{count}} destinatario",
     "shareTargetsCount_other": "{{count}} destinatari",
-    "publicListing": "Elenica nel directory pubblico",
-    "publicListingDes": "Mostra questa condivisione nella pagina Scopri, visibile a chiunque, inclusi i visitatori anonimi. Non disponibile per condivisioni protette da password.",
+    "publicListing": "Pubblica nella Piazza di condivisione",
+    "publicListingDes": "Mostra questa condivisione nella Piazza di condivisione, visibile a chiunque, inclusi i visitatori anonimi. Non disponibile per condivisioni protette da password.",
     "hideReadme": "Nascondi file readme",
     "hideReadmeDes": "Mantieni il file README fuori dall'elenco della condivisione. I visitatori vedono comunque il readme renderizzato.",
     "viewSetting": "Impostazione vista",
@@ -1446,6 +1446,6 @@
   "discover": {
     "searchPlaceholder": "Cerca condivisioni pubbliche",
     "empty": "Nessuna condivisione pubblica",
-    "emptyDescription": "Le condivisioni appaiono qui quando i proprietari le pubblicano nella directory pubblica."
+    "emptyDescription": "Le condivisioni appaiono qui quando i proprietari le pubblicano nella Piazza di condivisione."
   }
 }

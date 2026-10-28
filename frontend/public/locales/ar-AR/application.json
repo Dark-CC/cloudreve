@@ -703,8 +703,8 @@
     "shareTargetsCount_few": "{{count}} أهداف",
     "shareTargetsCount_many": "{{count}} هدفًا",
     "shareTargetsCount_other": "{{count}} هدف",
-    "publicListing": "إدراج في الدليل العام",
-    "publicListingDes": "إظهار هذه المشاركة على صفحة اكتشف، مرئية للجميع بما في ذلك الزوار المجهولون. غير متاح للمشاركات المحمية بكلمة مرور.",
+    "publicListing": "النشر في ساحة المشاركة",
+    "publicListingDes": "إظهار هذه المشاركة في ساحة المشاركة، مرئية للجميع بما في ذلك الزوار المجهولون. غير متاح للمشاركات المحمية بكلمة مرور.",
     "hideReadme": "إخفاء ملف readme",
     "hideReadmeDes": "إبقاء ملف README نفسه خارج قائمة المشاركة. لا يزال الزوار يرون محتوى readme المعروض.",
     "relativePathPlaceholder": "المسار_النسبي",
@@ -1259,6 +1259,6 @@
   "discover": {
     "searchPlaceholder": "البحث في المشاركات العامة",
     "empty": "لا توجد مشاركات عامة بعد",
-    "emptyDescription": "تظهر المشاركات هنا عندما يدرجها مالكوها في الدليل العام."
+    "emptyDescription": "تظهر المشاركات هنا عندما ينشرها أصحابها في ساحة المشاركة."
   }
 }

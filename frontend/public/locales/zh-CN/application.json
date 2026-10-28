@@ -705,8 +705,8 @@
     "shareTargets": "分享对象",
     "shareTargetsCount_one": "已选择 {{count}} 个项目",
     "shareTargetsCount_other": "已选择 {{count}} 个项目",
-    "publicListing": "收录到公开目录",
-    "publicListingDes": "将此分享显示在“发现”页，任何人（包括未登录访客）可见。带密码的分享不可用。",
+    "publicListing": "公开到分享广场",
+    "publicListingDes": "将此分享显示在“分享广场”，任何人（包括未登录访客）可见。带密码的分享不可用。",
     "hideReadme": "隐藏 README 文件",
     "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。",
     "anonymous": "匿名",
@@ -1255,6 +1255,6 @@
   "discover": {
     "searchPlaceholder": "搜索公开分享",
     "empty": "暂无公开分享",
-    "emptyDescription": "当分享的所有者将其列入公开目录时，分享会显示在这里。"
+    "emptyDescription": "当分享的所有者将其公开到分享广场时，分享会显示在这里。"
   }
 }
