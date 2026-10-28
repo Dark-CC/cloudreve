@@ -549,7 +549,13 @@
     "relocateStart": "재배치",
     "policySaved": "스토리지 정책이 업데이트되었습니다",
     "policyInherit": "상속 (상위 또는 그룹 기본값 사용)",
-    "policyGroupDefault": "그룹 기본값"
+    "policyGroupDefault": "그룹 기본값",
+    "switchDirPolicy": "폴더 저장 정책 전환",
+    "policySwitched": "{{name}}(으)로 전환되었습니다",
+    "policyCleared": "저장 정책이 해제되었습니다. 폴더는 상위 폴더에서 상속합니다",
+    "policyFollowParent": "상위 폴더 따르기",
+    "policyEffective": "현재 적용: {{name}}",
+    "enteredPolicyDir": "이 폴더의 저장 정책: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "공유 링크에 비밀번호 포함",
@@ -755,8 +761,8 @@
     "shareNoteDes": "이 공유를 식별하기 위한 비공개 메모입니다. 내 공유에서만 볼 수 있습니다.",
     "shareTargets": "공유 대상",
     "shareTargetsCount_other": "대상 {{count}}개",
-    "publicListing": "공개 디렉터리에 등록",
-    "publicListingDes": "이 공유를 발견 페이지에 표시하며, 익명 방문자를 포함한 누구나 볼 수 있습니다. 비밀번호 보호 공유에는 사용할 수 없습니다.",
+    "publicListing": "공유 광장에 공개",
+    "publicListingDes": "이 공유를 공유 광장에 표시하며, 익명 방문자를 포함한 누구나 볼 수 있습니다. 비밀번호 보호 공유에는 사용할 수 없습니다.",
     "hideReadme": "readme 파일 숨기기",
     "hideReadmeDes": "README 파일 자체를 공유 목록에서 제외합니다. 방문자는 렌더링된 readme을 계속 볼 수 있습니다.",
     "shareTargetsCount_one": "대상 {{count}}개",
@@ -1256,7 +1262,12 @@
     "archiveDownloadMethod": "일괄 다운로드 방법",
     "archiveDownloadMethodDes": "폴더와 다중 선택 파일의 다운로드 방식입니다. \"매번 확인\"을 선택하면 다운로드할 때마다 선택할 수 있습니다.",
     "archiveDownloadAsk": "매번 확인",
-    "downloadDesktopApp": "Windows용 다운로드"
+    "downloadDesktopApp": "Windows용 다운로드",
+    "notifyPolicyChange": "저장 정책 변경 알림",
+    "notifyPolicyChangeDes": "이전과 다른 저장 정책의 폴더에 들어갈 때 알림",
+    "notifyPolicyChangeOn": "켜기",
+    "notifyPolicyChangeOff": "끄기",
+    "storage": "스토리지"
   },
   "vas": {
     "points": "포인트",
@@ -1309,7 +1320,12 @@
     "report": "남용 신고",
     "reportTarget": "신고 대상",
     "reportReason": "이유",
-    "reportReasonOptions": ["침해", "유해 콘텐츠", "스팸 정보", "기타"],
+    "reportReasonOptions": [
+      "침해",
+      "유해 콘텐츠",
+      "스팸 정보",
+      "기타"
+    ],
     "reportDescription": "추가 설명",
     "reportAbuseSuccess": "신고가 제출되었습니다",
     "migrateStoragePolicy": "저장 정책 전송",
@@ -1432,6 +1448,6 @@
   "discover": {
     "searchPlaceholder": "공개 공유 검색",
     "empty": "공개 공유가 아직 없습니다",
-    "emptyDescription": "소유자가 공개 디렉터리에 등록한 공유가 여기에 표시됩니다."
+    "emptyDescription": "소유자가 공유 광장에 공개한 공유가 여기에 표시됩니다."
   }
 }

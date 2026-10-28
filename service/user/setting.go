@@ -357,6 +357,10 @@ type (
 		// DismissAnnouncement records the current site announcement as seen
 		// so the modal does not show again until the content changes.
 		DismissAnnouncement *bool `json:"dismiss_announcement" binding:"omitempty"`
+		// NotifyStoragePolicyChange toggles the toast reminder shown when
+		// entering a directory whose effective storage policy differs from the
+		// previously listed one. Default (unset) is off.
+		NotifyStoragePolicyChange *bool `json:"notify_storage_policy_change" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -483,6 +487,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 
 	if s.DismissAnnouncement != nil && *s.DismissAnnouncement {
 		u.Settings.DismissedAnnouncement = dep.SettingProvider().Announcement(c)
+		saveSetting = true
+	}
+
+	if s.NotifyStoragePolicyChange != nil {
+		u.Settings.NotifyStoragePolicyChange = *s.NotifyStoragePolicyChange
 		saveSetting = true
 	}
 

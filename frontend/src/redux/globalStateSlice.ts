@@ -292,6 +292,10 @@ export interface GlobalStateSlice {
 
   policyOptionCache?: StoragePolicyBrief[];
 
+  // Per-user setting: toast reminder when entering a directory whose
+  // effective storage policy differs from the previously listed one.
+  notifyPolicyChange?: boolean;
+
   // Search popup
   searchPopupOpen?: boolean;
 
@@ -437,6 +441,9 @@ export const globalStateSlice = createSlice({
     },
     setPolicyOptionCache: (state, action: PayloadAction<StoragePolicyBrief[] | undefined>) => {
       state.policyOptionCache = action.payload;
+    },
+    setNotifyPolicyChange: (state, action: PayloadAction<boolean>) => {
+      state.notifyPolicyChange = action.payload;
     },
     resetDialogs: (state) => {
       state.aggregatedErrorDialogOpen = state.aggregatedErrorDialogOpen ? false : undefined;
@@ -1036,6 +1043,7 @@ export const {
   closeSaveAsDialog,
   resetDialogs,
   setPolicyOptionCache,
+  setNotifyPolicyChange,
   setSearchPopup,
   setExcalidrawViewer,
   closeExcalidrawViewer,

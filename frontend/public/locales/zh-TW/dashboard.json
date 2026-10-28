@@ -1500,7 +1500,7 @@
     "weightedPolicies": "按容量加權選擇策略",
     "weightedPoliciesDes": "啟用後，未指定策略偏好的上傳會被分配到剩餘容量最多且可容納該檔案的可切換儲存策略。僅參與設定了總容量限制的策略。",
     "sharePublicList": "公開分享目錄",
-    "sharePublicListDes": "開啟後，使用者可以將分享連結收錄到公開目錄（發現頁）。帶密碼的分享無法被收錄。"
+    "sharePublicListDes": "開啟後，使用者可以將分享連結公開到分享廣場。帶密碼的分享無法被公開。"
   },
   "user": {
     "createdAt": "建立日期",

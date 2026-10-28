@@ -549,7 +549,13 @@
     "relocateStart": "Riloca",
     "policySaved": "Politica di archiviazione aggiornata",
     "policyInherit": "Eredita (padre o predefinito del gruppo)",
-    "policyGroupDefault": "Predefinito del gruppo"
+    "policyGroupDefault": "Predefinito del gruppo",
+    "switchDirPolicy": "Cambia criterio di archiviazione della cartella",
+    "policySwitched": "Passato a {{name}}",
+    "policyCleared": "Criterio di archiviazione rimosso: la cartella eredita di nuovo dalla cartella padre",
+    "policyFollowParent": "Eredita dalla cartella padre",
+    "policyEffective": "Attualmente attivo: {{name}}",
+    "enteredPolicyDir": "Questa cartella usa il criterio di archiviazione: {{name}}"
   },
   "modals": {
     "includePasswordInShareLink": "Includi password nel link di condivisione",
@@ -752,8 +758,8 @@
     "shareTargets": "Destinatari condivisione",
     "shareTargetsCount_one": "{{count}} destinatario",
     "shareTargetsCount_other": "{{count}} destinatari",
-    "publicListing": "Elenica nel directory pubblico",
-    "publicListingDes": "Mostra questa condivisione nella pagina Scopri, visibile a chiunque, inclusi i visitatori anonimi. Non disponibile per condivisioni protette da password.",
+    "publicListing": "Pubblica nella Piazza di condivisione",
+    "publicListingDes": "Mostra questa condivisione nella Piazza di condivisione, visibile a chiunque, inclusi i visitatori anonimi. Non disponibile per condivisioni protette da password.",
     "hideReadme": "Nascondi file readme",
     "hideReadmeDes": "Mantieni il file README fuori dall'elenco della condivisione. I visitatori vedono comunque il readme renderizzato.",
     "viewSetting": "Impostazione vista",
@@ -1256,7 +1262,12 @@
     "archiveDownloadMethod": "Metodo di download multiplo",
     "archiveDownloadMethodDes": "Come vengono scaricate cartelle e selezioni multiple. Scegli «Chiedi ogni volta» per decidere a ogni download.",
     "archiveDownloadAsk": "Chiedi ogni volta",
-    "downloadDesktopApp": "Scarica per Windows"
+    "downloadDesktopApp": "Scarica per Windows",
+    "notifyPolicyChange": "Promemoria cambio criterio di archiviazione",
+    "notifyPolicyChangeDes": "Avvisa quando entri in una cartella con un criterio di archiviazione diverso",
+    "notifyPolicyChangeOn": "Attivo",
+    "notifyPolicyChangeOff": "Disattivo",
+    "storage": "Archiviazione"
   },
   "vas": {
     "points": "Punti",
@@ -1309,7 +1320,12 @@
     "report": "Segnala abuso",
     "reportTarget": "Target segnalazione",
     "reportReason": "Motivo",
-    "reportReasonOptions": ["Violazione copyright", "Contenuto dannoso", "Spam", "Altro"],
+    "reportReasonOptions": [
+      "Violazione copyright",
+      "Contenuto dannoso",
+      "Spam",
+      "Altro"
+    ],
     "reportDescription": "Descrizione aggiuntiva",
     "reportAbuseSuccess": "Segnalazione inviata.",
     "migrateStoragePolicy": "Migra policy di archiviazione",
@@ -1430,6 +1446,6 @@
   "discover": {
     "searchPlaceholder": "Cerca condivisioni pubbliche",
     "empty": "Nessuna condivisione pubblica",
-    "emptyDescription": "Le condivisioni appaiono qui quando i proprietari le pubblicano nella directory pubblica."
+    "emptyDescription": "Le condivisioni appaiono qui quando i proprietari le pubblicano nella Piazza di condivisione."
   }
 }

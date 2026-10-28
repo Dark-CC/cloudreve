@@ -1501,7 +1501,7 @@
     "weightedPolicies": "Selezione politica ponderata",
     "weightedPoliciesDes": "Quando attivo, gli upload senza preferenza di politica esplicita sono instradati alla politica consentita con più spazio libero che contenga il file. Solo le politiche con limite di capacità totale sono ponderate.",
     "sharePublicList": "Directory pubblica delle condivisioni",
-    "sharePublicListDes": "Quando attivo, gli utenti possono iscrivere i loro link di condivisione alla directory pubblica (pagina Scopri). Le condivisioni protette da password non possono essere elencate."
+    "sharePublicListDes": "Quando attivata, gli utenti possono pubblicare i propri link di condivisione nella Piazza di condivisione. Le condivisioni protette da password non possono essere pubblicate."
   },
   "user": {
     "createdAt": "Creato il",
