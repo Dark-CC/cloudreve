@@ -867,6 +867,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "Sem autenticação",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "O Captcha ID do <0>console GeeTest</0>. Use um captcha GeeTest 4.0.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1496,7 +1501,7 @@
     "weightedPolicies": "Seleção ponderada de políticas",
     "weightedPoliciesDes": "Quando ativado, uploads sem preferência explícita de política são roteados à política permitida com mais capacidade livre que caiba o arquivo. Apenas políticas com limite de capacidade total são ponderadas.",
     "sharePublicList": "Diretório público de compartilhamentos",
-    "sharePublicListDes": "Quando ativado, usuários podem incluir seus links de compartilhamento no diretório público (página Descobrir). Compartilhamentos protegidos por senha não podem ser listados."
+    "sharePublicListDes": "Quando ativado, usuários podem publicar seus links de compartilhamento na Praça de compartilhamento. Compartilhamentos protegidos por senha não podem ser publicados."
   },
   "user": {
     "createdAt": "Criado em",

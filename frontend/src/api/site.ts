@@ -7,6 +7,7 @@ export enum CaptchaType {
   TCAPTCHA = "tcaptcha",
   TURNSTILE = "turnstile",
   CAP = "cap",
+  GEETEST = "geetest",
 }
 
 export interface SiteConfig {
@@ -23,6 +24,7 @@ export interface SiteConfig {
   captcha_type?: CaptchaType;
   tcaptcha_app_id?: string;
   turnstile_site_id?: string;
+  geetest_captcha_id?: string;
   captcha_cap_instance_url?: string;
   captcha_cap_site_key?: string;
   captcha_cap_secret_key?: string;

@@ -866,6 +866,11 @@
     "smtpAuth_xoauth2": "XOAUTH2",
     "smtpAuth_noauth": "Bez uwierzytelniania",
     "tcaptcha": "Tencent Captcha",
+    "geetest": "GeeTest",
+    "geetestCaptchaId": "Captcha ID",
+    "geetestCaptchaIdDes": "Captcha ID z <0>konsoli GeeTest</0>. Użyj captchy GeeTest 4.0.",
+    "geetestCaptchaKey": "Captcha Key",
+    "geetestCaptchaKeyDes": "The Captcha Key from the <0>GeeTest console</0>, used for server-side secondary validation.",
     "tcaptchaAppId": "CaptchaAppId",
     "tcaptchaAppSecretKey": "AppSecretKey",
     "tcaptchaSecretId": "SecretId",
@@ -1495,7 +1500,7 @@
     "weightedPolicies": "Ważony wybór polityk",
     "weightedPoliciesDes": "Gdy włączone, przesyłania bez jawnego wyboru polityki są kierowane do dozwolonej polityki z największą wolną pojemnością mieszczącą plik. Ważone są tylko polityki z całkowitym limitem pojemności.",
     "sharePublicList": "Publiczny katalog udostępnień",
-    "sharePublicListDes": "Gdy włączone, użytkownicy mogą opcjonalnie dodawać swoje linki udostępnienia do publicznego katalogu (strona Odkrywaj). Udostępnienia chronione hasłem nie mogą być wymienione."
+    "sharePublicListDes": "Po włączeniu użytkownicy mogą publikować swoje linki udostępnienia w Galerii udostępnień. Udostępnienia chronione hasłem nie mogą być publikowane."
   },
   "user": {
     "createdAt": "Utworzono",

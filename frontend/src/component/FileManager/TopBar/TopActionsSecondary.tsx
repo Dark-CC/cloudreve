@@ -8,6 +8,7 @@ import MoreHorizontal from "../../Icons/MoreHorizontal.tsx";
 import { refreshFileList } from "../../../redux/thunks/filemanager.ts";
 import { bindMenu, bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
 import MoreActionMenu from "./MoreActionMenu.tsx";
+import StoragePolicySwitchButton from "./StoragePolicySwitchButton.tsx";
 import { FileManagerIndex } from "../FileManager.tsx";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 
@@ -51,6 +52,7 @@ const TopActionsSecondary = () => {
             />
           </ActionButton>
         </Tooltip>
+        {fmIndex == FileManagerIndex.main && <StoragePolicySwitchButton />}
         {fmIndex == FileManagerIndex.main && (
           <ActionButton {...bindTrigger(morePopupState)}>
             <MoreHorizontal fontSize={"small"} />
