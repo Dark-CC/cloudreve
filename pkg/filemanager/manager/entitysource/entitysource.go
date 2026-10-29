@@ -595,8 +595,15 @@ func (f *entitySource) ShouldInternalProxy(opts ...EntitySourceOption) bool {
 		opt.Apply(f.o)
 	}
 	handlerCapability := f.handler.Capabilities()
+	// An encrypted entity is stored as ciphertext: the upstream source URL
+	// only hands the browser bytes it cannot decrypt. NoInternalProxy
+	// therefore never applies to it, encryption always keeps the relay.
+	if f.e.Encrypted() {
+		return true
+	}
+
 	return f.e.ID() == 0 || handlerCapability.StaticFeatures.Enabled(int(driver.HandlerCapabilityProxyRequired)) ||
-		(f.policy.Settings.InternalProxy || f.e.Encrypted()) && !f.o.NoInternalProxy
+		f.policy.Settings.InternalProxy && !f.o.NoInternalProxy
 }
 
 func (f *entitySource) Url(ctx context.Context, opts ...EntitySourceOption) (*EntityUrl, error) {

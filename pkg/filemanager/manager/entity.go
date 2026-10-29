@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -311,35 +312,49 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 			}
 		}
 
+		// Direct (non-relayed) downloads bypass this site and land on the
+		// storage provider, so they cannot carry a metering claim; ask the
+		// source for the upstream URL instead of the relay one.
+		directEntitySource := o.NoInternalProxy && meterClaim == ""
 		// Try to read from cache.
 		cacheKey := entityUrlCacheKey(target.ID(), o.DownloadSpeed, getEntityDisplayName(file, target), o.IsDownload,
-			m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, getEntityDisplayName(file, target), o.IsDownload)+"|"+meterClaim)
-		if cached, ok := m.kv.Get(cacheKey); ok && !o.NoCache {
-			cachedItem := cached.(EntityUrlCache)
-			// Find the earliest expiry time
-			if cachedItem.ExpireAt != nil && (earliestExpireAt == nil || cachedItem.ExpireAt.Before(*earliestExpireAt)) {
-				earliestExpireAt = cachedItem.ExpireAt
+			m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, getEntityDisplayName(file, target), o.IsDownload)+"|"+meterClaim+
+				"|"+strconv.FormatBool(directEntitySource))
+		if !o.NoCache {
+			if cached, ok := m.kv.Get(cacheKey); ok {
+				cachedItem := cached.(EntityUrlCache)
+				// Find the earliest expiry time
+				if cachedItem.ExpireAt != nil && (earliestExpireAt == nil || cachedItem.ExpireAt.Before(*earliestExpireAt)) {
+					earliestExpireAt = cachedItem.ExpireAt
+				}
+				res[i] = EntityUrl{
+					Url:                        cachedItem.Url,
+					BrowserDownloadDisplayName: cachedItem.BrowserDownloadDisplayName,
+					Size:                       file.Size(),
+					OwnerID:                    file.OwnerID(),
+					Metered:                    cachedItem.Metered,
+				}
+				continue
 			}
-			res[i] = EntityUrl{
-				Url:                        cachedItem.Url,
-				BrowserDownloadDisplayName: cachedItem.BrowserDownloadDisplayName,
-				Size:                       file.Size(),
-				OwnerID:                    file.OwnerID(),
-				Metered:                    cachedItem.Metered,
-			}
-			continue
 		}
 
 		// Cache miss, Generate new url
 		source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
 			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
-		downloadUrl, err := source.Url(ctx,
+		urlOpts := []entitysource.EntitySourceOption{
 			entitysource.WithExpire(o.Expire),
 			entitysource.WithDownload(o.IsDownload),
 			entitysource.WithSpeedLimit(o.DownloadSpeed),
 			entitysource.WithDisplayName(getEntityDisplayName(file, target)),
 			entitysource.WithMeterClaim(meterClaim),
-		)
+		}
+		// Only set when actually requested: the option mutates an option bag
+		// shared with the source, so a "false" value would still clear the
+		// URL cache on every call for no reason.
+		if directEntitySource {
+			urlOpts = append(urlOpts, entitysource.WithNoInternalProxy())
+		}
+		downloadUrl, err := source.Url(ctx, urlOpts...)
 		if err != nil {
 			ae.Add(arg.URI.String(), err)
 			continue
