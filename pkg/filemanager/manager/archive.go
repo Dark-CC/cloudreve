@@ -157,6 +157,27 @@ func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity, zip
 	return fileList, nil
 }
 
+// AssertArchivable reports whether every given URI may be packed into an
+// archive. A direct-only policy (the 139 cloud drive) forbids it outright: it
+// is served only by jumping to the drive, and zipping would stream each entry
+// through this site. Callers use it before creating an archive session so the
+// rejection arrives as a plain error rather than a failed zip stream.
+func (m *manager) AssertArchivable(ctx context.Context, uris []*fs.URI) error {
+	for _, uri := range uris {
+		file, err := m.Get(ctx, uri, dbfs.WithFileEntities(),
+			dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
+		if err != nil {
+			return err
+		}
+
+		if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.Writer, opts ...fs.Option) (int, error) {
 	o := newOption()
 	for _, opt := range opts {
