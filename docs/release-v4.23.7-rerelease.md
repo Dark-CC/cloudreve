@@ -19,6 +19,18 @@
 | GHCR `cloudreve:v4.23.7` manifest | `sha256:9f0cdac0b7a9b7eea2e87ec7b688d4de0932c268fdd4ca762857f5c56655254d`（multi-arch: linux/amd64 + linux/arm64） |
 | Release workflow run | [40926183258](https://github.com/Dark-CC/cloudreve/actions/runs/40926183258)，server job 全绿 |
 
+覆盖后（2026-10-30 重发完成）对应的新值：
+
+| 项 | 新（2026-10-30 重发） |
+| --- | --- |
+| tag `v4.23.7` 指向 | `bbef3e86f4098c409a4fc7a72a170c838fb96c74`（PR #144 合并提交，含直链修复与本次发版说明） |
+| GitHub Release id | `428461815`（旧 `428235271` 已删除），正文含直链修复、重发说明、旧直链失效提示 |
+| `cloudreve_v4.23.7_linux_amd64.tar.gz` | sha256 `e9dd80b1f34ad0120bf6bda769ff1a9e37ddf8f910a97ba1c4b190581ceaa215`，40,198,224 字节 |
+| `cloudreve_v4.23.7_linux_arm64.tar.gz` | sha256 `4c4bf89ed9ac2924c8e62a6c4e2d8ad0a7402309b92c9015b2da63cae1f47fc9`，37,640,056 字节 |
+| `checksums.txt` | sha256 `b6fe139dac3b4c56b953a3ee280c043ca7f0fa32503218d40bf591048e78d67a`，1242 字节 |
+| GHCR `cloudreve:v4.23.7` / `latest` manifest | `sha256:8de9fd2186c7d657ccf56340694cb1bd1181f76aa960d136bc33008bc373f860` |
+| Release workflow run | [40964151064](https://github.com/Dark-CC/cloudreve/actions/runs/40964151064) attempt 2 成功（attempt 1 因附件已存在失败，见 §2） |
+
 旧镜像仍可从 GHCR 按 digest 取回：`docker pull ghcr.io/dark-cc/cloudreve@sha256:9f0cdac0…`（manifest 被新构建覆盖后该 digest 依然可寻址，因为 digest 即内容地址；万一被 GC 清掉，回滚就退回 v4.23.6 镜像 `ghcr.io/dark-cc/cloudreve:v4.23.6`）。
 
 ## 2. 覆盖方式
@@ -38,9 +50,23 @@ git push -f origin refs/tags/v4.23.7
 
 ### 已存在 Release 时的行为（本任务待查明项，实测结论）
 
-`release.yml` 里 GoReleaser 走 `goreleaser release --clean`，其默认 `release.mode` 为 `replace`（本仓库 `.goreleaser.yaml` 未覆盖该字段），所以**已存在的 Release 会被就地覆盖，不需要先删 Release 或 GHCR tag**：正文换成新发版说明，附件同名覆盖（清单里的 13 个文件全为同名同架构），target_commitish 更新为新 tag 指向。
+`release.yml` 里 GoReleaser 走 `goreleaser release --clean`，本仓库 `.goreleaser.yaml` 未覆盖 `release.mode`（默认 `replace`）。**实测表明 `replace` 并不覆盖附件**，第一次重跑的 run [40964151064](https://github.com/Dark-CC/cloudreve/actions/runs/40964151064) 在 GoReleaser 发布阶段失败：
 
-若实测出现「asset already exists」类失败，处理方式是删掉该 Release 与对应 GHCR tag 后重跑，无需改 workflow——见 §6 的实测记录。
+```
+422 Validation Failed [{Resource:ReleaseAsset Field:name Code:already_exists}]
+⨯ release failed after 6m59s  failed to upload cloudreve_v4.23.7_windows_amd64.zip
+```
+
+13 个附件逐个报 `already_exists`。注意失败点在**最后一步**：GoReleaser 先编译、再推 GHCR 镜像、最后才上传 Release 附件，所以失败时 **GHCR 的 `v4.23.7` manifest 其实已经被新构建覆盖**（`sha256:9f0cdac0…` → `sha256:eca5ceea…`），只有 Release 的附件和正文停在旧内容——这会造成「镜像已更新、Release 没更新」的不一致状态，排查时别被镜像 digest 变化误导。
+
+正确处置：**先删掉旧 Release，再重跑同一 workflow**（tag 无需再动）：
+
+```bash
+DELETE /repos/Dark-CC/cloudreve/releases/428235271   # 204，GHCR tag 不必删，反正会被覆盖
+# 然后 rerun 失败的 run（attempt 2）
+```
+
+重跑后 run 成功，Release 以新 id `428461815` 重建，13 个附件全部为新产物，正文换成含直链修复与重发说明的版本。若将来再次同版本覆盖，直接沿用「先删 Release → 重跑」两步，无需改 workflow。
 
 ## 3. 部署到测试站（先于重发）
 
