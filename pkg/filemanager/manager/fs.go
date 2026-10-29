@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/remote"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/s3"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/upyun"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/y139"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 )
@@ -92,6 +93,19 @@ func (m *manager) GetStorageDriver(ctx context.Context, policy *ent.StoragePolic
 		return upyun.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
 	case types.PolicyTypeOd:
 		return onedrive.New(ctx, policy, m.settings, m.config, m.l, m.dep.CredManager())
+	case types.PolicyTypeY139:
+		d, err := y139.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
+		if err != nil {
+			return nil, err
+		}
+
+		// A refreshed login token must survive a restart, otherwise the drive
+		// eventually rejects the stale header the administrator pasted.
+		y139.SetTokenPersister(d, func(ctx context.Context, authorization string) error {
+			return m.policyClient.UpdateAccessKey(ctx, policy, authorization)
+		})
+
+		return d, nil
 	default:
 		return nil, ErrUnknownPolicyType
 	}

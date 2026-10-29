@@ -31,6 +31,7 @@ import RemoteWizard from "./Wizards/Remote/RemoteWizard";
 import S3Wizard from "./Wizards/S3/S3Wizard";
 import KS3Wizard from "./Wizards/KS3/KS3Wizard";
 import UpyunWizard from "./Wizards/Upyun/UpyunWizard";
+import Y139Wizard from "./Wizards/Y139/Y139Wizard";
 
 export const PageQuery = "page";
 export const PageSizeQuery = "page_size";
@@ -260,6 +261,21 @@ export const PolicyPropsMap: Record<PolicyType, PolicyProps> = {
     nativeExtractorDes: "policy.nativeMediaMetaExtObs",
     nativeExtractorDoc: "https://support.huaweicloud.com/intl/zh-cn/usermanual-obs/obs_01_0410.html",
     nativeExtractorDesDoc: "https://support.huaweicloud.com/intl/zh-cn/usermanual-obs/obs_01_0410.html",
+  },
+  [PolicyType.y139]: {
+    name: "policy.y139",
+    img: "/static/img/y139.svg",
+    wizardSize: "md",
+    wizard: Y139Wizard,
+    bucketName: "policy.y139Root",
+    endpointName: "policy.policyEndpoint",
+    akName: "policy.y139Authorization",
+    skName: "policy.y139AppKey",
+    // The drive signs at most 100 parts per call and 100MB is what its own
+    // client uses below 30GB, so that is the sane default ceiling here.
+    chunkSizeMin: 5 * 1024 * 1024, //5MB
+    chunkSizeMax: 512 * 1024 * 1024, //512MB
+    chunkSizeDes: "policy.chunkSizeDesY139",
   },
   [PolicyType.qiniu]: {
     name: "policy.qiniu",

@@ -498,6 +498,9 @@ const (
 	PolicyTypeOd     = "onedrive"
 	PolicyTypeRemote = "remote"
 	PolicyTypeObs    = "obs"
+	// PolicyTypeY139 is the China Mobile cloud drive (139) policy. It relies on
+	// the user's own web login state rather than an official developer API.
+	PolicyTypeY139 = "y139"
 	// PolicyTypeLoadBalance distributes uploads across weighted child
 	// policies. It is resolved to a concrete child policy before use and
 	// never reaches a storage driver.
