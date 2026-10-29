@@ -122,40 +122,15 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			}
 
 			linkHashID := hashid.EncodeSourceLinkID(m.hasher, link.ID)
-			redirectUrl := routes.MasterDirectLink(siteUrl, linkHashID, link.Name).String()
 
-			// A direct-only policy keeps its traffic counters and its stable
-			// link record, but the URL handed out is the storage provider's
-			// own presigned link: the group default of routing direct links
-			// through this site would turn every download back into a relay.
-			policy, d, err := m.getEntityPolicyDriver(ctx, target, nil)
-			if err != nil {
-				ae.Add(url.String(), err)
-				continue
-			}
-
-			if policy.Type == types.PolicyTypeY139 {
-				source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
-					m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
-				sourceUrl, err := source.Url(ctx,
-					entitysource.WithSpeedLimit(int64(inventory.EffectiveGroup(m.user).SpeedLimit)),
-					entitysource.WithDisplayName(file.Name()),
-				)
-				if err != nil {
-					ae.Add(url.String(), err)
-					continue
-				}
-
-				res = append(res, DirectLink{
-					File: file,
-					Url:  sourceUrl.Url,
-				})
-				continue
-			}
-
+			// Every policy gets this site's own link, the 139 cloud drive
+			// included: /f/:id/:name is a 302 to the drive's pre-signed URL,
+			// so the browser still receives the bytes from the drive (nothing
+			// is relayed through us) while the address handed out stays on
+			// this site and keeps working past the drive's 15 minute signature.
 			res = append(res, DirectLink{
 				File: file,
-				Url:  redirectUrl,
+				Url:  routes.MasterDirectLink(siteUrl, linkHashID, link.Name).String(),
 			})
 		} else {
 			// Use direct source
@@ -215,9 +190,15 @@ func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.Dir
 		metered bool
 	)
 
+	// Self-served URLs are the ones a NoInternalProxy request would change,
+	// so they get their own cache line: a relay URL cached by a preview must
+	// not be handed to a direct link redirect (or the reverse).
+	directEntitySource := o.NoInternalProxy && meterClaim == ""
+
 	// Try to read from cache.
 	cacheKey := entityUrlCacheKey(primaryEntity.ID(), int64(dl.Speed), dl.Name, o.IsDownload,
-		m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, dl.Name, o.IsDownload)+"|"+meterClaim)
+		m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, dl.Name, o.IsDownload)+"|"+meterClaim+
+			"|"+strconv.FormatBool(directEntitySource))
 	if cached, ok := m.kv.Get(cacheKey); ok {
 		cachedItem := cached.(EntityUrlCache)
 		res = &EntityUrl{Url: cachedItem.Url}
@@ -232,13 +213,17 @@ func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.Dir
 
 		source := entitysource.NewEntitySource(primaryEntity, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
 			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
-		downloadUrl, err := source.Url(ctx,
+		urlOpts := []entitysource.EntitySourceOption{
 			entitysource.WithExpire(o.Expire),
 			entitysource.WithDownload(o.IsDownload),
 			entitysource.WithSpeedLimit(int64(dl.Speed)),
 			entitysource.WithDisplayName(dl.Name),
 			entitysource.WithMeterClaim(meterClaim),
-		)
+		}
+		if directEntitySource {
+			urlOpts = append(urlOpts, entitysource.WithNoInternalProxy())
+		}
+		downloadUrl, err := source.Url(ctx, urlOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -346,11 +331,7 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 		// Direct (non-relayed) downloads bypass this site and land on the
 		// storage provider, so they cannot carry a metering claim; ask the
 		// source for the upstream URL instead of the relay one.
-		// A direct-only policy (the 139 cloud drive) never relays, whether or
-		// not the caller asked for it: its whole point is that bytes go from
-		// the drive to the browser, so the group default or a stored
-		// internal_proxy flag must not pull them back through this site.
-		directEntitySource := (o.NoInternalProxy && meterClaim == "") || policy.Type == types.PolicyTypeY139
+		directEntitySource := o.NoInternalProxy && meterClaim == ""
 		// Try to read from cache.
 		cacheKey := entityUrlCacheKey(target.ID(), o.DownloadSpeed, getEntityDisplayName(file, target), o.IsDownload,
 			m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, getEntityDisplayName(file, target), o.IsDownload)+"|"+meterClaim+

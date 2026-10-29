@@ -471,12 +471,6 @@ type (
 		SkipError         bool     `json:"skip_error"`
 		Archive           bool     `json:"archive"`
 		NoCache           bool     `json:"no_cache"`
-		// Direct requests the storage provider's own source URL instead of
-		// this site's relay URL, so the browser is sent straight to the
-		// cloud drive (the context-menu "download" path). Policies with an
-		// internal proxy enabled are overridden; local and encrypted
-		// entities still relay because they have no upstream URL.
-		Direct bool `json:"direct"`
 		// PurchaseTicket restores paid-share access after session loss.
 		PurchaseTicket string `json:"purchase_ticket"`
 	}
@@ -593,7 +587,6 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 		fs.WithNoCache(s.NoCache),
 		fs.WithUrlExpire(&expire),
 		fs.WithTrafficMeter(requesterID),
-		fs.WithNoInternalProxy(s.Direct && s.Download),
 	)
 	if err != nil && !s.SkipError {
 		return nil, fmt.Errorf("failed to get entity url: %w", err)
@@ -853,11 +846,15 @@ func RedirectDirectLink(c *gin.Context, name string, download bool) error {
 
 	// Request entity URL. TrafficMeter(-1) makes every owner billable —
 	// direct links always meter the owner regardless of who requests.
+	// NoInternalProxy keeps the 302 pointed at the storage provider itself
+	// (the cloud drive for a 139 policy) instead of this site's relay, so a
+	// direct link never turns back into a served download.
 	expire := time.Now().Add(settings.EntityUrlValidDuration(c))
 	res, earliestExpire, err := m.GetUrlForRedirectedDirectLink(c, dl,
 		fs.WithUrlExpire(&expire),
 		fs.WithIsDownload(download),
 		fs.WithTrafficMeter(-1),
+		fs.WithNoInternalProxy(true),
 	)
 	if err != nil {
 		return err

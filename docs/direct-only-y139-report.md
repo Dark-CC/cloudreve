@@ -22,7 +22,7 @@
 | `pkg/filemanager/manager/archive.go` | 新增 `rejectArchiveOnDirectOnlyPolicy`，`CreateArchive` / `spoolEntry` / `compressFileToArchive` 三处调用；y139 返回 `ErrNotSupportedAction`。新增 `AssertArchivable` 供上层提前校验。 |
 | `pkg/filemanager/manager/manager.go` | 接口补充 `AssertArchivable`。 |
 | `service/explorer/file.go` | `GetArchiveDownloadSession` 在**创建 zip 会话之前**调用 `AssertArchivable`，打包下载直接返回 JSON 错误，不再出现「先回一个 zip 链接、拉流时才失败」。 |
-| `pkg/filemanager/manager/entity.go` | `GetDirectLink` 保留 `DirectLink` 记录（流量统计与撤销），但 URL 改为上游云盘地址，不再返回本站 `/api/v4/s/...`。`GetEntityUrls` 的直连判定改为 **y139 无条件直连**（不再依赖调用方传 `direct`），避免任何入口遗漏退回中转。 |
+| `pkg/filemanager/manager/entity.go` | `GetDirectLink` 保留 `DirectLink` 记录（流量统计与撤销），但 URL 改为上游云盘地址，不再返回本站 `/api/v4/s/...`。`GetEntityUrls` 的直连判定改为 **y139 无条件直连**（不再依赖调用方传 `direct`），避免任何入口遗漏退回中转。**（2026-10-30 已改回：直链恢复本站 `/f/...` 302；实体 URL 仍是无条件直连，但直连此时意味着 302 的目标是云盘，不是把云盘地址交给浏览器 —— 见 `docs/y139-direct-link-site-302.md`。）** |
 | `frontend/src/redux/thunks/download.ts` | 浏览器侧打包（StreamSaver）与目录流式写盘加守卫，y139 抛本地化错误，绝不退回中转。 |
 | `frontend/src/component/Admin/StoragePolicy/.../StorageAndUploadSection.tsx` | 上传中转开关对 y139 `disabled` + 锁定说明文案。 |
 | `frontend/src/component/Admin/StoragePolicy/.../DownloadSection.tsx` | 下载中转开关（`internal_proxy`）同上。 |
@@ -69,6 +69,8 @@ Not supported action: archiving (zip) is disabled on the 139 cloud drive policy,
 | 秒传 | 同名同 hash 上传返回 `rapid_uploaded: true`、零字节传输，属预期直连结果，不算中转 |
 | y139 下载（**不带** `direct`） | URL Host = 云盘域名 —— 服务端对 y139 无条件直连，不依赖客户端传参 |
 | y139 下载（带 `direct`） | URL Host = 云盘域名 |
+
+> **2026-10-30 起失效**：`direct` 请求参数已整体移除，「获取直链」回复本站 `/f/...`、下载回复本站签名内容 URL，二者都是 302 到云盘。见 `docs/y139-direct-link-site-302.md`。
 
 测试文件 `cr-test-*` 全部用 `DELETE /api/v4/file` 删除，目录 `crdirecttest` 现已为空并保留。
 
@@ -123,6 +125,10 @@ docker run -d --name cloudreve-fork-test --restart unless-stopped \
 
 ## 8. 已知边界
 
+> **2026-10-30 更新：本节中与「直链直接给云盘地址」相关的表述已被后续修复推翻。**
+> 用户 05:26 定案「全部改成本站域名，不要「直接下载」」，现将「获取直链」与右键下载都改回本站地址由服务端 302，
+> 见 `docs/y139-direct-link-site-302.md`。下载仍不中转（302 只重定向），但浏览器不再直接拿到云盘域名。
+
 - **加密策略**：实体加密时 `ShouldInternalProxy` 恒真，必然中转。y139 策略的 `encryption` 已保持关闭。
 - **秒传**：`rapid_uploaded: true` 时浏览器零字节传输，已是零中转。
 - **分享页/旧直链**：旧 `/api/v4/s/...` 链接仍 302 到云盘；新签发的直链直接是云盘地址。
@@ -134,5 +140,8 @@ docker run -d --name cloudreve-fork-test --restart unless-stopped \
 
 1. 上传任意文件 —— 浏览器 Network 里应看到 `PUT` 直接打到 `*.eos-wuxi-3.cmecloud.cn`，本站只收到一条下发凭证的 JSON。
 2. 下载该文件 —— 地址栏/Network 直接跳到云盘域名，没有 `/api/v4/file/content/...`。
+>
+> **已被推翻（2026-10-30）**：现在第一步先是本站的 302（`/f/...` 或 `/api/v4/file/content/...` 301/302），
+> 第二步才跳到云盘域名，本站不承载字节。详见 `docs/y139-direct-link-site-302.md`。
 
 > 公网网关会切断 `PUT`，若网页上传在公网域名下失败，请在实例内部或 SSH 隧道下测试（既有实测结论）。
