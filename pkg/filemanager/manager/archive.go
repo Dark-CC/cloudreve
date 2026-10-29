@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -253,8 +254,8 @@ func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.F
 	}
 
 	if policy.Type == types.PolicyTypeY139 {
-		return fs.ErrNotSupportedAction.WithError(fmt.Errorf(
-			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually", nil))
+		return fs.ErrNotSupportedAction.WithError(errors.New(
+			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually"))
 	}
 
 	return nil
