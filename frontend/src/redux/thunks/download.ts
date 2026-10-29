@@ -3,7 +3,7 @@ import i18next from "i18next";
 import { closeSnackbar, enqueueSnackbar } from "notistack";
 import streamSaver from "streamsaver";
 import { getFileEntityUrl, getFileList } from "../../api/api.ts";
-import { FileResponse, FileType, ListResponse, Metadata } from "../../api/explorer.ts";
+import { FileResponse, FileType, ListResponse, Metadata, PolicyType } from "../../api/explorer.ts";
 import { GroupPermission } from "../../api/user.ts";
 import {
   DefaultCloseAction,
@@ -22,6 +22,7 @@ import {
 } from "../../util/filesystem.ts";
 import "../../util/zip.js";
 import { closeContextMenu } from "../fileManagerSlice.ts";
+import { FileManagerIndex } from "../../component/FileManager/FileManager.tsx";
 import { DialogSelectOption, setBatchDownloadLog, setBatchDownloadProgress } from "../globalStateSlice.ts";
 import { AppThunk } from "../store.ts";
 import { promiseId, selectOption } from "./dialog.ts";
@@ -217,6 +218,26 @@ export const cancelSignals: {
   [key: string]: AbortController;
 } = {};
 
+// assertNoDirectOnlyPolicy refuses batch downloads that would have to stream
+// file content through this site. Browser-side zipping fetches every entry
+// itself, which a direct-only policy (the 139 cloud drive) forbids: its files
+// are served straight from the drive, one download at a time. The caller gets a
+// readable error instead of a silently relayed archive.
+//
+// A file's own policy only rides along on entity listings, so a plain directory
+// listing falls back to the policy of the directory being browsed.
+function assertNoDirectOnlyPolicy(files: FileResponse[], getState?: () => any): void {
+  const blocked = files.some((f) => f.storage_policy?.type === PolicyType.y139);
+  if (blocked) {
+    throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
+  }
+
+  const current = getState?.()?.fileManager?.[FileManagerIndex.main]?.list?.storage_policy;
+  if (current?.type === PolicyType.y139) {
+    throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
+  }
+}
+
 export function browserBatchDownload(files: FileResponse[]): AppThunk {
   return async (dispatch, getState) => {
     const downloadId = promiseId();
@@ -322,6 +343,8 @@ function startBrowserBatchDownloadTo(
   files: FileResponse[],
 ): AppThunk<Promise<void>> {
   return async (dispatch, _getState): Promise<void> => {
+    assertNoDirectOnlyPolicy(files, _getState);
+
     let log = "";
     let failed = 0;
     let skipAll = false;
@@ -555,6 +578,11 @@ function startBrowserBatchDownloadTo(
 
 export function streamSaverDownload(files: FileResponse[]): AppThunk {
   return async (dispatch, getState) => {
+    // A direct-only policy (the 139 cloud drive) must never have its bytes
+    // pulled through this site, and the browser-side zip does exactly that.
+    // Refuse up front rather than streaming a relayed archive.
+    assertNoDirectOnlyPolicy(files, getState);
+
     const allFiles = (
       await longRunningTaskWithSnackbar(dispatch(walkAll(files)), "application:fileManager.preparingBathDownload")
     ).filter((f) => f.type == FileType.file);

@@ -175,6 +175,16 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 		files = append(files, file)
 	}
 
+	// Archiving reads every entry through this site to zip it, which is exactly
+	// the relay the 139 cloud drive policy forbids: its files are only ever
+	// served straight from the drive. Fail before a single byte is written so
+	// the caller gets a clean, readable rejection instead of a half-built zip.
+	for _, file := range files {
+		if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+			return 0, err
+		}
+	}
+
 	zipWriter := zip.NewWriter(writer)
 	defer zipWriter.Close()
 
@@ -226,8 +236,36 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 	return failed, nil
 }
 
+// rejectArchiveOnDirectOnlyPolicy refuses to zip a file stored on a policy that
+// must only ever be served straight from the storage provider. Compressing an
+// entry streams its bytes through this site, which a direct-only policy (the 139
+// cloud drive) forbids — the user downloads such files individually instead, and
+// that download jumps to the drive.
+func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.File) error {
+	entity := file.PrimaryEntity()
+	if entity == nil {
+		return nil
+	}
+
+	policy, _, err := m.getEntityPolicyDriver(ctx, entity, nil)
+	if err != nil {
+		return nil
+	}
+
+	if policy.Type == types.PolicyTypeY139 {
+		return fs.ErrNotSupportedAction.WithError(fmt.Errorf(
+			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually", nil))
+	}
+
+	return nil
+}
+
 func (m *manager) compressFileToArchive(ctx context.Context, parent string, file fs.File, zipWriter *zip.Writer,
 	compression bool, dryrun fs.CreateArchiveDryRunFunc) error {
+	if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+		return err
+	}
+
 	es, err := m.GetEntitySource(ctx, file.PrimaryEntityID())
 	if err != nil {
 		return fmt.Errorf("failed to get entity source for file %s: %w", file.Uri(false), err)
@@ -354,6 +392,11 @@ func (m *manager) createArchiveParallel(ctx context.Context, jobs []createArchiv
 // precomputed CRC32 and sizes for zip.Writer.CreateRaw.
 func (m *manager) spoolEntry(ctx context.Context, job createArchiveJob) archiveEntryResult {
 	res := archiveEntryResult{file: job.file}
+	if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, job.file); err != nil {
+		res.err = err
+		return res
+	}
+
 	es, err := m.GetEntitySource(ctx, job.file.PrimaryEntityID())
 	if err != nil {
 		res.err = fmt.Errorf("failed to get entity source: %w", err)

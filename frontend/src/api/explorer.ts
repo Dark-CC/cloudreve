@@ -35,6 +35,8 @@ export interface FileResponse {
   folder_summary?: FolderSummary;
   extended_info?: ExtendedInfo;
   primary_entity?: string;
+  // Only present on entity listings; a plain directory listing leaves it out.
+  storage_policy?: StoragePolicy;
 }
 
 export interface FolderSummary {

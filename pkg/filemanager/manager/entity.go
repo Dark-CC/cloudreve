@@ -122,9 +122,40 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			}
 
 			linkHashID := hashid.EncodeSourceLinkID(m.hasher, link.ID)
+			redirectUrl := routes.MasterDirectLink(siteUrl, linkHashID, link.Name).String()
+
+			// A direct-only policy keeps its traffic counters and its stable
+			// link record, but the URL handed out is the storage provider's
+			// own presigned link: the group default of routing direct links
+			// through this site would turn every download back into a relay.
+			policy, d, err := m.getEntityPolicyDriver(ctx, target, nil)
+			if err != nil {
+				ae.Add(url.String(), err)
+				continue
+			}
+
+			if policy.Type == types.PolicyTypeY139 {
+				source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
+					m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
+				sourceUrl, err := source.Url(ctx,
+					entitysource.WithSpeedLimit(int64(inventory.EffectiveGroup(m.user).SpeedLimit)),
+					entitysource.WithDisplayName(file.Name()),
+				)
+				if err != nil {
+					ae.Add(url.String(), err)
+					continue
+				}
+
+				res = append(res, DirectLink{
+					File: file,
+					Url:  sourceUrl.Url,
+				})
+				continue
+			}
+
 			res = append(res, DirectLink{
 				File: file,
-				Url:  routes.MasterDirectLink(siteUrl, linkHashID, link.Name).String(),
+				Url:  redirectUrl,
 			})
 		} else {
 			// Use direct source

@@ -524,10 +524,18 @@ const StorageAndUploadSection = () => {
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel
-                  control={<Switch checked={values.settings?.relay ?? false} onChange={onUploadRelayChange} />}
+                  control={
+                    <Switch
+                      checked={values.settings?.relay ?? false}
+                      onChange={onUploadRelayChange}
+                      disabled={values.type === PolicyType.y139}
+                    />
+                  }
                   label={t("policy.uploadRelay")}
                 />
-                <NoMarginHelperText>{t("policy.uploadRelayDes")}</NoMarginHelperText>
+                <NoMarginHelperText>
+                  {values.type === PolicyType.y139 ? t("policy.uploadRelayLockedY139") : t("policy.uploadRelayDes")}
+                </NoMarginHelperText>
               </FormControl>
             </SettingForm>
             <SettingForm title={t("policy.uploadTrafficDiagram")} lgWidth={5}>
