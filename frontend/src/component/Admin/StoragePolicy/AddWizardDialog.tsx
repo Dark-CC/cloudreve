@@ -10,7 +10,7 @@ import { useAppDispatch } from "../../../redux/hooks";
 import AutoHeight from "../../Common/AutoHeight";
 import FacebookCircularProgress from "../../Common/CircularProgress";
 import DraggableDialog from "../../Dialogs/DraggableDialog";
-import { PolicyPropsMap } from "./StoragePolicySetting";
+import { PolicyPropsMap } from "./policyProps";
 
 export interface AddWizardDialogProps {
   open: boolean;

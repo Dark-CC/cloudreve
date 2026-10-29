@@ -1,7 +1,9 @@
 import { Alert, Box, Link, Stack } from "@mui/material";
 import { useContext } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
+import { PolicyPropsMap } from "../policyProps";
+import { PolicyType } from "../../../../api/explorer";
 import {
   BasicInfoSection,
   DownloadSection,
@@ -14,8 +16,28 @@ import {
 import { StoragePolicySettingContext } from "./StoragePolicySettingWrapper";
 
 const StoragePolicyForm = () => {
-  const { t } = useTranslation("dashboard");
   const { formRef, values } = useContext(StoragePolicySettingContext);
+
+  // A policy whose type this build has no driver for (created by another
+  // Cloudreve build, or its driver was removed) has no meaningful form: every
+  // type specific section would render empty defaults and saving it would
+  // overwrite settings we cannot represent. Show an explanatory banner instead.
+  const recognizedType = !!PolicyPropsMap[values.type as PolicyType];
+
+  if (!recognizedType) {
+    return (
+      <Box component={"form"} ref={formRef} onSubmit={(e) => e.preventDefault()}>
+        <Alert severity="warning">
+          <Trans
+            i18nKey="policy.unknownPolicyTypeHint"
+            ns="dashboard"
+            values={{ type: values.type }}
+            components={[<strong />]}
+          />
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box component={"form"} ref={formRef} onSubmit={(e) => e.preventDefault()}>

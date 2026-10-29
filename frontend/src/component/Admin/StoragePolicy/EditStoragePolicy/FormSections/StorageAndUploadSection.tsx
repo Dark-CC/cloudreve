@@ -21,7 +21,7 @@ import { SquareMenuItem } from "../../../../FileManager/ContextMenu/ContextMenu"
 import SettingForm from "../../../../Pages/Setting/SettingForm";
 import MagicVarDialog from "../../../Common/MagicVarDialog";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
-import { PolicyPropsMap } from "../../StoragePolicySetting";
+import { getPolicyProps } from "../../policyProps";
 import { TrafficDiagram } from "../../TrafficDiagram";
 import { StoragePolicySettingContext } from "../StoragePolicySettingWrapper";
 import { fileMagicVars, pathMagicVars } from "./magicVars";
@@ -45,7 +45,7 @@ const StorageAndUploadSection = () => {
   const fileNameInputRef = useRef<HTMLInputElement>(null);
 
   const policyProps = useMemo(() => {
-    return PolicyPropsMap[values.type];
+    return getPolicyProps(values.type);
   }, [values.type]);
 
   const showPreallocate = useMemo(() => {

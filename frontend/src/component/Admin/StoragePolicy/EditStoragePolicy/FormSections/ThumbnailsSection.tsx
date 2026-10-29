@@ -11,7 +11,7 @@ import { DenseFilledTextField, DenseSelect } from "../../../../Common/StyledComp
 import { SquareMenuItem } from "../../../../FileManager/ContextMenu/ContextMenu";
 import SettingForm from "../../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
-import { PolicyPropsMap } from "../../StoragePolicySetting";
+import { getPolicyProps } from "../../policyProps";
 import { StoragePolicySettingContext } from "../StoragePolicySettingWrapper";
 
 const ThumbnailsSection = () => {
@@ -29,7 +29,7 @@ const ThumbnailsSection = () => {
   }, [values.id]);
 
   const policyProps = useMemo(() => {
-    return PolicyPropsMap[values.type];
+    return getPolicyProps(values.type);
   }, [values.type]);
 
   const noNativeThumbnail = useMemo(() => {

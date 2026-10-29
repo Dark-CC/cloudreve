@@ -14,7 +14,7 @@ import { PolicyType } from "../../../api/explorer";
 import { SecondaryButton } from "../../Common/StyledComponents";
 import DraggableDialog from "../../Dialogs/DraggableDialog";
 import Open from "../../Icons/Open";
-import { PolicyPropsMap } from "./StoragePolicySetting";
+import { PolicyPropsMap } from "./policyProps";
 
 export interface SelectProviderProps {
   open: boolean;

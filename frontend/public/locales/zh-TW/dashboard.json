@@ -1306,7 +1306,9 @@
     "lbWeight": "權重",
     "lbAddChild": "新增子策略",
     "lbChildrenDes": "新上傳將按權重比例分配到各子儲存策略。",
-    "lbWizardDes": "負載均衡策略按權重將上傳分配到子策略，建立後再配置子策略。"
+    "lbWizardDes": "負載均衡策略按權重將上傳分配到子策略，建立後再配置子策略。",
+    "unknownPolicyType": "未知類型",
+    "unknownPolicyTypeHint": "該策略的類型為 “{{type}}”，目前版本沒有對應的驅動。此處無法編輯，如不再使用請刪除。"
   },
   "node": {
     "slave": "從機",

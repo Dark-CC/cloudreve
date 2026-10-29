@@ -15,7 +15,7 @@ import { NoMarginHelperText } from "../../../Settings/Settings";
 import { AddWizardProps } from "../../AddWizardDialog";
 import BucketACLInput from "../../EditStoragePolicy/BucketACLInput";
 import BucketCorsTable from "../../EditStoragePolicy/BucketCorsTable";
-import { PolicyPropsMap } from "../../StoragePolicySetting";
+import { PolicyPropsMap } from "../../policyProps";
 
 const KS3Wizard = ({ onSubmit }: AddWizardProps) => {
   const { t } = useTranslation("dashboard");

@@ -25,7 +25,7 @@ import { Code } from "../../../../Common/Code.tsx";
 import { EndpointInput } from "../../../Common/EndpointInput";
 import NodeSelectionInput from "../../../Common/NodeSelectionInput";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
-import { PolicyPropsMap } from "../../StoragePolicySetting";
+import { getPolicyProps } from "../../policyProps";
 import GraphEndpointSelection from "../../Wizards/OneDrive/GraphEndpointSelection";
 import BucketACLInput from "../BucketACLInput";
 import BucketCorsTable from "../BucketCorsTable";
@@ -100,7 +100,7 @@ const BasicInfoSection = () => {
   }, [values.type]);
 
   const policyProps = useMemo(() => {
-    return PolicyPropsMap[values.type];
+    return getPolicyProps(values.type);
   }, [values.type]);
 
   const onBucketTypeChange = useCallback(

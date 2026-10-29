@@ -1306,7 +1306,9 @@
     "lbWeight": "权重",
     "lbAddChild": "添加子策略",
     "lbChildrenDes": "新上传将按权重比例分配到各子存储策略。",
-    "lbWizardDes": "负载均衡策略按权重将上传分配到子策略，创建后再配置子策略。"
+    "lbWizardDes": "负载均衡策略按权重将上传分配到子策略，创建后再配置子策略。",
+    "unknownPolicyType": "未知类型",
+    "unknownPolicyTypeHint": "该策略的类型为 “{{type}}”，当前版本没有对应的驱动（由其他 Cloudreve 版本创建，或驱动已被移除）。此处无法编辑，如不再使用请删除。"
   },
   "node": {
     "slave": "从机",
