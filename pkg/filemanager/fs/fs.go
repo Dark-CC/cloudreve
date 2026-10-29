@@ -315,6 +315,12 @@ type (
 		// Hash is the client-asserted sha256 of the file content, used for
 		// duplicate detection and instant upload. Stored on the entity.
 		Hash string
+		// UploadFileID is the provider-assigned identifier of the placeholder
+		// an upload writes into. Drivers that create the placeholder before
+		// the bytes arrive record it here so the completion step can address
+		// the in-flight upload instead of looking a file that does not exist
+		// yet up by name.
+		UploadFileID string
 		// RapidUploaded marks a session whose file was materialized from an
 		// existing identical entity — no transfer is needed.
 		RapidUploaded bool
@@ -354,6 +360,12 @@ type (
 		// metering (the requester); -1 meters every owner.
 		TrafficMeter       bool
 		TrafficMeterExempt int
+		// NoInternalProxy requests upstream (cloud drive) source URLs even
+		// for policies that relay downloads through this site, so the
+		// browser lands on the storage provider directly. Local handlers and
+		// encrypted entities still relay: there is no upstream URL to send
+		// the client to.
+		NoInternalProxy bool
 	}
 
 	// Option 发送请求的额外设置
@@ -559,6 +571,16 @@ func WithTrafficMeter(exempt int) Option {
 	return OptionFunc(func(o *FsOption) {
 		o.TrafficMeter = true
 		o.TrafficMeterExempt = exempt
+	})
+}
+
+// WithNoInternalProxy asks issued entity URLs to point at the upstream
+// storage provider instead of this site's relay endpoint, overriding the
+// policy's internal proxy preference. Local and encrypted entities keep
+// relaying — they have no externally reachable source URL.
+func WithNoInternalProxy(b bool) Option {
+	return OptionFunc(func(o *FsOption) {
+		o.NoInternalProxy = b
 	})
 }
 

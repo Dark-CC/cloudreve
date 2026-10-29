@@ -392,6 +392,12 @@ func (service *CreateStoragePolicyCorsService) Create(c *gin.Context) error {
 		}
 
 		return nil
+
+	case types.PolicyTypeY139:
+		// The 139 cloud drive signs downloads and uploads itself and its object
+		// storage already answers any origin, so there is nothing to configure.
+		return nil
+
 	default:
 		return serializer.NewError(serializer.CodeParamErr, "Unsupported policy type", nil)
 	}

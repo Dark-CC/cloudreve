@@ -7,7 +7,8 @@ import { useTranslation } from "react-i18next";
 import { getStoragePolicyList } from "../../../api/api";
 import { StoragePolicy } from "../../../api/dashboard";
 import { PolicyType } from "../../../api/explorer";
-import { getPolicyProps } from "./policyProps";
+import { getPolicyProps, PolicyPropsMap, unknownPolicyProps } from "./policyProps";
+import type { PolicyProps } from "./policyProps";
 import { useAppDispatch } from "../../../redux/hooks";
 import { DenseSelect, SecondaryButton } from "../../Common/StyledComponents";
 import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu";
@@ -20,7 +21,6 @@ import TablePagination from "../Common/TablePagination";
 import AddWizardDialog from "./AddWizardDialog";
 import SelectProvider from "./SelectProvider";
 import StoragePolicyCard from "./StoragePolicyCard";
-
 export const PageQuery = "page";
 export const PageSizeQuery = "page_size";
 export const OrderByQuery = "order_by";
@@ -29,9 +29,9 @@ export const PolicyTypeQuery = "policy_type";
 
 // The policy type -> presentation table (and the safe lookup helper) lives in
 // ./policyProps so the edit form can use it without an import cycle through
-// this page component.
-export { PolicyPropsMap, getPolicyProps, unknownPolicyProps } from "./policyProps";
-export type { PolicyProps } from "./policyProps";
+// this page component. Re-exported here to keep the historic import path.
+export { PolicyPropsMap, getPolicyProps, unknownPolicyProps };
+export type { PolicyProps };
 
 const StoragePolicySetting = () => {
   const { t } = useTranslation("dashboard");

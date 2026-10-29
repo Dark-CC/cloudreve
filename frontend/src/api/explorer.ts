@@ -115,6 +115,7 @@ export enum PolicyType {
   s3 = "s3",
   ks3 = "ks3",
   obs = "obs",
+  y139 = "y139",
   load_balance = "load_balance",
 }
 
@@ -392,6 +393,10 @@ export interface FileURLService extends MultipleUriService {
   redirect?: boolean;
   entity?: string;
   no_cache?: boolean;
+  // direct asks for the storage provider's own URL instead of this site's
+  // relay, so downloading sends the browser straight to the cloud drive.
+  // Only meaningful together with download: true.
+  direct?: boolean;
   skip_error?: boolean;
   use_primary_site_url?: boolean;
   archive?: boolean;
