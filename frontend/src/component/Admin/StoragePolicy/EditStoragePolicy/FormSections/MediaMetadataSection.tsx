@@ -7,7 +7,7 @@ import { PolicyType } from "../../../../../api/explorer";
 import { DenseFilledTextField } from "../../../../Common/StyledComponents";
 import SettingForm from "../../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
-import { PolicyPropsMap } from "../../StoragePolicySetting";
+import { getPolicyProps } from "../../policyProps";
 import { StoragePolicySettingContext } from "../StoragePolicySettingWrapper";
 
 const MediaMetadataSection = () => {
@@ -15,7 +15,7 @@ const MediaMetadataSection = () => {
   const { values, setPolicy } = useContext(StoragePolicySettingContext);
 
   const policyProps = useMemo(() => {
-    return PolicyPropsMap[values.type];
+    return getPolicyProps(values.type);
   }, [values.type]);
 
   const onNativeMediaMetaExtsChange = useCallback(

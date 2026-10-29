@@ -1306,7 +1306,9 @@
     "lbWeight": "Weight",
     "lbAddChild": "Add child policy",
     "lbChildrenDes": "New uploads are distributed across child policies proportionally to their weight.",
-    "lbWizardDes": "A load-balance policy distributes uploads across weighted child policies. Children are configured after creation."
+    "lbWizardDes": "A load-balance policy distributes uploads across weighted child policies. Children are configured after creation.",
+    "unknownPolicyType": "Unknown type",
+    "unknownPolicyTypeHint": "This policy is type \"{{type}}\", which this build has no driver for (it was created by another Cloudreve build or its driver was removed). It cannot be edited here; delete it if unneeded."
   },
   "node": {
     "slave": "slave",

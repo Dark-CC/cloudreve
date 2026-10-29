@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { deleteStoragePolicy, getStoragePolicyDetail } from "../../../api/api";
 import { PolicyStatus, StoragePolicy } from "../../../api/dashboard";
+import { PolicyType } from "../../../api/explorer";
 import { useAppDispatch } from "../../../redux/hooks";
 import { confirmOperation } from "../../../redux/thunks/dialog";
 import { sizeToString } from "../../../util";
@@ -15,7 +16,7 @@ import Info from "../../Icons/Info";
 import { BorderedCardClickableBaImg } from "../Common/AdminCard";
 import RelocateDialog from "../Entity/RelocateDialog";
 import BlobAuditDialog from "./BlobAuditDialog";
-import { PolicyPropsMap } from "./StoragePolicySetting";
+import { getPolicyProps, PolicyPropsMap } from "./policyProps";
 
 export interface StoragePolicyCardProps {
   policy?: StoragePolicy;
@@ -129,7 +130,7 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
     >
       <BorderedCardClickableBaImg
         onClick={() => navigate(`/admin/policy/${policy?.id}`)}
-        img={policy ? PolicyPropsMap[policy.type].img : undefined}
+        img={policy ? getPolicyProps(policy.type).img : undefined}
       >
         <Box
           sx={{
@@ -143,10 +144,15 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
             {policy?.status == PolicyStatus.suspended && (
               <SquareChip sx={{ ml: 1 }} size="small" color="warning" label={t("node.suspended")} />
             )}
+            {policy && !PolicyPropsMap[policy.type as PolicyType] && (
+              <Tooltip title={t("policy.unknownPolicyTypeHint", { type: policy.type })}>
+                <SquareChip sx={{ ml: 1 }} size="small" color="warning" label={t("policy.unknownPolicyType")} />
+              </Tooltip>
+            )}
           </Typography>
           {policy && (
             <Typography variant="body2" color="text.secondary">
-              {t(PolicyPropsMap[policy.type].name)}
+              {t(getPolicyProps(policy.type).name)}
             </Typography>
           )}
         </Box>
