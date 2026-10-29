@@ -471,6 +471,12 @@ type (
 		SkipError         bool     `json:"skip_error"`
 		Archive           bool     `json:"archive"`
 		NoCache           bool     `json:"no_cache"`
+		// Direct requests the storage provider's own source URL instead of
+		// this site's relay URL, so the browser is sent straight to the
+		// cloud drive (the context-menu "download" path). Policies with an
+		// internal proxy enabled are overridden; local and encrypted
+		// entities still relay because they have no upstream URL.
+		Direct bool `json:"direct"`
 		// PurchaseTicket restores paid-share access after session loss.
 		PurchaseTicket string `json:"purchase_ticket"`
 	}
@@ -577,6 +583,7 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 		fs.WithNoCache(s.NoCache),
 		fs.WithUrlExpire(&expire),
 		fs.WithTrafficMeter(requesterID),
+		fs.WithNoInternalProxy(s.Direct && s.Download),
 	)
 	if err != nil && !s.SkipError {
 		return nil, fmt.Errorf("failed to get entity url: %w", err)
