@@ -1,0 +1,87 @@
+{
+ "suite": "cloudreve 139 driver e2e (machine_test.py) on 15212",
+ "image": "cloudreve-fork:4.23.6-y139test4",
+ "all_passed": true,
+ "results": [
+  {
+   "check": "a.list",
+   "ok": true,
+   "detail": "list HTTP 200 code=0 policy=y139-test/y139"
+  },
+  {
+   "check": "c.upload-direct",
+   "ok": true,
+   "detail": "session + 1 part PUT(s) to OBS + callback ok"
+  },
+  {
+   "check": "a.list-fidelity",
+   "ok": true,
+   "detail": "drive size=21600 (want 21600), contentHash match=True"
+  },
+  {
+   "check": "b.download-302",
+   "ok": true,
+   "detail": "file/url redirect -> HTTP 302 Location=https://ykj-eos-wx2-01.eos-wuxi-3.cmecloud.cn/85ed04fcf4714ff081e9454472ec362e086"
+  },
+  {
+   "check": "b.bytes-match",
+   "ok": true,
+   "detail": "following redirect: HTTP 200 bytes=21600 sha256 match=True"
+  },
+  {
+   "check": "d.rapid-upload",
+   "ok": true,
+   "detail": "same content, new name -> rapid=True code=0"
+  },
+  {
+   "check": "e.delete-api",
+   "ok": true,
+   "detail": "delete code=0 msg="
+  },
+  {
+   "check": "e.survives-soft-delete",
+   "ok": true,
+   "detail": "drive object kept while the entry sits in the Cloudreve trash: True"
+  },
+  {
+   "check": "e.empty-trash",
+   "ok": true,
+   "detail": "empty trash code=0 msg="
+  },
+  {
+   "check": "e.gone-on-drive",
+   "ok": true,
+   "detail": "removed from the drive 2 s after the trash was emptied"
+  },
+  {
+   "check": "g.not-500",
+   "ok": true,
+   "detail": "upload with a dead credential -> HTTP 200 code=40099"
+  },
+  {
+   "check": "g.readable",
+   "ok": true,
+   "detail": "msg: 139 cloud drive login state expired, please paste a fresh Authorization header"
+  },
+  {
+   "check": "g.no-credential-leak",
+   "ok": true,
+   "detail": "response does not echo the credential"
+  },
+  {
+   "check": "g.restored",
+   "ok": true,
+   "detail": "credential restored, listing works again (code=0)"
+  },
+  {
+   "check": "f.credential-present",
+   "ok": true,
+   "detail": "policy holds a 294-char Authorization (redacted)"
+  },
+  {
+   "check": "f.no-needless-rewrite",
+   "ok": true,
+   "detail": "a valid credential is left untouched (updated_at stable=True, value stable=True)"
+  }
+ ]
+}

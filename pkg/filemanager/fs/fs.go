@@ -315,6 +315,12 @@ type (
 		// Hash is the client-asserted sha256 of the file content, used for
 		// duplicate detection and instant upload. Stored on the entity.
 		Hash string
+		// UploadFileID is the provider-assigned identifier of the placeholder
+		// an upload writes into. Drivers that create the placeholder before
+		// the bytes arrive record it here so the completion step can address
+		// the in-flight upload instead of looking a file that does not exist
+		// yet up by name.
+		UploadFileID string
 		// RapidUploaded marks a session whose file was materialized from an
 		// existing identical entity — no transfer is needed.
 		RapidUploaded bool

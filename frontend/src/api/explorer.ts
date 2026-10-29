@@ -115,6 +115,7 @@ export enum PolicyType {
   s3 = "s3",
   ks3 = "ks3",
   obs = "obs",
+  y139 = "y139",
   load_balance = "load_balance",
 }
 
