@@ -763,6 +763,44 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 	return f.getPreferredPolicyForSize(ctx, file, 0)
 }
 
+// getRequestedUploadPolicy honours a storage policy the client named for an
+// upload. The id is only accepted when the owner's group is allowed to use an
+// active policy with that id — anything else returns (nil, nil) so the caller
+// falls back to the normal directory/group selection instead of failing the
+// upload. This is what makes "upload while the current directory sits on a
+// cloud-drive policy" actually land on that drive rather than the group
+// default.
+func (f *DBFS) getRequestedUploadPolicy(ctx context.Context, file *File, policyID int) (*ent.StoragePolicy, error) {
+	owner := file.Owner()
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	allowed, err := sc.ListByGroups(ctx, inventory.GroupsOf(owner))
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
+	}
+
+	for _, candidate := range allowed {
+		if candidate.ID != policyID {
+			continue
+		}
+		if candidate.Status == storagepolicy.StatusSuspended {
+			return nil, nil
+		}
+
+		// A load-balance policy resolves to one of its weighted children
+		// before any storage driver sees it.
+		if candidate.Type == types.PolicyTypeLoadBalance {
+			child, err := sc.ResolveLoadBalance(ctx, candidate)
+			if err != nil {
+				return nil, serializer.NewError(serializer.CodeDBError, "Failed to resolve load-balanced storage policy", err)
+			}
+			candidate = child
+		}
+		return candidate, nil
+	}
+
+	return nil, nil
+}
+
 // getPreferredPolicyForSize is getPreferredPolicy with the incoming upload
 // size, so weighted-capacity selection can exclude policies without headroom.
 func (f *DBFS) getPreferredPolicyForSize(ctx context.Context, file *File, size int64) (*ent.StoragePolicy, error) {
