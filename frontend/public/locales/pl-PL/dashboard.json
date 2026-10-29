@@ -1109,6 +1109,7 @@
     "s3": "Kompatybilna z S3",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Balansowanie obciążenia",
     "childPolicy": "Podrzędna polityka przechowywania",
     "childPolicyDes": "Wybierz podrzędne polityki przechowywania do dodania do puli balansowania obciążenia.",
@@ -1306,7 +1307,17 @@
     "lbWeight": "Waga",
     "lbAddChild": "Dodaj politykę podrzędną",
     "lbChildrenDes": "Nowe przesyłania są rozdzielane między polityki podrzędne proporcjonalnie do ich wagi.",
-    "lbWizardDes": "Polityka równoważenia rozdziela przesyłania między polityki podrzędne z uwzględnieniem wagi. Podrzędne konfiguruje się po utworzeniu."
+    "lbWizardDes": "Polityka równoważenia rozdziela przesyłania między polityki podrzędne z uwzględnieniem wagi. Podrzędne konfiguruje się po utworzeniu.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Otwórz klienta webowego na yun.139.com, naciśnij F12, przejdź do Network, otwórz dowolne żądanie do personal-kd-njs.yun.139.com i skopiuj cały nagłówek Authorization (zaczyna się od Basic). Nie wpisuj hasła, wystarczy ten nagłówek sesji.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "x-yun-app-key z tych samych nagłówków; dysk go wymaga i bez niego zwraca 01000004.",
+    "y139Root": "fileId folderu głównego",
+    "y139RootDes": "Pozostaw puste, aby użyć całego dysku. Wpisz fileId folderu, aby ograniczyć tę politykę do tego folderu.",
+    "y139EndpointDes": "Pozostaw puste, aby sterownik kierował żądania do najbliższej domeny usługi dla konta. Ustawiaj ręcznie tylko podczas diagnostyki.",
+    "chunkSizeDesY139": "Dozwolony zakres: 5 MB ~ 512 MB, dla plików powyżej 30 GB zalecane 512 MB. Zmiana unieważnia trwające wysyłki wznawialne.",
+    "y139Risk": "Ta polityka korzysta z niepublicznego API webowego China Mobile Cloud, a nie z oficjalnej platformy otwartej: API może się zmienić i przestać działać w dowolnym momencie; konto może zostać ograniczone lub oznaczone jako ryzykowne z powodu nietypowego ruchu; przechowywane treści podlegają moderacji operatora i pliki naruszające zasady mogą zostać odrzucone lub usunięte; po wygaśnięciu poświadczeń trzeba wkleić nowy nagłówek Authorization. Ocen ryzyko przed użyciem.",
+    "y139Help": "Jak go uzyskać: zaloguj się na"
   },
   "node": {
     "slave": "podrzędny",

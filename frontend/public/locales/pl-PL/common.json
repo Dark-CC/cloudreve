@@ -103,7 +103,9 @@
     "50004": "Operacja we/wy nie powiodła się. ({{message}})",
     "50005": "Błąd wewnętrzny.",
     "50010": "Żądany węzeł jest niedostępny.",
-    "50011": "Nie udało się pobrać metadanych pliku."
+    "50011": "Nie udało się pobrać metadanych pliku.",
+    "40098": "Obiekt został odrzucony przez moderację treści dysku w chmurze",
+    "40099": "Sesja magazynu wygasła, wklej nowy nagłówek Authorization w polityce magazynu"
   },
   "save": "Zapisz",
   "delete": "Usuń"

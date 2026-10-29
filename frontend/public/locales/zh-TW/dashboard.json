@@ -1109,6 +1109,7 @@
     "s3": "S3 相容",
     "ks3": "金山雲 KS3",
     "obs": "華為雲 OBS",
+    "y139": "中國移動雲盤（139）",
     "load_balance": "負載均衡",
     "childPolicy": "子儲存策略",
     "childPolicyDes": "選擇你要添加到負載均衡中的子儲存策略。",
@@ -1306,7 +1307,17 @@
     "lbWeight": "權重",
     "lbAddChild": "新增子策略",
     "lbChildrenDes": "新上傳將按權重比例分配到各子儲存策略。",
-    "lbWizardDes": "負載均衡策略按權重將上傳分配到子策略，建立後再配置子策略。"
+    "lbWizardDes": "負載均衡策略按權重將上傳分配到子策略，建立後再配置子策略。",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "在 yun.139.com 網頁版按 F12 開啟開發者工具 → Network，任意點開一個 personal-kd-njs.yun.139.com 的請求，複製請求標頭裡的 Authorization 整行（以 Basic 開頭）。請勿填入密碼，只需這一行工作階段憑證。",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "同一請求標頭裡的 x-yun-app-key，雲盤介面要求必須攜帶，缺少會報 01000004。",
+    "y139Root": "根目錄 fileId",
+    "y139RootDes": "留空表示整個雲盤根目錄（root）。填入某個資料夾的 fileId 可把該策略限定在該資料夾內。",
+    "y139EndpointDes": "留空則自動依帳號路由到最近的業務網域；只有排查問題時才需要手動指定。",
+    "chunkSizeDesY139": "允許範圍：5 MB ~ 512 MB，超過 30 GB 的檔案建議 512 MB。分片大小一旦改變，進行中的斷點續傳需重新開始。",
+    "y139Risk": "此策略使用中國移動雲盤網頁版的非公開介面，非官方開放平台：介面隨時可能變更導致失效；帳號可能因異常流量觸發風控；雲端內容受營運商審核，違規檔案可能被拒絕或刪除；憑證失效時需要重新取得 Authorization。請自行評估後再投入使用。",
+    "y139Help": "取得方式：登入"
   },
   "node": {
     "slave": "從機",

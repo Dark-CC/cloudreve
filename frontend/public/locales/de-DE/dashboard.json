@@ -1108,6 +1108,7 @@
     "s3": "S3-kompatibel",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Lastausgleich",
     "childPolicy": "Untergeordnete Speicherrichtlinie",
     "childPolicyDes": "Wählen Sie die untergeordneten Speicherrichtlinien aus, die zum Lastausgleich-Pool hinzugefügt werden sollen.",
@@ -1307,7 +1308,17 @@
     "lbWeight": "Gewicht",
     "lbAddChild": "Untergeordnete Richtlinie hinzufügen",
     "lbChildrenDes": "Neue Uploads werden proportional zum Gewicht auf die untergeordneten Richtlinien verteilt.",
-    "lbWizardDes": "Eine Lastverteilungs-Richtlinie verteilt Uploads auf gewichtete untergeordnete Richtlinien."
+    "lbWizardDes": "Eine Lastverteilungs-Richtlinie verteilt Uploads auf gewichtete untergeordnete Richtlinien.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Öffnen Sie den Webclient unter yun.139.com, drücken Sie F12, wechseln Sie zu Network, öffnen Sie eine beliebige Anfrage an personal-kd-njs.yun.139.com und kopieren Sie den gesamten Authorization-Header (beginnt mit Basic). Kein Passwort eingeben, nur diesen Sitzungs-Header.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "Die x-yun-app-key aus denselben Headern; das Laufwerk verlangt sie und antwortet sonst mit 01000004.",
+    "y139Root": "fileId des Stammordners",
+    "y139RootDes": "Leer lassen, um das gesamte Laufwerk zu verwenden. Eine Ordner-fileId eintragen, um diese Richtlinie auf diesen Ordner zu beschränken.",
+    "y139EndpointDes": "Leer lassen, damit der Treiber für das Konto die nächstgelegene Dienstdomäne wählt. Nur zur Fehlersuche manuell setzen.",
+    "chunkSizeDesY139": "Zulässiger Bereich: 5 MB ~ 512 MB, für Dateien über 30 GB werden 512 MB empfohlen. Eine Änderung macht laufende fortsetzbare Uploads ungültig.",
+    "y139Risk": "Diese Richtlinie nutzt die nicht öffentliche Web-API von China Mobile Cloud und keine offizielle offene Plattform: Die API kann sich jederzeit ändern und ausfallen; das Konto kann wegen ungewöhnlichen Traffics gedrosselt oder als risikobehaftet markiert werden; gespeicherte Inhalte unterliegen der Moderation des Anbieters und Verstöße können abgelehnt oder gelöscht werden; nach Ablauf der Anmeldedaten muss ein neuer Authorization-Header eingefügt werden. Bitte diese Risiken vor dem Einsatz abwägen.",
+    "y139Help": "Bezugsquelle: Anmelden unter"
   },
   "node": {
     "slave": "Slave",

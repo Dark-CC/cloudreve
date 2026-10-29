@@ -1120,6 +1120,7 @@
     "s3": "S3 兼容",
     "ks3": "金山云 KS3",
     "obs": "华为云 OBS",
+    "y139": "中国移动云盘（139）",
     "load_balance": "负载均衡",
     "childPolicy": "子存储策略",
     "childPolicyDes": "选择你要添加到负载均衡中的子存储策略。",
@@ -1306,7 +1307,17 @@
     "lbWeight": "权重",
     "lbAddChild": "添加子策略",
     "lbChildrenDes": "新上传将按权重比例分配到各子存储策略。",
-    "lbWizardDes": "负载均衡策略按权重将上传分配到子策略，创建后再配置子策略。"
+    "lbWizardDes": "负载均衡策略按权重将上传分配到子策略，创建后再配置子策略。",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "在 yun.139.com 网页版按 F12 打开开发者工具 → Network，任意点开一个 personal-kd-njs.yun.139.com 的请求，复制请求头里的 Authorization 整行（以 Basic 开头）。请勿填入密码，只需这一行会话凭据。",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "同一请求头里的 x-yun-app-key，云盘接口要求必须携带，缺失会报 01000004。",
+    "y139Root": "根目录 fileId",
+    "y139RootDes": "留空表示整个云盘根目录（root）。填入某个文件夹的 fileId 可把该策略限定在该文件夹内。",
+    "y139EndpointDes": "留空则自动按账号路由到最近的业务域名；只有排查问题时才需要手动指定。",
+    "chunkSizeDesY139": "允许范围：5 MB ~ 512 MB，超过 30 GB 的文件建议 512 MB。分片大小一旦改变，进行中的断点续传需重新开始。",
+    "y139Risk": "此策略使用中国移动云盘网页版的非公开接口，非官方开放平台：接口随时可能变更导致失效；账号可能因异常流量触发风控；云端内容受运营商审核，违规文件可能被拒绝或删除；凭据失效时需要重新获取 Authorization。请自行评估后再投入使用。",
+    "y139Help": "获取方式：登录"
   },
   "node": {
     "slave": "从机",

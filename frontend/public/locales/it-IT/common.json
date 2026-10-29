@@ -103,7 +103,9 @@
     "50004": "Operazione I/O fallita. ({{message}})",
     "50005": "Errore interno.",
     "50010": "Il nodo desiderato non è disponibile.",
-    "50011": "Impossibile interrogare i metadati del file."
+    "50011": "Impossibile interrogare i metadati del file.",
+    "40098": "L'oggetto è stato rifiutato dalla moderazione dei contenuti del cloud drive",
+    "40099": "La sessione dello storage è scaduta, incolla una nuova intestazione Authorization nella policy"
   },
   "vasErrors": {
     "40031": "Questo provider email è vietato, cambia con un altro.",

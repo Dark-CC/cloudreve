@@ -1108,6 +1108,7 @@
     "s3": "Compatível com S3",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Balanceamento de Carga",
     "childPolicy": "Política de Armazenamento Filho",
     "childPolicyDes": "Selecione as políticas de armazenamento filho para adicionar ao pool de balanceamento de carga.",
@@ -1307,7 +1308,17 @@
     "lbWeight": "Peso",
     "lbAddChild": "Adicionar política filha",
     "lbChildrenDes": "Novos uploads são distribuídos entre as políticas filhas proporcionalmente ao peso.",
-    "lbWizardDes": "Uma política de balanceamento de carga distribui uploads entre políticas filhas com peso. As filhas são configuradas após a criação."
+    "lbWizardDes": "Uma política de balanceamento de carga distribui uploads entre políticas filhas com peso. As filhas são configuradas após a criação.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Abra o cliente web em yun.139.com, pressione F12, vá em Network, abra qualquer requisição para personal-kd-njs.yun.139.com e copie o cabeçalho Authorization inteiro (começa com Basic). Não informe uma senha, apenas este cabeçalho de sessão.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "O x-yun-app-key dos mesmos cabeçalhos; o disco exige e responde 01000004 sem ele.",
+    "y139Root": "fileId da pasta raiz",
+    "y139RootDes": "Deixe vazio para usar a raiz inteira da unidade. Informe o fileId de uma pasta para limitar esta política a ela.",
+    "y139EndpointDes": "Deixe vazio para o driver rotear para o domínio de serviço mais próximo da conta. Defina manualmente apenas para diagnóstico.",
+    "chunkSizeDesY139": "Faixa permitida: 5 MB ~ 512 MB, 512 MB é recomendado para arquivos acima de 30 GB. Alterar o valor invalida envios retomáveis em andamento.",
+    "y139Risk": "Esta política usa a API web não pública do China Mobile Cloud, e não uma plataforma aberta oficial: a API pode mudar e parar de funcionar a qualquer momento; a conta pode sofrer limitação de taxa ou ser sinalizada por tráfego incomum; o conteúdo armazenado está sujeito à moderação da operadora e arquivos irregulares podem ser recusados ou removidos; quando a credencial expira é preciso colar um novo cabeçalho Authorization. Avalie esses riscos antes de usar.",
+    "y139Help": "Como obter: entre em"
   },
   "node": {
     "slave": "escravo",

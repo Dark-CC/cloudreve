@@ -1108,6 +1108,7 @@
     "s3": "Compatibile S3",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Bilanciamento del Carico",
     "childPolicy": "Policy di Archiviazione Figlio",
     "childPolicyDes": "Seleziona le policy di archiviazione figlio da aggiungere al pool di bilanciamento del carico.",
@@ -1307,7 +1308,17 @@
     "lbAddChild": "Aggiungi politica figlia",
     "lbChildrenDes": "I nuovi upload sono distribuiti tra le politiche figlie proporzionalmente al loro peso.",
     "lbWizardDes": "Una politica di bilanciamento del carico distribuisce gli upload tra politiche figlie ponderate. Le figlie sono configurate dopo la creazione.",
-    "chunkSizeDesOd": "Intervallo consentito: 5 MB ~ 5 GB, OneDrive richiede un multiplo intero di 320 KiB (327.680 byte)."
+    "chunkSizeDesOd": "Intervallo consentito: 5 MB ~ 5 GB, OneDrive richiede un multiplo intero di 320 KiB (327.680 byte).",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Apri il client web su yun.139.com, premi F12, vai su Network, apri una richiesta verso personal-kd-njs.yun.139.com e copia l'intera intestazione Authorization (inizia con Basic). Non inserire una password, serve solo questa intestazione di sessione.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "L'x-yun-app-key degli stessi header; il drive lo richiede e senza risponde 01000004.",
+    "y139Root": "fileId della cartella radice",
+    "y139RootDes": "Lascia vuoto per usare l'intera unità. Inserisci il fileId di una cartella per limitare questa policy a quella cartella.",
+    "y139EndpointDes": "Lascia vuoto per far instradare il driver al dominio di servizio più vicino dell'account. Impostalo solo per la diagnosi.",
+    "chunkSizeDesY139": "Intervallo consentito: 5 MB ~ 512 MB, 512 MB consigliati per file oltre 30 GB. Modificarlo invalida i caricamenti riprendibili in corso.",
+    "y139Risk": "Questa policy usa l'API web non pubblica di China Mobile Cloud, non una piattaforma aperta ufficiale: l'API può cambiare e smettere di funzionare in qualsiasi momento; l'account può subire limitazioni di frequenza o essere segnalato per traffico anomalo; i contenuti archiviati sono soggetti alla moderazione dell'operatore e i file non conformi possono essere rifiutati o rimossi; alla scadenza della credenziale occorre incollare una nuova intestazione Authorization. Valuta questi rischi prima dell'uso.",
+    "y139Help": "Come ottenerlo: accedi a"
   },
   "node": {
     "slave": "slave",

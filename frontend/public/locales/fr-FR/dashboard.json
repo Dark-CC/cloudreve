@@ -1108,6 +1108,7 @@
     "s3": "Compatible S3",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Équilibrage de charge",
     "childPolicy": "Politique de stockage enfant",
     "childPolicyDes": "Sélectionnez les politiques de stockage enfants à ajouter au pool d'équilibrage de charge.",
@@ -1307,7 +1308,17 @@
     "lbWeight": "Poids",
     "lbAddChild": "Ajouter une politique enfant",
     "lbChildrenDes": "Les nouveaux envois sont répartis entre les politiques enfants proportionnellement à leur poids.",
-    "lbWizardDes": "Une politique d'équilibrage de charge répartit les envois entre des politiques enfants pondérées. Les enfants sont configurés après la création."
+    "lbWizardDes": "Une politique d'équilibrage de charge répartit les envois entre des politiques enfants pondérées. Les enfants sont configurés après la création.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Ouvrez le client web sur yun.139.com, appuyez sur F12, allez dans Network, ouvrez une requête vers personal-kd-njs.yun.139.com et copiez l'en-tête Authorization complet (commençant par Basic). Ne saisissez pas de mot de passe, uniquement cet en-tête de session.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "Le x-yun-app-key des mêmes en-têtes ; le lecteur l'exige et répond 01000004 sans lui.",
+    "y139Root": "fileId du dossier racine",
+    "y139RootDes": "Laissez vide pour utiliser tout le lecteur. Saisissez le fileId d'un dossier pour limiter cette stratégie à ce dossier.",
+    "y139EndpointDes": "Laissez vide pour que le pilote route vers le domaine de service le plus proche du compte. À renseigner uniquement pour le diagnostic.",
+    "chunkSizeDesY139": "Plage autorisée : 5 Mo ~ 512 Mo, 512 Mo conseillés au-delà de 30 Go. La modifier invalide les envois reprenables en cours.",
+    "y139Risk": "Cette stratégie utilise l'API web non publique de China Mobile Cloud et non une plateforme ouverte officielle : l'API peut changer et cesser de fonctionner à tout moment ; le compte peut être limité en débit ou signalé comme risqué pour un trafic inhabituel ; le contenu stocké est soumis à la modération de l'opérateur et les fichiers non conformes peuvent être refusés ou supprimés ; lorsque l'identifiant expire, un nouvel en-tête Authorization doit être collé. Évaluez ces risques avant utilisation.",
+    "y139Help": "Comment l'obtenir : connectez-vous sur"
   },
   "node": {
     "slave": "esclave",

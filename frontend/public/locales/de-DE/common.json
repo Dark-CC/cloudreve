@@ -103,7 +103,9 @@
     "50004": "I/O-Operation fehlgeschlagen. ({{message}})",
     "50005": "Interner Fehler.",
     "50010": "Gewünschter Knoten ist nicht verfügbar.",
-    "50011": "Fehler beim Abfragen der Datei-Metadaten."
+    "50011": "Fehler beim Abfragen der Datei-Metadaten.",
+    "40098": "Das Objekt wurde von der Inhaltsprüfung des Cloud-Laufwerks abgelehnt",
+    "40099": "Anmeldedaten des Speichers abgelaufen, bitte einen neuen Authorization-Header in der Strategie einfügen"
   },
   "vasErrors": {
     "40031": "Dieser E-Mail-Anbieter ist verboten. Bitte wechseln Sie zu einem anderen.",

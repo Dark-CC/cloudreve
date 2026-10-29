@@ -1120,6 +1120,7 @@
     "s3": "S3 Compatible",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Load Balance",
     "childPolicy": "Child Storage Policy",
     "childPolicyDes": "Select the child storage policies to add to the load balance pool.",
@@ -1306,7 +1307,17 @@
     "lbWeight": "Weight",
     "lbAddChild": "Add child policy",
     "lbChildrenDes": "New uploads are distributed across child policies proportionally to their weight.",
-    "lbWizardDes": "A load-balance policy distributes uploads across weighted child policies. Children are configured after creation."
+    "lbWizardDes": "A load-balance policy distributes uploads across weighted child policies. Children are configured after creation.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Open the web client at yun.139.com, press F12, go to Network, open any request to personal-kd-njs.yun.139.com and copy the whole Authorization header (starting with Basic). Do not enter a password, only this single session header.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "The x-yun-app-key from the same request headers; the drive requires it and answers 01000004 without it.",
+    "y139Root": "Root folder fileId",
+    "y139RootDes": "Leave empty to use the whole drive root. Enter a folder's fileId to confine this policy to that folder.",
+    "y139EndpointDes": "Leave empty to let the driver route to the nearest service domain for the account. Only set this when troubleshooting.",
+    "chunkSizeDesY139": "Allowed range: 5 MB ~ 512 MB, 512 MB is recommended for files above 30 GB. Changing it invalidates in-progress resumable uploads.",
+    "y139Risk": "This policy uses the private web API of China Mobile Cloud rather than an official open platform: the API may change and break at any time; the account may be rate limited or risk-flagged for unusual traffic; stored content is subject to carrier moderation and violating files may be rejected or removed; when the credential expires a fresh Authorization header must be pasted. Evaluate these risks before use.",
+    "y139Help": "How to obtain it: sign in at"
   },
   "node": {
     "slave": "slave",

@@ -1108,6 +1108,7 @@
     "s3": "Compatible con S3",
     "ks3": "Kingsoft Cloud S3",
     "obs": "Huawei Cloud OBS",
+    "y139": "China Mobile Cloud (139)",
     "load_balance": "Balanceador de Carga",
     "childPolicy": "Política de Almacenamiento Hija",
     "childPolicyDes": "Selecciona las políticas de almacenamiento hijas para agregar al pool de balanceador de carga.",
@@ -1307,7 +1308,17 @@
     "lbWeight": "Peso",
     "lbAddChild": "Añadir política hija",
     "lbChildrenDes": "Las nuevas subidas se distribuyen entre las políticas hijas proporcionalmente a su peso.",
-    "lbWizardDes": "Una política de balanceo de carga distribuye las subidas entre políticas hijas ponderadas. Las hijas se configuran tras la creación."
+    "lbWizardDes": "Una política de balanceo de carga distribuye las subidas entre políticas hijas ponderadas. Las hijas se configuran tras la creación.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "Abre el cliente web en yun.139.com, pulsa F12, ve a Network, abre cualquier petición a personal-kd-njs.yun.139.com y copia la cabecera Authorization completa (empieza por Basic). No introduzcas una contraseña, solo esta cabecera de sesión.",
+    "y139AppKey": "x-yun-app-key",
+    "y139AppKeyDes": "El x-yun-app-key de las mismas cabeceras; el disco lo exige y responde 01000004 si falta.",
+    "y139Root": "fileId de la carpeta raíz",
+    "y139RootDes": "Déjalo vacío para usar toda la unidad. Introduce el fileId de una carpeta para limitar esta política a esa carpeta.",
+    "y139EndpointDes": "Déjalo vacío para que el controlador enrute a la dominio de servicio más cercano de la cuenta. Configúralo solo para diagnosticar.",
+    "chunkSizeDesY139": "Rango permitido: 5 MB ~ 512 MB, se recomiendan 512 MB para archivos de más de 30 GB. Cambiarlo invalida las subidas reanudables en curso.",
+    "y139Risk": "Esta política usa la API web no pública de China Mobile Cloud, no una plataforma abierta oficial: la API puede cambiar y dejar de funcionar en cualquier momento; la cuenta puede sufrir limitación de velocidad o marcarse como riesgosa por tráfico inusual; el contenido almacenado está sujeto a la moderación del operador y los archivos infractores pueden rechazarse o eliminarse; cuando caduca la credencial hay que pegar una nueva cabecera Authorization. Valora estos riesgos antes de usarla.",
+    "y139Help": "Cómo obtenerlo: inicia sesión en"
   },
   "node": {
     "slave": "esclavo",

@@ -103,7 +103,9 @@
     "50004": "Operação de E/S falhou. ({{message}})",
     "50005": "Erro interno.",
     "50010": "Nó desejado não está disponível.",
-    "50011": "Falha ao consultar metadados do arquivo."
+    "50011": "Falha ao consultar metadados do arquivo.",
+    "40098": "O objeto foi recusado pela moderação de conteúdo do disco na nuvem",
+    "40099": "A sessão do armazenamento expirou, cole um novo cabeçalho Authorization na política de armazenamento"
   },
   "vasErrors": {
     "40031": "Este provedor de e-mail é proibido, mude para outro.",

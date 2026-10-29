@@ -103,7 +103,9 @@
     "50004": "Operación de E/S fallida. ({{message}})",
     "50005": "Error interno. ({{message}})",
     "50010": "El nodo deseado no está disponible.",
-    "50011": "Error al consultar metadatos del archivo."
+    "50011": "Error al consultar metadatos del archivo.",
+    "40098": "El objeto fue rechazado por la moderación de contenido del disco en la nube",
+    "40099": "La sesión del almacenamiento ha caducado, pega una nueva cabecera Authorization en la política de almacenamiento"
   },
   "vasErrors": {
     "40031": "Este proveedor de correo electrónico está prohibido, por favor cambia a otro.",

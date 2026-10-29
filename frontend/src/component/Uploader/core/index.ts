@@ -15,6 +15,7 @@ import Qiniu from "./uploader/qiniu";
 import Remote from "./uploader/remote";
 import S3 from "./uploader/s3";
 import Upyun from "./uploader/upyun";
+import Y139 from "./uploader/y139";
 import {
   cleanupResumeCtx,
   getAllFileEntries,
@@ -130,6 +131,8 @@ export default class UploadManager {
         return new KS3(task, this);
       case PolicyType.obs:
         return new OBS(task, this);
+      case PolicyType.y139:
+        return new Y139(task, this);
       default:
         throw new UnknownPolicyError("Unknown policy type.", task.policy);
     }
