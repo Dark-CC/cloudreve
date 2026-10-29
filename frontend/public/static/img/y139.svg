@@ -1,11 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 72" width="120" height="72" role="img" aria-label="China Mobile cloud drive">
-  <rect width="120" height="72" rx="10" fill="#ffffff" />
-  <rect x="0.5" y="0.5" width="119" height="71" rx="10" fill="none" stroke="#e3e6ea" />
-  <!-- cloud -->
-  <path d="M38 48h44a12 12 0 0 0 1.6-23.9A17 17 0 0 0 51 22.6A12.5 12.5 0 0 0 38 48z"
-        fill="#0087d1" opacity="0.92" />
-  <!-- download arrow -->
-  <path d="M60 26v14" stroke="#fff" stroke-width="4" stroke-linecap="round" />
-  <path d="M53 35l7 7 7-7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-  <text x="60" y="64" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#0087d1">139</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 72" width="120" height="72" role="img" aria-label="移动云盘">
+  <defs>
+    <linearGradient id="ycBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7fbff" />
+      <stop offset="1" stop-color="#eef6ff" />
+    </linearGradient>
+    <linearGradient id="ycCloud" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3fb6f0" />
+      <stop offset="1" stop-color="#0a6fd1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="120" height="72" rx="10" fill="url(#ycBg)" />
+  <rect x="0.5" y="0.5" width="119" height="71" rx="10" fill="none" stroke="#dce8f5" />
+
+  <!-- cloud body -->
+  <path d="M40 49h40a11.5 11.5 0 0 0 1.4-22.9A16 16 0 0 0 51.6 24A12 12 0 0 0 40 49z"
+        fill="url(#ycCloud)" />
+
+  <!-- sync / direct-transfer glyph: two arrows chasing each other -->
+  <path d="M53.5 33.5h13a4.5 4.5 0 0 1 0 9h-3" fill="none"
+        stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+  <path d="M66.5 42.5l-3.4-3.2M66.5 42.5l-3.4 3.2" fill="none"
+        stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M66.5 42.5h-13a4.5 4.5 0 0 1 0-9h3" fill="none"
+        stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.55" />
+
+  <!-- brand wordmark -->
+  <text x="60" y="65" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', Helvetica, Arial, sans-serif"
+        font-size="10.5" font-weight="600" fill="#0a6fd1" letter-spacing="0.5">移动云盘</text>
 </svg>

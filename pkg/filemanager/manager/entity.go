@@ -346,7 +346,11 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 		// Direct (non-relayed) downloads bypass this site and land on the
 		// storage provider, so they cannot carry a metering claim; ask the
 		// source for the upstream URL instead of the relay one.
-		directEntitySource := o.NoInternalProxy && meterClaim == ""
+		// A direct-only policy (the 139 cloud drive) never relays, whether or
+		// not the caller asked for it: its whole point is that bytes go from
+		// the drive to the browser, so the group default or a stored
+		// internal_proxy flag must not pull them back through this site.
+		directEntitySource := (o.NoInternalProxy && meterClaim == "") || policy.Type == types.PolicyTypeY139
 		// Try to read from cache.
 		cacheKey := entityUrlCacheKey(target.ID(), o.DownloadSpeed, getEntityDisplayName(file, target), o.IsDownload,
 			m.settings.SiteURL(ctx).String()+"|"+m.cdnPoolKey(ctx, getEntityDisplayName(file, target), o.IsDownload)+"|"+meterClaim+

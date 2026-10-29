@@ -984,6 +984,17 @@
     "giftCodeAmountHelp": "每个兑换码的额度"
   },
   "policy": {
+    "y139": "移动云盘",
+    "y139Root": "根目录 FileID",
+    "y139RootDes": "云盘内用作用户端根目录的 FileID。留空或填写 root 表示直接使用整个云盘。",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "移动云盘网页端的登录凭据整行，包含前缀 Basic，原样粘贴即可。该值等同于账号权限，请勿泄露。",
+    "y139AppKey": "App Key（x-yun-app-key）",
+    "y139AppKeyDes": "调用云盘接口所需的 x-yun-app-key 请求头值。",
+    "y139EndpointDes": "移动云盘对象存储地址由接口自动获取，通常无需填写。",
+    "y139Risk": "本策略固定直连：上传与下载均由浏览器直接与移动云盘通信，本站不转发任何字节。",
+    "y139Help": "因为不经过本站，打包（zip）与批量下载在移动云盘策略下不可用，请逐个下载文件。",
+    "chunkSizeDesY139": "移动云盘单次最多签发 100 个分片地址，且其官方客户端在 30GB 以下使用 100MB 分片，因此建议分片大小填 100MB。",
     "acceleratedDomainUpload": "使用传输加速域名上传",
     "acceleratedDomainUploadDes": "开启后，上传文件时会使用七牛的 <0>传输加速域名</0>。",
     "compare": "对比存储策略",
