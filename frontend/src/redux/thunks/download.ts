@@ -621,7 +621,15 @@ export function streamSaverDownload(files: FileResponse[]): AppThunk {
   };
 }
 
-export function downloadSingleFile(file: FileResponse, preferredEntity?: string, direct = false): AppThunk {
+// downloadSingleFile sends the browser to the file's own source URL, which for
+// cloud-drive policies is the provider's pre-signed link: the download never
+// passes through this site. Policies with no upstream URL (local storage,
+// encrypted entities, metered sessions, drivers requiring a proxy) still get
+// the relay URL — the server decides, a `direct` request cannot override those.
+// It is on by default so every user-visible single-file download entry point
+// (context menu, double click, preview toolbar, entity lists) behaves the same;
+// pass false only for callers that need this site's own URL.
+export function downloadSingleFile(file: FileResponse, preferredEntity?: string, direct = true): AppThunk {
   return async (dispatch, _getState) => {
     const isSharedFile = file.metadata?.[Metadata.share_redirect] ?? false;
     if (isSharedFile) {

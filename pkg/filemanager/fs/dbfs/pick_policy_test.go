@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cloudreve/Cloudreve/v4/ent/user"
+
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
 	entfile "github.com/cloudreve/Cloudreve/v4/ent/file"
@@ -196,4 +198,70 @@ func TestPickPolicyWeightedCapacity(t *testing.T) {
 		got := f.pickPolicy(ctx, wrapChain(root), owner, allowed, 10)
 		require.Equal(t, def.ID, got.ID)
 	})
+}
+
+// TestGetRequestedUploadPolicy guards the upload path: a client that names the
+// policy its target directory sits on (a cloud-drive policy, say) must land the
+// file on that policy rather than the group default, while a policy the owner
+// is not allowed to use must be ignored instead of honoured.
+func TestGetRequestedUploadPolicy(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	ctx := context.Background()
+	_, def, a, b, owner, root, dir := pickPolicyFixture(t, client)
+
+	// A policy that exists but is not in the group's allowed set.
+	outsider := client.StoragePolicy.Create().SetName("outsider").SetType("local").
+		SetStatus(storagepolicy.StatusActive).SaveX(ctx)
+
+	// The fixture's owner row carries no group edge; reload it so the allowed
+	// policy set can be resolved the way it is at runtime.
+	owner = client.User.Query().Where(user.ID(owner.ID)).WithGroup().OnlyX(ctx)
+	f := pickPolicyDBFS(t, client, owner)
+
+	t.Run("allowed policy is honoured", func(t *testing.T) {
+		got, err := f.getRequestedUploadPolicy(ctx, ownedChain(ctx, client, owner, root, dir), a.ID)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.Equal(t, a.ID, got.ID)
+	})
+
+	t.Run("policy outside the allowed set falls back", func(t *testing.T) {
+		got, err := f.getRequestedUploadPolicy(ctx, ownedChain(ctx, client, owner, root, dir), outsider.ID)
+		require.NoError(t, err)
+		require.Nil(t, got, "an unallowed policy must not be returned")
+	})
+
+	t.Run("suspended allowed policy falls back", func(t *testing.T) {
+		suspended := client.StoragePolicy.UpdateOneID(b.ID).
+			SetStatus(storagepolicy.StatusSuspended).SaveX(ctx)
+		require.Equal(t, storagepolicy.StatusSuspended, suspended.Status)
+		got, err := f.getRequestedUploadPolicy(ctx, ownedChain(ctx, client, owner, root, dir), b.ID)
+		require.NoError(t, err)
+		require.Nil(t, got, "a suspended policy must not be returned")
+	})
+
+	t.Run("unknown id falls back", func(t *testing.T) {
+		got, err := f.getRequestedUploadPolicy(ctx, ownedChain(ctx, client, owner, root, dir), 99999)
+		require.NoError(t, err)
+		require.Nil(t, got)
+	})
+
+	t.Run("requested policy is not the group default", func(t *testing.T) {
+		// The premise of the bug: the group default is `def`, so an upload
+		// that never consults the request lands on `def`. Naming `a` — an
+		// allowed policy — must yield `a` instead.
+		require.NotEqual(t, def.ID, a.ID)
+		got, err := f.getRequestedUploadPolicy(ctx, ownedChain(ctx, client, owner, root, dir), a.ID)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.Equal(t, a.ID, got.ID)
+		require.NotEqual(t, def.ID, got.ID)
+	})
+}
+
+// ownedChain rebuilds root -> dir with the owner attached so DBFS.Owner()
+// resolution works the way it does for a real request.
+func ownedChain(ctx context.Context, client *ent.Client, owner *ent.User, root, dir *ent.File) *File {
+	parent := &File{Model: client.File.GetX(ctx, root.ID), OwnerModel: owner}
+	return &File{Model: client.File.GetX(ctx, dir.ID), OwnerModel: owner, Parent: parent}
 }
