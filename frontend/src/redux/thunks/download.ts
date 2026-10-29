@@ -44,7 +44,7 @@ export function downloadFiles(index: number, files: FileResponse[]): AppThunk {
   return async (dispatch, _getState) => {
     dispatch(closeContextMenu({ index, value: undefined }));
     if (files.length == 1 && files[0].type == FileType.file) {
-      await dispatch(downloadSingleFile(files[0]));
+      await dispatch(downloadSingleFile(files[0], undefined, true));
     } else {
       await dispatch(downloadMultipleFiles(files));
     }
@@ -160,6 +160,9 @@ export function backendBatchDownload(files: FileResponse[]): AppThunk {
 // pickDownloadRoute lets the user choose one of the admin-configured CDN
 // mirror endpoints (#2987); the signed URL keeps its path+query so the
 // signature stays valid through the CDN. Cancel falls back to direct.
+// CDN mirrors only make sense for URLs served by this site: a direct cloud
+// storage URL is already the fastest route and carries the provider's own
+// signature, so rebuilding it against a mirror would only break it.
 export function pickDownloadRoute(url: string): AppThunk<Promise<string>> {
   return async (dispatch, getState) => {
     const config = getState().siteConfig.basic.config;
@@ -171,6 +174,14 @@ export function pickDownloadRoute(url: string): AppThunk<Promise<string>> {
 
     const routes = config.download_cdn_routes;
     if (!routes || routes.length === 0) {
+      return url;
+    }
+
+    try {
+      if (new URL(url).origin !== window.location.origin) {
+        return url;
+      }
+    } catch {
       return url;
     }
 
@@ -572,6 +583,11 @@ export function streamSaverDownload(files: FileResponse[]): AppThunk {
         }
 
         try {
+          // The browser-side zip pulls every file through fetch(), so each
+          // URL has to be CORS-readable. Cloud storage signed URLs are
+          // readable only when the provider allows it, so this path keeps
+          // asking for this site's relay (the default) instead of direct
+          // URLs; single-file downloads are the one that jumps to the cloud.
           const entityUrls = await dispatch(
             getFileEntityUrl({
               uris: batch.map((f) => getFileLinkedUri(f)),
@@ -605,7 +621,15 @@ export function streamSaverDownload(files: FileResponse[]): AppThunk {
   };
 }
 
-export function downloadSingleFile(file: FileResponse, preferredEntity?: string): AppThunk {
+// downloadSingleFile sends the browser to the file's own source URL, which for
+// cloud-drive policies is the provider's pre-signed link: the download never
+// passes through this site. Policies with no upstream URL (local storage,
+// encrypted entities, metered sessions, drivers requiring a proxy) still get
+// the relay URL — the server decides, a `direct` request cannot override those.
+// It is on by default so every user-visible single-file download entry point
+// (context menu, double click, preview toolbar, entity lists) behaves the same;
+// pass false only for callers that need this site's own URL.
+export function downloadSingleFile(file: FileResponse, preferredEntity?: string, direct = true): AppThunk {
   return async (dispatch, _getState) => {
     const isSharedFile = file.metadata?.[Metadata.share_redirect] ?? false;
     if (isSharedFile) {
@@ -618,6 +642,11 @@ export function downloadSingleFile(file: FileResponse, preferredEntity?: string)
           uris: [getFileLinkedUri(file)],
           entity: preferredEntity,
           download: true,
+          // direct: hand the browser the storage provider's own URL instead
+          // of this site's relay, so the request never passes through us.
+          // The server keeps relaying for local/encrypted entities, which
+          // have no upstream URL to jump to.
+          direct,
         }),
       ),
       "application:fileManager.preparingDownload",

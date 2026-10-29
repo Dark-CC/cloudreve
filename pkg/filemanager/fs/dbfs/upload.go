@@ -146,7 +146,18 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		// explicitly instead of inheriting the ancestor's preference.
 		policy, err = f.storagePolicyClient.GetPolicyByID(ctx, req.Props.PreferredStoragePolicy)
 	} else {
-		policy, err = f.getPreferredPolicyForSize(ctx, ancestor, req.Props.Size)
+		// An explicit pick from the upload dialog (the client sends the policy
+		// the target directory currently uses) must be honoured, otherwise a
+		// file uploaded to a cloud-drive directory lands on the group default
+		// instead. It is only honoured when the owner's group is allowed to
+		// use that policy, so a crafted policy_id cannot reach a policy the
+		// uploader has no access to.
+		if req.Props.PreferredStoragePolicy != 0 {
+			policy, err = f.getRequestedUploadPolicy(ctx, ancestor, req.Props.PreferredStoragePolicy)
+		}
+		if policy == nil {
+			policy, err = f.getPreferredPolicyForSize(ctx, ancestor, req.Props.Size)
+		}
 	}
 	if err != nil {
 		return nil, err
