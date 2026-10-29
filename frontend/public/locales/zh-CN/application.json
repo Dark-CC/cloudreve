@@ -676,6 +676,7 @@
     "directoryDownloadStarted": "开始下载 “{{name}}”",
     "directoryDownloadFinished": "下载完成 “{{name}}”",
     "directoryDownloadError": "遇到错误：{{msg}}",
+    "directOnlyBatchDownloadUnsupported": "当前存储策略（移动云盘）只支持直连下载，不支持打包/批量下载，请逐个下载文件。",
     "directoryDownloadErrorNotification": "下载 {{name}} 遇到错误：{{msg}}",
     "directoryDownloadAutoscroll": "自动滚动",
     "directoryDownloadCancelled": "已取消下载",

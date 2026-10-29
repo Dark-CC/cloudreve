@@ -677,6 +677,7 @@
     "directoryDownloadStarted": "Start downloading \"{{name}}\"",
     "directoryDownloadFinished": "Download finished \"{{name}}\"",
     "directoryDownloadError": "Error: {{msg}}",
+    "directOnlyBatchDownloadUnsupported": "The current storage policy (China Mobile Cloud) serves files by direct link only, so packing or batch download is unavailable. Please download files one by one.",
     "directoryDownloadErrorNotification": "Error occurs while download {{name}}: {{msg}}",
     "directoryDownloadAutoscroll": "Auto scroll",
     "directoryDownloadCancelled": "Download cancelled",

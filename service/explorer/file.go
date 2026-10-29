@@ -513,6 +513,16 @@ func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResp
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
+	// Refuse before a session (and a zip stream) exists: a direct-only policy
+	// never lets its bytes be pulled through this site, and packing reads every
+	// entry through the server. Failing here gives the caller a plain JSON
+	// error instead of a half-written archive.
+	fm := manager.NewFileManager(dep, user)
+	defer fm.Recycle()
+	if err := fm.AssertArchivable(c, uris); err != nil {
+		return nil, err
+	}
+
 	// Create archive download session
 	archiveSession := &ArchiveDownloadSession{
 		Uris:        uris,

@@ -126,11 +126,21 @@ const DownloadSection = () => {
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>
               <FormControlLabel
-                control={<Switch checked={values.settings?.internal_proxy ?? false} onChange={onInternalProxyChange} />}
+                control={
+                  <Switch
+                    checked={values.settings?.internal_proxy ?? false}
+                    onChange={onInternalProxyChange}
+                    disabled={values.type === PolicyType.y139}
+                  />
+                }
                 label={t("policy.downloadRelay")}
               />
               <NoMarginHelperText>
-                <Trans i18nKey="policy.downloadRelayDes" ns="dashboard" />
+                {values.type === PolicyType.y139 ? (
+                  t("policy.downloadRelayLockedY139")
+                ) : (
+                  <Trans i18nKey="policy.downloadRelayDes" ns="dashboard" />
+                )}
               </NoMarginHelperText>
             </FormControl>
           </SettingForm>

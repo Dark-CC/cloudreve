@@ -162,7 +162,13 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 	uploadSession.ChunkSize = uploadSession.Policy.Settings.ChunkSize
 	// Create upload credential for underlying storage driver
 	credential := &fs.UploadCredential{}
-	unrelayed := !uploadSession.Policy.Settings.Relay || m.stateless
+	// The 139 cloud drive driver signs one part URL per chunk and the browser
+	// PUTs every part straight to the drive's object storage; the relay branch
+	// (chunks streamed into this site) has no legitimate use for it and would
+	// put file content back through the server. Direct-only is required for
+	// this policy type regardless of the stored relay flag.
+	unrelayed := !uploadSession.Policy.Settings.Relay || m.stateless ||
+		uploadSession.Policy.Type == types.PolicyTypeY139
 	if unrelayed {
 		credential, err = d.Token(ctx, uploadSession, req)
 		if err != nil {
@@ -258,7 +264,10 @@ func (m *manager) ConfirmUploadSession(ctx context.Context, session *fs.UploadSe
 	}
 
 	// Make sure this storage policy is OK to receive data from clients to Cloudreve server.
-	if session.Policy.Type != types.PolicyTypeLocal && !session.Policy.Settings.Relay {
+	// The 139 cloud drive never accepts relayed chunks, even when its stored
+	// relay flag was flipped on: its uploads always go straight to the drive.
+	if session.Policy.Type != types.PolicyTypeLocal &&
+		(!session.Policy.Settings.Relay || session.Policy.Type == types.PolicyTypeY139) {
 		return nil, serializer.NewError(serializer.CodePolicyNotAllowed, "", nil)
 	}
 

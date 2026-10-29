@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -156,6 +157,27 @@ func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity, zip
 	return fileList, nil
 }
 
+// AssertArchivable reports whether every given URI may be packed into an
+// archive. A direct-only policy (the 139 cloud drive) forbids it outright: it
+// is served only by jumping to the drive, and zipping would stream each entry
+// through this site. Callers use it before creating an archive session so the
+// rejection arrives as a plain error rather than a failed zip stream.
+func (m *manager) AssertArchivable(ctx context.Context, uris []*fs.URI) error {
+	for _, uri := range uris {
+		file, err := m.Get(ctx, uri, dbfs.WithFileEntities(),
+			dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
+		if err != nil {
+			return err
+		}
+
+		if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.Writer, opts ...fs.Option) (int, error) {
 	o := newOption()
 	for _, opt := range opts {
@@ -173,6 +195,16 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 		}
 
 		files = append(files, file)
+	}
+
+	// Archiving reads every entry through this site to zip it, which is exactly
+	// the relay the 139 cloud drive policy forbids: its files are only ever
+	// served straight from the drive. Fail before a single byte is written so
+	// the caller gets a clean, readable rejection instead of a half-built zip.
+	for _, file := range files {
+		if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+			return 0, err
+		}
 	}
 
 	zipWriter := zip.NewWriter(writer)
@@ -226,8 +258,36 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 	return failed, nil
 }
 
+// rejectArchiveOnDirectOnlyPolicy refuses to zip a file stored on a policy that
+// must only ever be served straight from the storage provider. Compressing an
+// entry streams its bytes through this site, which a direct-only policy (the 139
+// cloud drive) forbids — the user downloads such files individually instead, and
+// that download jumps to the drive.
+func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.File) error {
+	entity := file.PrimaryEntity()
+	if entity == nil {
+		return nil
+	}
+
+	policy, _, err := m.getEntityPolicyDriver(ctx, entity, nil)
+	if err != nil {
+		return nil
+	}
+
+	if policy.Type == types.PolicyTypeY139 {
+		return fs.ErrNotSupportedAction.WithError(errors.New(
+			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually"))
+	}
+
+	return nil
+}
+
 func (m *manager) compressFileToArchive(ctx context.Context, parent string, file fs.File, zipWriter *zip.Writer,
 	compression bool, dryrun fs.CreateArchiveDryRunFunc) error {
+	if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, file); err != nil {
+		return err
+	}
+
 	es, err := m.GetEntitySource(ctx, file.PrimaryEntityID())
 	if err != nil {
 		return fmt.Errorf("failed to get entity source for file %s: %w", file.Uri(false), err)
@@ -354,6 +414,11 @@ func (m *manager) createArchiveParallel(ctx context.Context, jobs []createArchiv
 // precomputed CRC32 and sizes for zip.Writer.CreateRaw.
 func (m *manager) spoolEntry(ctx context.Context, job createArchiveJob) archiveEntryResult {
 	res := archiveEntryResult{file: job.file}
+	if err := m.rejectArchiveOnDirectOnlyPolicy(ctx, job.file); err != nil {
+		res.err = err
+		return res
+	}
+
 	es, err := m.GetEntitySource(ctx, job.file.PrimaryEntityID())
 	if err != nil {
 		res.err = fmt.Errorf("failed to get entity source: %w", err)
