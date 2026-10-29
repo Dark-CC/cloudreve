@@ -373,6 +373,48 @@ export async function upyunFormUploadChunk(
   return res.data;
 }
 
+// y139UploadChunk PUTs one part of a China Mobile cloud drive (139) upload to
+// the pre-signed URL the backend signed for that part. The signature covers the
+// content length, so the browser must send exactly the bytes of one part and no
+// credentials.
+export async function y139UploadChunk(
+  url: string,
+  chunk: ChunkInfo,
+  onProgress: (p: Progress) => void,
+  cancel: CancelToken,
+  partNumber: number,
+  fileName: string,
+): Promise<void> {
+  const streaming = chunk.chunk instanceof EncryptedBlob;
+  await request<string>(url, {
+    method: "put",
+    adapter: streaming ? "fetch" : "xhr",
+    headers: {
+      "content-type": `text/plain;name=${encodeURIComponent(fileName)}`,
+      contentSize: String(chunk.chunk.size),
+      range: `0-${chunk.chunk.size - 1}`,
+      uploadtaskID: String(partNumber),
+      rangeType: "0",
+    },
+    data: streaming ? chunk.chunk.stream() : chunk.chunk,
+    onUploadProgress: (progressEvent) => {
+      onProgress({
+        loaded: progressEvent.loaded,
+        total: progressEvent.total,
+      });
+    },
+    cancelToken: cancel,
+    responseType: "document",
+    transformResponse: undefined,
+  }).catch((e) => {
+    if (e instanceof HTTPError && e.response) {
+      throw new S3LikeChunkError(e.response.data);
+    }
+
+    throw e;
+  });
+}
+
 export async function s3LikeUploadCallback(sessionID: string, sessionKey: string, policyType: string): Promise<any> {
   try {
     return await store.dispatch(sendS3LikeCompleteUpload(policyType, sessionID, sessionKey));

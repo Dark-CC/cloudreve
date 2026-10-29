@@ -276,6 +276,8 @@ const (
 	CodeContentAuditFailed = 40097
 	// CodeContentAuditRejected 内容审核未通过
 	CodeContentAuditRejected = 40098
+	// CodeStorageAuthExpired 存储端登录态已失效（如 139 云盘需重新获取凭据）
+	CodeStorageAuthExpired = 40099
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

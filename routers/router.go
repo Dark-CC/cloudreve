@@ -630,6 +630,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.UseUploadSession(types.PolicyTypeKs3),
 				controllers.ProcessCallback(http.StatusBadRequest, false),
 			)
+			// China Mobile cloud drive (139) upload callback
+			callback.GET(
+				"y139/:sessionID/:key",
+				middleware.UseUploadSession(types.PolicyTypeY139),
+				controllers.ProcessCallback(http.StatusBadRequest, false),
+			)
 			// Huawei OBS upload callback
 			callback.POST(
 				"obs/:sessionID/:key",
