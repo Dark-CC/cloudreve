@@ -74,9 +74,15 @@ export default defineConfig({
         const version = {
           name: process.env.npm_package_name,
           // Must match application/constants.BackendVersion: statics.go compares
-          // this field against it and logs a mismatch otherwise. package.json's
-          // version (4.0.0-next) is a placeholder that never tracked the release.
-          version: "4.23.7",
+          // this field against it and logs a mismatch otherwise.
+          //
+          // Don't hardcode it: .build/build-assets.sh runs `yarn version
+          // --new-version <tag>` before building, so package.json carries the tag
+          // version (4.23.8, or 0.0.0-dev for a local build). Hardcoding it meant
+          // every release whose tag did not match the literal shipped a stale
+          // stamp and logged a mismatch. Outside that script package.json's
+          // placeholder (4.0.0-next) is what you get, matching the dev backend.
+          version: process.env.npm_package_version,
           build: BUILD_VERSION,
         };
         const path = resolve(__dirname, outputOptions.dir, "version.json");
