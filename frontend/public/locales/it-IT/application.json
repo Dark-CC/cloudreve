@@ -555,7 +555,9 @@
     "policyCleared": "Criterio di archiviazione rimosso: la cartella eredita di nuovo dalla cartella padre",
     "policyFollowParent": "Eredita dalla cartella padre",
     "policyEffective": "Attualmente attivo: {{name}}",
-    "enteredPolicyDir": "Questa cartella usa il criterio di archiviazione: {{name}}"
+    "enteredPolicyDir": "Questa cartella usa il criterio di archiviazione: {{name}}",
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit.",
+    "directOnlyBatchDownloadUnsupported": "This storage policy only allows single-file direct downloads; batch download is not supported."
   },
   "modals": {
     "includePasswordInShareLink": "Includi password nel link di condivisione",
@@ -778,7 +780,8 @@
     "accessRoleEditor": "Visualizza, carica e modifica",
     "accessRoleViewerDes": "I visitatori possono visualizzare e scaricare i file.",
     "additionalOptions": "Opzioni aggiuntive",
-    "never": "Mai"
+    "never": "Mai",
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead."
   },
   "uploader": {
     "fileCopyName": "Copia di ",
@@ -1437,7 +1440,33 @@
     "noProductsDescription": "Quando l'operatore aggiunge abbonamenti o pacchetti, appariranno qui.",
     "buyWithCard": "Pay {{price}}",
     "paymentSuccess": "\"{{name}}\" activated",
-    "paymentPending": "Payment is being processed; your purchase will appear shortly"
+    "paymentPending": "Payment is being processed; your purchase will appear shortly",
+    "myOrders": "My orders",
+    "nextPage": "Next",
+    "noOrders": "No orders yet",
+    "noOrdersDescription": "Purchases you make will show up here",
+    "orderAmount": "Amount",
+    "orderCreatedAt": "Created",
+    "orderExpiresIn": "{{minutes}} min left",
+    "orderItem": "Item",
+    "orderNo": "Order",
+    "orderPaidAt": "Paid",
+    "orderStatus": "Status",
+    "orderStatusExpired": "Expired",
+    "orderStatusPaid": "Paid",
+    "orderStatusPending": "Unpaid",
+    "payNow": "Pay now",
+    "paymentCheckAgain": "Check again",
+    "paymentDialogTitle": "Scan to pay",
+    "paymentNoQrcode": "This channel returned no QR code — open the cashier page to pay",
+    "paymentOpenCashier": "Open cashier",
+    "paymentOrderNo": "Order: {{order}}",
+    "paymentScanHint": "Scan the QR code with your phone to complete the payment",
+    "paymentStatusExpired": "Order expired",
+    "paymentStatusPaid": "Paid",
+    "paymentStatusWaiting": "Waiting for payment",
+    "prevPage": "Previous",
+    "resumeFailed": "This order can no longer be paid — please place a new one"
   },
   "announcement": {
     "title": "Annuncio",
@@ -1447,5 +1476,30 @@
     "searchPlaceholder": "Cerca condivisioni pubbliche",
     "empty": "Nessuna condivisione pubblica",
     "emptyDescription": "Le condivisioni appaiono qui quando i proprietari le pubblicano nella Piazza di condivisione."
+  },
+  "file": {
+    "importWarnings": [
+      "After import, the physical file will be taken over by Cloudreve, please do not modify it externally afterwards.",
+      "Do not import the same file multiple times.",
+      "If the user's file conflicts, this file will be skipped."
+    ]
+  },
+  "policy": {
+    "y139AppKey": "App Key (x-yun-app-key)",
+    "y139AppKeyDes": "Value of the x-yun-app-key header required by the cloud drive API.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "The full login credential line from the cloud drive web client, including the Basic prefix. It grants the same access as your account; keep it secret.",
+    "y139CredentialDes": "Both credentials together grant full access to the drive account; editing them takes effect immediately, no restart needed.",
+    "y139Help": "Because traffic never passes through this site, zip archives and batch downloads are unavailable on this policy — download files individually.",
+    "y139Risk": "This policy is direct-only: uploads and downloads are made by the browser straight to the cloud drive, and this site never relays a byte.",
+    "y139Root": "Root directory FileID",
+    "y139RootDes": "The FileID used as the user-facing root folder inside the cloud drive. Leave empty or set to root to expose the whole drive."
+  },
+  "summary": {
+    "credentialExpired": "The 139 Drive credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
+    "credentialNoticeTitle": "Storage policy credentials need attention",
+    "credentialPersistFailed": "The 139 Drive credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
+    "credentialRefreshFailed": "The 139 Drive credential of \"{{name}}\" could not be renewed. Please update it manually.",
+    "goToPolicy": "Fix it"
   }
 }

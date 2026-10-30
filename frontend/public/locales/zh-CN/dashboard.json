@@ -1607,7 +1607,16 @@
     "noInvitationCodes": "暂无邀请码。",
     "loadMore": "加载更多",
     "additionalGroups": "附加用户组",
-    "additionalGroupsDes": "在主要用户组之外的额外用户组成员身份。权限、容量与存储策略在所有用户组间取并集。"
+    "additionalGroupsDes": "在主要用户组之外的额外用户组成员身份。权限、容量与存储策略在所有用户组间取并集。",
+    "adjustPoints": "调整积分",
+    "creditsDes": "积分余额；如需更改请使用调整入口，每次调整都会记入积分流水。",
+    "currentCredits": "当前积分：{{credits}}",
+    "creditDelta": "调整数量",
+    "creditDeltaDes": "正数增加，负数扣减。",
+    "creditReason": "调整原因",
+    "creditReasonDes": "将记录在积分流水中，便于追溯。",
+    "creditDeltaInvalid": "请输入非 0 的整数",
+    "creditAdjusted": "积分已调整"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",
@@ -2013,7 +2022,13 @@
     "appForum": "用户论坛 URL",
     "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。",
     "subAddressChars": "子地址字符",
-    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。"
+    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。",
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ]
   },
   "pro": {
     "title": "Pro 版本专属功能",
@@ -2113,5 +2128,39 @@
     "reasonHint": "必填，会记入审计日志",
     "reconcileSuccess": "补单成功，商品已到账",
     "alreadyPaid": "该订单已支付，未重复发货"
+  },
+  "fileManager": {
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit."
+  },
+  "modals": {
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead."
+  },
+  "shop": {
+    "myOrders": "我的订单",
+    "nextPage": "下一页",
+    "noOrders": "暂无订单",
+    "noOrdersDescription": "你的购买记录会显示在这里",
+    "orderAmount": "金额",
+    "orderCreatedAt": "创建时间",
+    "orderExpiresIn": "剩余 {{minutes}} 分钟",
+    "orderItem": "商品",
+    "orderNo": "订单号",
+    "orderPaidAt": "支付时间",
+    "orderStatus": "状态",
+    "orderStatusExpired": "已过期",
+    "orderStatusPaid": "已支付",
+    "orderStatusPending": "待支付",
+    "payNow": "去支付",
+    "paymentCheckAgain": "重新检查",
+    "paymentDialogTitle": "扫码支付",
+    "paymentNoQrcode": "该渠道未返回二维码，请打开收银台支付",
+    "paymentOpenCashier": "打开收银台",
+    "paymentOrderNo": "订单：{{order}}",
+    "paymentScanHint": "请用手机扫码完成支付",
+    "paymentStatusExpired": "订单已过期",
+    "paymentStatusPaid": "已支付",
+    "paymentStatusWaiting": "等待支付中",
+    "prevPage": "上一页",
+    "resumeFailed": "This order can no longer be paid — please place a new one"
   }
 }

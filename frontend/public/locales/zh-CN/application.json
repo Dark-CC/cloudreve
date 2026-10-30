@@ -517,7 +517,9 @@
     "policyCleared": "已解除目录存储策略，将恢复继承上级目录",
     "policyFollowParent": "跟随上级目录（继承）",
     "policyEffective": "当前生效：{{name}}",
-    "enteredPolicyDir": "当前目录使用存储策略：{{name}}"
+    "enteredPolicyDir": "当前目录使用存储策略：{{name}}",
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit.",
+    "directOnlyBatchDownloadUnsupported": "该存储策略仅允许单文件直链下载，不支持批量下载。"
   },
   "modals": {
     "paidShare": "付费分享",
@@ -1285,5 +1287,30 @@
     "searchPlaceholder": "搜索公开分享",
     "empty": "暂无公开分享",
     "emptyDescription": "当分享的所有者将其公开到分享广场时，分享会显示在这里。"
+  },
+  "file": {
+    "importWarnings": [
+      "After import, the physical file will be taken over by Cloudreve, please do not modify it externally afterwards.",
+      "Do not import the same file multiple times.",
+      "If the user's file conflicts, this file will be skipped."
+    ]
+  },
+  "policy": {
+    "y139AppKey": "App Key (x-yun-app-key)",
+    "y139AppKeyDes": "Value of the x-yun-app-key header required by the cloud drive API.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "The full login credential line from the cloud drive web client, including the Basic prefix. It grants the same access as your account; keep it secret.",
+    "y139CredentialDes": "Both credentials together grant full access to the drive account; editing them takes effect immediately, no restart needed.",
+    "y139Help": "Because traffic never passes through this site, zip archives and batch downloads are unavailable on this policy — download files individually.",
+    "y139Risk": "This policy is direct-only: uploads and downloads are made by the browser straight to the cloud drive, and this site never relays a byte.",
+    "y139Root": "Root directory FileID",
+    "y139RootDes": "The FileID used as the user-facing root folder inside the cloud drive. Leave empty or set to root to expose the whole drive."
+  },
+  "summary": {
+    "credentialExpired": "The 139 Drive credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
+    "credentialNoticeTitle": "Storage policy credentials need attention",
+    "credentialPersistFailed": "The 139 Drive credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
+    "credentialRefreshFailed": "The 139 Drive credential of \"{{name}}\" could not be renewed. Please update it manually.",
+    "goToPolicy": "Fix it"
   }
 }

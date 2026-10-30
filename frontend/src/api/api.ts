@@ -2336,6 +2336,25 @@ export function getUserDetail(id: number): ThunkResponse<UserEnt> {
   };
 }
 
+// adjustUserCredit applies a signed delta to a user's points. The server routes
+// it through the points ledger, so every manual change leaves an auditable row.
+export function adjustUserCredit(id: number, delta: number, reason?: string): ThunkResponse<UserEnt> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/${id}/credit`,
+        {
+          method: "PUT",
+          data: { delta, reason },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function upsertUser(args: UpsertUserService): ThunkResponse<UserEnt> {
   return async (dispatch, _getState) => {
     return await dispatch(

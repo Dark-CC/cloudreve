@@ -128,7 +128,12 @@
     "aboutFork": "社群分支",
     "aboutForkDes": "本站點運行的是 Cloudreve 的社群維護分支，專注於 Windows 桌面客戶端與檔案總管整合。發現 Bug 或有好想法？歡迎提交回報或任何形式的貢獻。",
     "reportIssue": "回報問題",
-    "roadmap": "路線圖"
+    "roadmap": "路線圖",
+    "credentialExpired": "「{{name}}」的 139 雲端硬碟憑證已過期，部分操作可能失敗。",
+    "credentialNoticeTitle": "儲存策略憑證需要處理",
+    "credentialPersistFailed": "「{{name}}」的 139 雲端硬碟憑證已續期，但無法儲存。",
+    "credentialRefreshFailed": "「{{name}}」的 139 雲端硬碟憑證無法續期。",
+    "goToPolicy": "去處理"
   },
   "queue": {
     "queueName_io_intense": "IO 密集型",
@@ -1320,9 +1325,18 @@
     "lbWizardDes": "負載均衡策略按權重將上傳分配到子策略，建立後再配置子策略。",
     "unknownPolicyType": "未知類型",
     "unknownPolicyTypeHint": "該策略的類型為 “{{type}}”，目前版本沒有對應的驅動。此處無法編輯，如不再使用請刪除。",
-    "chunkSizeDesY139": "The cloud drive signs at most 100 part URLs per request and its own client uses 100MB parts below 30GB, so 100MB is the recommended chunk size.",
-    "downloadRelayLockedY139": "China Mobile Cloud policies always download by direct link and cannot be proxied by Cloudreve.",
-    "uploadRelayLockedY139": "China Mobile Cloud policies always upload directly and cannot be relayed (locked)."
+    "chunkSizeDesY139": "雲端硬碟每次請求最多簽發 100 個分片 URL，超過部分將自動拆分請求。",
+    "downloadRelayLockedY139": "中國移動雲端硬碟策略一律使用直鏈下載，無法改為中轉。",
+    "uploadRelayLockedY139": "中國移動雲端硬碟策略一律直傳，無法改為中轉。",
+    "y139AppKey": "App Key (x-yun-app-key)",
+    "y139AppKeyDes": "雲端硬碟要求的 x-yun-app-key 請求標頭值。",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "從雲端硬碟網頁版取得的完整登入憑證字串。",
+    "y139CredentialDes": "兩項憑證需同時提供，才能完整存取雲端硬碟帳號。",
+    "y139Help": "由於流量不經過本站，打包（zip）與批次下載在移動雲端硬碟策略下不可用，請逐個下載檔案。",
+    "y139Risk": "此策略僅支援直鏈：上傳與下載皆直連雲端硬碟，不經過本站中轉。",
+    "y139Root": "Root directory FileID",
+    "y139RootDes": "在雲端硬碟中作為使用者根目錄的 FileID。"
   },
   "node": {
     "slave": "從機",
@@ -1593,7 +1607,16 @@
     "noInvitationCodes": "暫無邀請碼。",
     "loadMore": "載入更多",
     "additionalGroups": "附加使用者組",
-    "additionalGroupsDes": "在主要使用者組之外的額外使用者組成員身份。許可權、容量與儲存策略在所有使用者組間取並集。"
+    "additionalGroupsDes": "在主要使用者組之外的額外使用者組成員身份。許可權、容量與儲存策略在所有使用者組間取並集。",
+    "adjustPoints": "調整積分",
+    "creditsDes": "積分餘額；如需更改請使用調整入口，每次調整都會記入積分流水。",
+    "currentCredits": "目前積分：{{credits}}",
+    "creditDelta": "調整數量",
+    "creditDeltaDes": "正數增加，負數扣減。",
+    "creditReason": "調整原因",
+    "creditReasonDes": "將記錄在積分流水中，便於追溯。",
+    "creditDeltaInvalid": "請輸入非 0 的整數",
+    "creditAdjusted": "積分已調整"
   },
   "file": {
     "deleteXFiles": "刪除 {{num}} 個檔案",
@@ -1999,7 +2022,13 @@
     "trafficSize": "流量大小（位元組）",
     "trafficSizeDes": "購買後增加的直鏈流量位元組數；流量包永久有效。",
     "subAddressChars": "子地址字元",
-    "subAddressCharsDes": "郵箱使用者名稱部分中視為子地址分隔符的字元（如 <code>+-.</code>，覆蓋 Gmail/iCloud 風格別名）。留空預設為 <code>+</code>。"
+    "subAddressCharsDes": "郵箱使用者名稱部分中視為子地址分隔符的字元（如 <code>+-.</code>，覆蓋 Gmail/iCloud 風格別名）。留空預設為 <code>+</code>。",
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ]
   },
   "pro": {
     "title": "Pro 版本專屬功能",
@@ -2099,5 +2128,39 @@
     "reasonHint": "Required; recorded in the audit log",
     "reconcileSuccess": "Order settled and the item granted",
     "alreadyPaid": "This order is already paid — nothing was granted again"
+  },
+  "fileManager": {
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit."
+  },
+  "modals": {
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead."
+  },
+  "shop": {
+    "myOrders": "我的訂單",
+    "nextPage": "下一頁",
+    "noOrders": "暫無訂單",
+    "noOrdersDescription": "你的購買記錄會顯示在這裡",
+    "orderAmount": "金額",
+    "orderCreatedAt": "建立時間",
+    "orderExpiresIn": "剩餘 {{minutes}} 分鐘",
+    "orderItem": "商品",
+    "orderNo": "訂單號",
+    "orderPaidAt": "付款時間",
+    "orderStatus": "狀態",
+    "orderStatusExpired": "已過期",
+    "orderStatusPaid": "已付款",
+    "orderStatusPending": "待付款",
+    "payNow": "去付款",
+    "paymentCheckAgain": "重新檢查",
+    "paymentDialogTitle": "掃碼付款",
+    "paymentNoQrcode": "該渠道未回傳二維碼，請開啟收銀台付款",
+    "paymentOpenCashier": "開啟收銀台",
+    "paymentOrderNo": "訂單：{{order}}",
+    "paymentScanHint": "請用手機掃碼完成付款",
+    "paymentStatusExpired": "訂單已過期",
+    "paymentStatusPaid": "已付款",
+    "paymentStatusWaiting": "等待付款中",
+    "prevPage": "上一頁",
+    "resumeFailed": "此訂單已無法付款，請重新下單"
   }
 }
