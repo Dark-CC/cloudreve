@@ -459,16 +459,14 @@ const BasicInfoSection = () => {
         {values.type === PolicyType.y139 && (
           <>
             {/* y139 has no bucket, but it does need the root path it stores
-                under, the drive endpoint, and the two credentials the wizard
-                asks for: Authorization and x-yun-app-key. Without them the
-                policy cannot be edited after creation. */}
+                under and the two credentials the wizard asks for:
+                Authorization and x-yun-app-key. Without them the policy cannot
+                be edited after creation. The drive endpoint is resolved by the
+                backend from those credentials, so it is deliberately not
+                editable here. */}
             <SettingForm title={t(policyProps.bucketName ?? "policy.y139Root")} lgWidth={5}>
               <DenseFilledTextField fullWidth value={values.bucket_name} onChange={onBucketNameChange} />
               <NoMarginHelperText>{t("policy.y139RootDes")}</NoMarginHelperText>
-            </SettingForm>
-            <SettingForm title={t(policyProps.endpointName ?? "policy.policyEndpoint")} lgWidth={5}>
-              <DenseFilledTextField fullWidth value={values.server} onChange={onEndpointChange} />
-              <NoMarginHelperText>{t("policy.y139EndpointDes")}</NoMarginHelperText>
             </SettingForm>
             <SettingForm title={t("policy.accessCredential")} lgWidth={5}>
               <FormControl fullWidth>
