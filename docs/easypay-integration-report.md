@@ -120,6 +120,45 @@
 
 ---
 
+### 5.1 管理端「订单管理」页五项修复与 UI 复验（提交 `ab364552`）
+
+五项修复：
+
+1. **筛选器裸 key**：根因是 `paymentOrders` 命名空间只有 zh-CN/en-US 两份，
+   其余 11 种语言整个命名空间缺失，i18next 缺 key 时直接回显原始 key —— 属整类缺陷，
+   不是单个 `applyFilter` 的问题。已为 13 种语言补全该命名空间（非中英回退英文）。
+2. **日期选择器**：改用 MUI 官方 `DatePicker` + `AdapterDayjs`，与主题联动，日期以 `YYYY-MM-DD` 回传。
+3. **用户搜索**：后端 `ListPaymentOrdersOptions` 新增 `UserEmail`，
+   `resolveAdminUserFilter` 依次尝试 HashID 解码 → 纯数字 ID → 邮箱子串；前后端均补了用例。
+4. **状态**：`paid`/`pending`/`expired`（含 `refunded`/`failed` 兜底）走 i18n 中文，
+   用 MUI `Chip` + 语义色，文本与配色集中在 `PaymentOrderStatus.ts`。
+5. **整页样式**：以 `/admin/task` 为样板统一 `PageContainer`、`PageHeader`、`Stack`、
+   `StyledTableContainerPaper`、`tableLayout: fixed` + 固定列宽、分页器移出表格；补单含二次确认。
+
+顺带修掉同类的漏翻：11 种语言的 `settings.easypay*` / `addPaymentProvider` 等 15 键、
+`policy.chunkSizeDesY139` 等 5 键（zh-TW 另补 13 键）。
+
+真机复验（1600×1000，Playwright + chromium）：
+
+- 浏览器标题 `订单管理 - Cloudreve`，页面标题 `H4=订单管理`，侧栏文案含「订单管理」、
+  旧文案「支付订单」已不存在；正文无任何裸 i18n key（`RAW_KEYS: []`）。
+- 状态 `Chip` 显示：已支付 / 手动补单 / 待支付 / 已过期。
+- 筛选弹层：用户 ID 或邮箱、状态、全部、创建于之后、创建于之前、重置、应用；
+  日期框占位符 `YYYY-MM-DD`（MUI DatePicker 生效）。
+- 布局指标与 `/admin/task` 完全一致：`containerW:1342, containerLeft:241, tableW:1294,
+  paperLeft:265, headerH:37, rowH:37`。
+- `tsc --noEmit` 与本轮文件相关的错误数为 0（仓库原有的 193 行历史类型问题不计）。
+
+> **部署冲突（已按用户意见处理）**：15220 测试站在 02:57 被另一个任务（提交 `ff631cc`）
+> 接管并部署了它自己的二进制，本任务的二进制与「订单管理」页已不在 15220 上，
+> 但其数据库中的 `payment_orders` 表与数据完好。上述复验均在覆盖前完成并留存。
+> 用户 2026-10-31 决定**保持现状、不动 15220**，因此没有再抢占该端口。
+> 如需复现本页，请从分支 `tds/conv-01a18cb3-ed66-73ea-9280-b3e01d09ccc4` 的 `ab364552`
+> 重新构建（前端 `yarn build` 后打包 `assets.zip` 需让 `version.json` 位于 `build/` 内，
+> 再 `go build`）并部署到空闲端口。
+
+---
+
 ## 6. 真实付款验证
 
 ### 6.1 真实扫码支付
