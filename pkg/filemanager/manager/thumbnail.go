@@ -25,6 +25,89 @@ import (
 	"github.com/samber/lo"
 )
 
+// recoverExistingThumbEntity is the second line of defence for the
+// ErrFileExisted case: the thumbnail blob is already at its derived path but
+// the upload just failed with "object existed", either because another file's
+// thumbnail entity already describes that blob or because a stale object with
+// no DB record is in the way. Attach what exists rather than failing the task
+// and disabling thumbnails for this file.
+func (m *manager) recoverExistingThumbEntity(ctx context.Context, uri *fs.URI, latest fs.Entity) (*ent.Entity, error) {
+	if latest == nil || latest.ID() == 0 {
+		return nil, nil
+	}
+
+	file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithFilePublicMetadata())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file: %w", err)
+	}
+
+	return m.findReusableThumbEntity(ctx, file, latest)
+}
+
+// findReusableThumbEntity looks for a thumbnail entity that already exists for
+// the given source entity and attaches it to the current file. Thumbnail blob
+// paths are derived from their source entity (ThumbEntitySuffix over
+// entity.Source()), so files sharing one source entity — an instant upload
+// (hash dedup) or several copies of the same blob — share a single thumbnail
+// object. Generating a second one would write the same path again and some
+// drivers (y139 among them) answer that with fs.ErrFileExisted, which used to
+// fail the whole task and permanently disable thumbnails for the file.
+//
+// The returned entity is linked to the file (refcount +1) so the existing
+// reference-counted sharing model applies, exactly as with instant-upload
+// entities. A nil result with a nil error means "no thumbnail entity yet".
+func (m *manager) findReusableThumbEntity(ctx context.Context, file fs.File, latest fs.Entity) (*ent.Entity, error) {
+	if latest == nil || latest.ID() == 0 || latest.Source() == "" {
+		return nil, nil
+	}
+
+	// The thumbnail's blob path, as generateThumb would derive it.
+	thumbPath := path.Clean(fs.ReplaceMagicVar(m.settings.ThumbEntitySuffix(ctx), fs.MagicVarProps{
+		FsSeparator:      fs.Separator,
+		PathAvailable:    true,
+		BlobAvailable:    true,
+		UserID:           m.user.ID,
+		OriginName:       file.Uri(false).Name(),
+		OriginPath:       file.Uri(false).Path(),
+		CompleteBlobPath: latest.Source(),
+	}))
+
+	// A dedicated thumbnail storage policy, when configured, owns the blob.
+	policyID := latest.PolicyID()
+	if srcPolicy, err := m.policyClient.GetPolicyByID(ctx, latest.PolicyID()); err == nil &&
+		srcPolicy.Settings != nil && srcPolicy.Settings.ThumbStoragePolicyID != 0 {
+		if dst, err := m.policyClient.GetPolicyByID(ctx, srcPolicy.Settings.ThumbStoragePolicyID); err == nil &&
+			dst.Status == storagepolicy.StatusActive {
+			policyID = dst.ID
+		}
+	}
+
+	existing, err := m.dep.FileClient().GetThumbEntityBySource(ctx, thumbPath, policyID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to look up existing thumb entity: %w", err)
+	}
+
+	// Skip entities already attached to this very file.
+	if _, ok := lo.Find(file.Entities(), func(e fs.Entity) bool { return e.ID() == existing.ID }); ok {
+		return existing, nil
+	}
+
+	model, err := m.dep.FileClient().GetByID(ctx, file.ID())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file: %w", err)
+	}
+
+	if err := m.dep.FileClient().LinkEntity(ctx, existing, model); err != nil {
+		return nil, fmt.Errorf("failed to link existing thumb entity: %w", err)
+	}
+
+	m.l.Info("Reusing existing thumb entity %d for file %q (source %q)", existing.ID, file.Name(), latest.Source())
+	return existing, nil
+}
+
 // Thumbnail returns the thumbnail entity of the file.
 func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.EntitySource, error) {
 	// retrieve file info
@@ -86,9 +169,22 @@ func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.Enti
 			return nil, fs.ErrEntityNotExist
 		}
 
-		thumbEntity, err := m.SubmitAndAwaitThumbnailTask(ctx, uri, file.Ext(), latest)
+		// Another file sharing this source entity (instant upload, copies) may
+		// already have produced the thumbnail blob. Reuse it instead of
+		// writing the same path again.
+		thumbModel, err := m.findReusableThumbEntity(ctx, file, latest)
 		if err != nil {
-			return nil, fmt.Errorf("failed to execute thumb task: %w", err)
+			m.l.Warning("Failed to look up reusable thumb entity for %q: %s", uri.String(), err)
+		}
+
+		var thumbEntity fs.Entity
+		if thumbModel != nil {
+			thumbEntity = fs.NewEntity(thumbModel)
+		} else {
+			thumbEntity, err = m.SubmitAndAwaitThumbnailTask(ctx, uri, file.Ext(), latest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to execute thumb task: %w", err)
+			}
 		}
 
 		thumbSource, err := m.GetEntitySource(ctx, 0, fs.WithEntity(thumbEntity))
@@ -106,6 +202,19 @@ func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.Enti
 }
 
 func (m *manager) SubmitAndAwaitThumbnailTask(ctx context.Context, uri *fs.URI, ext string, entity fs.Entity) (fs.Entity, error) {
+	// Reuse a thumbnail another file already generated from the same source
+	// entity — instant-upload copies share their source, hence its thumbnail
+	// blob path too.
+	if file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities()); err == nil {
+		if reusable, ferr := m.findReusableThumbEntity(ctx, file, entity); ferr == nil && reusable != nil {
+			if found, ok := lo.Find(file.Entities(), func(e fs.Entity) bool { return e.ID() == reusable.ID }); ok {
+				return found, nil
+			}
+
+			return fs.NewEntity(reusable), nil
+		}
+	}
+
 	es, err := m.GetEntitySource(ctx, 0, fs.WithEntity(entity))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity source: %w", err)
@@ -225,6 +334,22 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 
 		file, err := m.Update(ctx, req, fs.WithEntityType(types.EntityTypeThumbnail))
 		if err != nil {
+			// The blob is already there but no thumbnail entity points at it
+			// (a leftover from an earlier upload, or a race between two
+			// files sharing one source entity). Recover by attaching that
+			// existing entity instead of failing the task, which would leave
+			// the file marked thumb:disabled for good.
+			if recovered, recErr := m.recoverExistingThumbEntity(ctx, uri, es.Entity()); recErr == nil && recovered != nil {
+				m.l.Info("Thumb object already exists for %q, reusing it (%d)", uri.String(), recovered.ID)
+				thumbEntity = fs.NewEntity(recovered)
+				if m.settings.ThumbGCAfterGen(ctx) {
+					m.l.Debug("GC after thumb generation")
+					runtime.GC()
+				}
+
+				return thumbEntity, nil
+			}
+
 			return nil, fmt.Errorf("failed to upload thumb entity: %w", err)
 		}
 

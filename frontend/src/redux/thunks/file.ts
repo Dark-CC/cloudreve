@@ -1376,8 +1376,24 @@ function startBatchGetDirectLinks(files: FileResponse[]): AppThunk<Promise<Direc
     const allFiles: FileResponse[] = [];
     const currentUser = SessionManager.currentUserGroup();
     const batchLimit = currentUser?.direct_link_batch_size ?? 0;
+
+    // Folders cannot be turned into a single link: one is taken per file
+    // beneath it instead. Only expand them when the group grants folder
+    // direct links; otherwise refuse the whole request with a clear message
+    // rather than silently dropping the folders.
+    const hasFolder = files.some((f) => f.type == FileType.folder);
+    if (hasFolder && !currentUser?.folder_direct_link) {
+      enqueueSnackbar({
+        message: i18next.t("modals.folderDirectLinkNotAllowed"),
+        preventDuplicate: true,
+        variant: "warning",
+        action: DefaultCloseAction,
+      });
+      throw new Error("AbortError");
+    }
+
     await dispatch(
-      walk(files, async (children, relativePath) => {
+      walk(files, async (children) => {
         const childFiles = children.filter((f) => f.type == FileType.file);
         allFiles.push(...childFiles);
         if (allFiles.length > batchLimit) {

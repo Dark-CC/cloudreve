@@ -282,7 +282,12 @@ export const getActionOpt = (
   display.showDirectLink =
     (display.hasOwned || groupBs.enabled(GroupPermission.is_admin)) &&
     display.orCapability &&
-    (currentUserAnonymous?.group?.direct_link_batch_size ?? 0) >= targets.length &&
+    // Folders only when the group grants folder direct links; the number of
+    // links one expands into is checked server side against the same
+    // source_batch budget when the folder is walked.
+    (!display.hasFolder || display.hasFile || !!currentUserAnonymous?.group?.folder_direct_link) &&
+    ((display.hasFolder && !display.hasFile) ||
+      (currentUserAnonymous?.group?.direct_link_batch_size ?? 0) >= targets.length) &&
     display.orCapability.enabled(NavigatorCapability.download_file);
   display.showDirectLinkManagement = display.showDirectLink && targets.length == 1 && display.hasFile;
   display.showOpen =

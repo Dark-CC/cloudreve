@@ -456,6 +456,44 @@ const BasicInfoSection = () => {
             </SettingForm>
           </>
         )}
+        {values.type === PolicyType.y139 && (
+          <>
+            {/* y139 has no bucket, but it does need the root path it stores
+                under, the drive endpoint, and the two credentials the wizard
+                asks for: Authorization and x-yun-app-key. Without them the
+                policy cannot be edited after creation. */}
+            <SettingForm title={t(policyProps.bucketName ?? "policy.y139Root")} lgWidth={5}>
+              <DenseFilledTextField fullWidth value={values.bucket_name} onChange={onBucketNameChange} />
+              <NoMarginHelperText>{t("policy.y139RootDes")}</NoMarginHelperText>
+            </SettingForm>
+            <SettingForm title={t(policyProps.endpointName ?? "policy.policyEndpoint")} lgWidth={5}>
+              <DenseFilledTextField fullWidth value={values.server} onChange={onEndpointChange} />
+              <NoMarginHelperText>{t("policy.y139EndpointDes")}</NoMarginHelperText>
+            </SettingForm>
+            <SettingForm title={t("policy.accessCredential")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  placeholder={t(policyProps.akName ?? "policy.y139Authorization")}
+                  fullWidth
+                  required
+                  multiline
+                  minRows={2}
+                  value={values.access_key}
+                  onChange={onAccessKeyChange}
+                />
+                <DenseFilledTextField
+                  placeholder={t(policyProps.skName ?? "policy.y139AppKey")}
+                  sx={{ mt: 1 }}
+                  fullWidth
+                  required
+                  value={values.secret_key}
+                  onChange={onSecretKeyChange}
+                />
+                <NoMarginHelperText>{t("policy.y139CredentialDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+          </>
+        )}
         {values.type === PolicyType.remote && (
           <SettingForm title={t("policy.node")} lgWidth={5}>
             <NodeSelectionInput fullWidth required value={values.node_id ?? 0} onChange={onNodeChange} />
