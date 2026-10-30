@@ -398,7 +398,7 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 | 静态资产包 | ✅ 按 `statics.go` 要求打成 `assets/build/...` 结构（703 条目，14,876,961 字节，含 `version.json`） |
 | Go 二进制 | ✅ 已产出（116,279,649 字节，`go:embed` 内含新资产包；`strings` 可查 `credential-notices`、`folder_direct_link`） |
 | r7 镜像 | ✅ **`cloudreve-fork:fix-1030-r7d`**（605MB，基于 `vas-1030-r3`，仅换二进制 + 资产包） |
-| 15212 部署 + 浏览器验收（VAS 容量单位/单价小数） | ✅ 已部署并实测通过（见「九、r7 部署与真实浏览器验收」；因 15212 被并行任务占用，验收实例跑在 **15214**） |
+| 15212 部署 + 浏览器验收（VAS 容量单位/单价小数） | ✅ **已正式切到 15212**（容器 `cloudreve-fork-test` = `cloudreve-fork:fix-1030-r7d`，`/`、`/admin`、静态资源全部 200，数据完整；见「十二」） |
 | 移动云盘「续期成功」路径实机验证 | ❌ **未完成**（见 6.7：网盘侧已作废当前 token，直调续期返回 `4006`，不破坏 token 无法构造续期窗口；已由 11 个单测覆盖） |
 | 多策略隔离 / 失败上报 | ✅ 实机验证通过（见 6.7） |
 | 上一轮七项界面修复（目录直链开关、凭据框、中转控件隐藏、缩略图去重、Endpoint 移除、Deselect 字号） | ✅ 全部经真实浏览器复核通过（见「十、七项回归复核」） |
@@ -429,7 +429,9 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 | 验收实例 | 容器 `cr-r7-verify`，镜像 `fix-1030-r7d`，端口 **15214**，数据目录 `/data/cr-r7-test`（从 `/data/cloudreve-fork-test` 复制） |
 | 公网地址 | https://15214-agqw5litn4acpbo7b5axu3ycku.instabox.tech |
 
-**为什么是 15214 而不是 15212**：验收期间 15212 被并行任务占用（容器 `cloudreve-fork-test` 正在跑 `cloudreve-fork:admin-r7`，数据目录 `/data/cloudreve-fork-test`）。按事先约束「不得干扰他人容器与数据」，本次验收用**独立端口 + 独立数据副本**进行。15212 上的正式切换留给收尾时由用户确认时机。
+**为什么验收当时是 15214 而不是 15212**：验收期间 15212 被并行任务占用（容器 `cloudreve-fork-test` 正在跑 `cloudreve-fork:admin-r7`）。按「不得干扰他人容器与数据」约束，验收用**独立端口 + 独立数据副本**进行。
+
+> **已补做**：用户批准后，15212 已于同日晚正式切到 `cloudreve-fork:fix-1030-r7d`，验收副本（`cr-r7-verify` + `/data/cr-r7-test`）已删除。详情见「十二、15212 正式部署与回滚」。
 
 启动自检：站点 `/` 200、`/admin` 200、`site/ping` 返回版本 `4.23.7`。残留一条非阻断告警「Static resource version mismatch [Current 4.0.0-next, Desired: 4.23.7]」，为本 fork 既有现象（前端包版本号与后端版本号不同步），不影响功能。
 
@@ -494,9 +496,11 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 | 删临时二进制 `/tmp/cloudreve-r7*`（每份 111MB） | 约 222 MB |
 | **合计** | **约 1.7 GB**（`/` 44% → **35%**，8.4G → **9.7G 可用**） |
 
-保留镜像：`fix-1030-r7d`（本批交付）、`admin-r7`（他人在用）、`admin-r6`、`vas-1030-r3`（回滚位）、`easypay-1030-r2`（支付任务回滚位）、`debian:bookworm-slim`、`mcr.microsoft.com/playwright:v1.49.1-jammy`。
+正式切换后进一步清理（删验收容器 `cr-r7-verify`、过渡容器 `cloudreve-fork-test-old-r7`、`/data/cr-r7-test`、`crverify` 验收目录、`crB` 下 `node_modules`/`build`、构建缓存）：`/data` 44% → **37%**（8.5G → **13G 可用**），再释放约 **1.3 GB**。
 
-清理后：`/` **35%（9.7G 可用）**、`/data` **44%（11G 可用）**。
+保留镜像：`fix-1030-r7d`（**正在 15212 运行**）、`admin-r7`（回滚位）、`admin-r6`、`vas-1030-r3`、`easypay-1030-r2`、`debian:bookworm-slim`、`mcr.microsoft.com/playwright:v1.49.1-jammy`。
+
+**最终磁盘占用**：`/` **35%（9.7G 可用）**、`/data` **37%（13G 可用）**。
 
 ### 11.2 Baixiong（`3Vpjw8E1s5xb6meuf6Qhf`）
 
@@ -505,30 +509,76 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 | 项 | 值 |
 |---|---|
 | 清理前 | 31G 已用 / **65G 可用** |
-| 清理后 | 30G 已用 / **67G 可用** |
+| 清理后 | 30G 已用 / **67G 可用**（本轮无新增残留，保持不变） |
 | 释放 | 约 **1.7 GB** |
 
 ---
 
-## 十二、回滚方式
+## 十二、15212 正式部署与回滚
+
+### 12.1 15212 当前实际运行的镜像（docker inspect 证据）
+
+用户于 2026-10-30 批准将 15212 正式切到本批交付镜像，已执行完成。
+
+| 项 | 值 |
+|---|---|
+| 容器名 | `cloudreve-fork-test` |
+| **Image** | **`cloudreve-fork:fix-1030-r7d`** |
+| **ImageID** | `sha256:1e5d17880241ddd6bcb6477ad821164be764e7c5cba4324f37d56e8cf31bb46c` |
+| **RepoDigest** | `sha256:c1fdbf54ab1e97a87346bcd42b8ca7d89ac1a3f0da5a4c3bed4f121c0a876c21`（amd64/linux） |
+| Entrypoint / Cmd | `null` / `["sh","./entrypoint.sh"]`（与切换前一致） |
+| 端口映射 | `5212/tcp -> 15212`（与切换前一致） |
+| 挂载 | `/data/cloudreve-fork-test:/cloudreve/data`（同目录，未重建） |
+| RestartPolicy | `unless-stopped`（与切换前一致） |
+| 环境变量 | 仅 `PATH`，无自定义 `CR_*`（与切换前一致） |
+
+### 12.2 切换前备份
+
+| 项 | 值 |
+|---|---|
+| 原镜像 | `cloudreve-fork:admin-r7`（`sha256:0c1041674ac8...`），**保留未删** |
+| 数据库副本 | `/data/cloudreve-fork-test-db-backup-20261030-1632.db`（`sqlite3 .backup`，1,712,128 字节，未直拷主文件） |
+| 回滚说明书 | `/data/cloudreve-fork-test/ROLLBACK-15212.md` |
+
+数据集基线（切前 = 切后，已逐项核对一致）：`users=2`、`policies=5`、`groups=3`、`skus=1`、`entities=13`，文件 28 条（含软删除）。
+
+### 12.3 切换后自检
+
+| 检查 | 结果 |
+|---|---|
+| `GET /` | **200** |
+| `GET /admin` | **200** |
+| `GET /admin/home` | **200** |
+| `GET /api/v4/site/ping` | `{"code":0,"data":"4.23.7"}` |
+| 前端静态资源 | `/assets/index-DaVzUYOM.js` 200 (1,778,757B)、`/assets/common-5dK6VpSw.js` 200、`/assets/react-4-pFdlfx.css` 200、`/manifest.json` 200、`/static/img/favicon.ico` 200（**无 404**） |
+| 原有数据 | 用户、存储策略、文件、用户组、订单（`payment_orders` 为空，切前即如此）均在 |
+
+### 12.4 回滚命令（完整）
 
 ```bash
-docker rm -f cloudreve-fork-test
-docker run -d --name cloudreve-fork-test --restart unless-stopped -p 15212:5212 \
+cd /data && sudo sqlite3 /data/cloudreve-fork-test/cloudreve.db \
+  ".backup '/data/cloudreve-fork-test-db-pre-rollback-$(date +%Y%m%d-%H%M).db'"
+
+sudo docker rm -f cloudreve-fork-test
+sudo docker run -d --name cloudreve-fork-test --restart unless-stopped \
+  -p 15212:5212 \
   -v /data/cloudreve-fork-test:/cloudreve/data \
-  -e CR_SETTING_DEFAULT_media_meta_ffprobe=1 -e CR_SETTING_DEFAULT_thumb_libraw_enabled=1 \
-  -e CR_ENABLE_ARIA2=0 -e CR_SETTING_DEFAULT_thumb_ffmpeg_enabled=1 \
-  -e CR_SETTING_DEFAULT_thumb_vips_enabled=1 -e CR_SETTING_DEFAULT_thumb_libreoffice_enabled=1 \
-  cloudreve-fork:vas-1030-r3
+  cloudreve-fork:admin-r7
 ```
 
-切到本批交付镜像时把最后一行换成 `cloudreve-fork:fix-1030-r7d`。两个 tag 均在 InstaBox 上保留。
+若要回退到数据库内容本身（而非仅回镜像），停容器后把 `/data/cloudreve-fork-test-db-backup-20261030-1632.db` 覆盖回 `cloudreve.db` 再启动。
 
-数据目录 `/data/cloudreve-fork-test` 不受影响。本轮验收签在独立目录 `/data/cr-r7-test`，删掉它不影响正式站：
+### 12.5 验收临时资源已清理
 
-```bash
-docker rm -f cr-r7-verify && rm -rf /data/cr-r7-test
-```
+| 资源 | 状态 |
+|---|---|
+| 容器 `cr-r7-verify`（15214） | ✅ 已删 |
+| 容器 `cloudreve-fork-test-old-r7`（过渡备份态） | ✅ 已删 |
+| 数据目录 `/data/cr-r7-test` | ✅ 已删 |
+| 15214 端口监听 | ✅ 已确认无监听（`ss -lntp` 无结果）；当前仅 `15212->5212` 一条 |
+| InstaBox 公共端口记录 15214 | ⚠️ **未能删除**：该 API 只提供列表与创建，`DELETE /v1/machines/{id}/ports/{id}` 及其变体均返回 404（无此路由）。因主机 15214 已无监听，该记录不构成实际暴露 |
+
+---
 
 ## 十三、范围内自有判断（按授权说明）
 
