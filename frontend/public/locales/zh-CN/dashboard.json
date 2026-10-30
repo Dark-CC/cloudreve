@@ -45,7 +45,7 @@
     "fullTextSearch": "全文搜索",
     "abuseReport": "滥用举报",
     "oauthClients": "OAuth 应用",
-    "paymentOrders": "支付订单"
+    "paymentOrders": "订单管理"
   },
   "oauth": {
     "oauthClients": "OAuth 应用",
@@ -2089,6 +2089,7 @@
     "createdAfter": "创建于之后",
     "createdBefore": "创建于之前",
     "refresh": "刷新",
+    "applyFilter": "筛选",
     "empty": "暂无订单",
     "detail": "订单详情",
     "manual": "手动补单",

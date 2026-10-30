@@ -1,6 +1,7 @@
-import { Search, SyncProblem } from "@mui/icons-material";
+import { SyncProblem } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
   Chip,
   Container,
@@ -14,6 +15,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -27,11 +29,27 @@ import { adminGetPaymentOrder, adminListPaymentOrders, adminReconcilePaymentOrde
 import { AdminPaymentOrder } from "../../../api/user";
 import { useAppDispatch } from "../../../redux/hooks";
 import { DefaultCloseAction } from "../../Common/Snackbar/snackbar";
-import { DenseSelect, StyledTableContainerPaper } from "../../Common/StyledComponents";
+import { DenseSelect, NoWrapTableCell, SecondaryButton, StyledTableContainerPaper } from "../../Common/StyledComponents";
 import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu";
 import PageContainer from "../../Pages/PageContainer";
 import PageHeader from "../../Pages/PageHeader";
 import TablePagination from "../Common/TablePagination";
+
+/**
+ * Column widths are pinned so the table keeps the same rhythm as /admin/task:
+ * fixed layout, no reflow as rows load, amounts and dates never shift column.
+ */
+const COL = {
+  id: 110,
+  buyer: "20%",
+  item: "18%",
+  amount: 90,
+  provider: 100,
+  status: 150,
+  createdAt: 150,
+  paidAt: 150,
+  actions: 120,
+} as const;
 
 const statusColor = (s: AdminPaymentOrder["status"]): "success" | "warning" | "default" =>
   s === "paid" ? "success" : s === "pending" ? "warning" : "default";
@@ -250,129 +268,135 @@ const PaymentOrderList = () => {
   };
 
   return (
-    <Container maxWidth={false}>
-      <PageHeader
-        title={t("nav.paymentOrders")}
-        secondaryAction={
-          <Button size="small" startIcon={<Search />} onClick={applyFilter}>
-            {t("paymentOrders.refresh")}
-          </Button>
-        }
-      />
-      <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap", gap: 1 }}>
-        <DenseSelect
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as string);
-            setPage(1);
-          }}
-          displayEmpty
-        >
-          <SquareMenuItem value="">{t("paymentOrders.allStatus")}</SquareMenuItem>
-          <SquareMenuItem value="pending">{t("paymentOrders.statusPending")}</SquareMenuItem>
-          <SquareMenuItem value="paid">{t("paymentOrders.statusPaid")}</SquareMenuItem>
-          <SquareMenuItem value="expired">{t("paymentOrders.statusExpired")}</SquareMenuItem>
-        </DenseSelect>
-        <TextField
-          size="small"
-          label={t("paymentOrders.userId")}
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          sx={{ width: 180 }}
-        />
-        <TextField
-          size="small"
-          type="date"
-          label={t("paymentOrders.createdAfter")}
-          value={after}
-          onChange={(e) => setAfter(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          size="small"
-          type="date"
-          label={t("paymentOrders.createdBefore")}
-          value={before}
-          onChange={(e) => setBefore(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-      </Stack>
-      <StyledTableContainerPaper>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t("paymentOrders.orderNo")}</TableCell>
-              <TableCell>{t("paymentOrders.buyer")}</TableCell>
-              <TableCell>{t("paymentOrders.item")}</TableCell>
-              <TableCell align="right">{t("paymentOrders.amount")}</TableCell>
-              <TableCell>{t("paymentOrders.provider")}</TableCell>
-              <TableCell>{t("paymentOrders.status")}</TableCell>
-              <TableCell>{t("paymentOrders.createdAt")}</TableCell>
-              <TableCell>{t("paymentOrders.paidAt")}</TableCell>
-              <TableCell align="right">{t("paymentOrders.actions")}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {orders.map((o) => (
-              <TableRow key={o.id} hover>
-                <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>
-                  <Button size="small" onClick={() => openDetail(o)} sx={{ textTransform: "none" }}>
-                    {o.id}
-                  </Button>
-                </TableCell>
-                <TableCell>{o.user_nick || o.user_email || "-"}</TableCell>
-                <TableCell>{o.sku_name}</TableCell>
-                <TableCell align="right">{(o.amount / 100).toFixed(2)}</TableCell>
-                <TableCell>{o.provider}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5}>
-                    <Chip size="small" label={o.status} color={statusColor(o.status)} />
-                    {o.manual && <Chip size="small" variant="outlined" label={t("paymentOrders.manualYes")} />}
-                  </Stack>
-                </TableCell>
-                <TableCell>{dayjs.unix(o.created_at).format("MM-DD HH:mm")}</TableCell>
-                <TableCell>{o.paid_at ? dayjs.unix(o.paid_at).format("MM-DD HH:mm") : "-"}</TableCell>
-                <TableCell align="right">
-                  {o.status !== "paid" && (
-                    <Button
-                      size="small"
-                      startIcon={<SyncProblem />}
-                      onClick={() => setReconcile(o)}
-                      color="warning"
-                    >
-                      {t("paymentOrders.reconcile")}
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {orders.length === 0 && !loading && (
-              <TableRow>
-                <TableCell colSpan={9} align="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                    {t("paymentOrders.empty")}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        <Stack direction="row" sx={{ justifyContent: "flex-end", p: 1 }}>
-          <TablePagination
-            page={page}
-            totalItems={total}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={(v) => {
-              setPageSize(v);
+    <PageContainer>
+      <Container maxWidth="xl">
+        <PageHeader title={t("dashboard:nav.paymentOrders")} loading={loading} onRefresh={load} />
+        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", rowGap: 1 }}>
+          <DenseSelect
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as string);
               setPage(1);
             }}
-            onChange={(_, v) => setPage(v)}
+            displayEmpty
+            size="small"
+          >
+            <SquareMenuItem value="">{t("paymentOrders.allStatus")}</SquareMenuItem>
+            <SquareMenuItem value="pending">{t("paymentOrders.statusPending")}</SquareMenuItem>
+            <SquareMenuItem value="paid">{t("paymentOrders.statusPaid")}</SquareMenuItem>
+            <SquareMenuItem value="expired">{t("paymentOrders.statusExpired")}</SquareMenuItem>
+          </DenseSelect>
+          <TextField
+            size="small"
+            label={t("paymentOrders.userId")}
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applyFilter();
+            }}
+            sx={{ width: 170 }}
           />
+          <TextField
+            size="small"
+            type="date"
+            label={t("paymentOrders.createdAfter")}
+            value={after}
+            onChange={(e) => setAfter(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 170 }}
+          />
+          <TextField
+            size="small"
+            type="date"
+            label={t("paymentOrders.createdBefore")}
+            value={before}
+            onChange={(e) => setBefore(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 170 }}
+          />
+          <SecondaryButton variant="contained" onClick={applyFilter} disabled={loading}>
+            {t("paymentOrders.applyFilter")}
+          </SecondaryButton>
         </Stack>
-      </StyledTableContainerPaper>
+        <TableContainer component={StyledTableContainerPaper} sx={{ mt: 2 }}>
+          <Table size="small" stickyHeader sx={{ width: "100%", tableLayout: "fixed" }}>
+            <TableHead>
+              <TableRow>
+                <NoWrapTableCell width={COL.id}>{t("paymentOrders.orderNo")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.buyer}>{t("paymentOrders.buyer")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.item}>{t("paymentOrders.item")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.amount} align="right">
+                  {t("paymentOrders.amount")}
+                </NoWrapTableCell>
+                <NoWrapTableCell width={COL.provider}>{t("paymentOrders.provider")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.status}>{t("paymentOrders.status")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.createdAt}>{t("paymentOrders.createdAt")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.paidAt}>{t("paymentOrders.paidAt")}</NoWrapTableCell>
+                <NoWrapTableCell width={COL.actions} align="right">
+                  {t("paymentOrders.actions")}
+                </NoWrapTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {orders.map((o) => (
+                <TableRow key={o.id} hover>
+                  <NoWrapTableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>
+                    <Button size="small" onClick={() => openDetail(o)} sx={{ textTransform: "none", p: 0, minWidth: 0 }}>
+                      {o.id}
+                    </Button>
+                  </NoWrapTableCell>
+                  <NoWrapTableCell>{o.user_nick || o.user_email || "-"}</NoWrapTableCell>
+                  <NoWrapTableCell>{o.sku_name}</NoWrapTableCell>
+                  <NoWrapTableCell align="right">{(o.amount / 100).toFixed(2)}</NoWrapTableCell>
+                  <NoWrapTableCell>{o.provider}</NoWrapTableCell>
+                  <NoWrapTableCell>
+                    <Stack direction="row" spacing={0.5}>
+                      <Chip size="small" label={o.status} color={statusColor(o.status)} />
+                      {o.manual && <Chip size="small" variant="outlined" label={t("paymentOrders.manualYes")} />}
+                    </Stack>
+                  </NoWrapTableCell>
+                  <NoWrapTableCell>{dayjs.unix(o.created_at).format("MM-DD HH:mm")}</NoWrapTableCell>
+                  <NoWrapTableCell>{o.paid_at ? dayjs.unix(o.paid_at).format("MM-DD HH:mm") : "-"}</NoWrapTableCell>
+                  <NoWrapTableCell align="right">
+                    {o.status !== "paid" && (
+                      <Button size="small" startIcon={<SyncProblem />} onClick={() => setReconcile(o)} color="warning">
+                        {t("paymentOrders.reconcile")}
+                      </Button>
+                    )}
+                  </NoWrapTableCell>
+                </TableRow>
+              ))}
+              {orders.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={9} align="center">
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
+                      {t("paymentOrders.empty")}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {total > 0 && (
+          <Box sx={{ mt: 1 }}>
+            <TablePagination
+              page={page}
+              totalItems={total}
+              rowsPerPage={pageSize}
+              rowsPerPageOptions={[10, 25, 50]}
+              onRowsPerPageChange={(v) => {
+                setPageSize(v);
+                setPage(1);
+              }}
+              onChange={(_, v) => setPage(v)}
+            />
+          </Box>
+        )}
+      </Container>
       <ReconcileDialog order={reconcile} onClose={() => setReconcile(undefined)} onDone={load} />
       <DetailDialog order={detail} onClose={() => setDetail(undefined)} />
-    </Container>
+    </PageContainer>
   );
 };
 

@@ -45,7 +45,7 @@
     "fullTextSearch": "Full-text search",
     "abuseReport": "Abuse report",
     "oauthClients": "OAuth Apps",
-    "paymentOrders": "Payment orders"
+    "paymentOrders": "Order Management"
   },
   "oauth": {
     "oauthClients": "OAuth Apps",
@@ -2089,6 +2089,7 @@
     "createdAfter": "Created after",
     "createdBefore": "Created before",
     "refresh": "Refresh",
+    "applyFilter": "Filter",
     "empty": "No orders",
     "detail": "Order detail",
     "manual": "Manual",
