@@ -23,7 +23,8 @@ import { useTranslation } from "react-i18next";
 import { useAppDispatch } from "../../../../redux/hooks.ts";
 import { adminCreateGiftCode, adminDeleteGiftCode, adminListGiftCodes, getGroupList } from "../../../../api/api.ts";
 import { GiftCode, GiftCodeListResponse, GroupEnt } from "../../../../api/dashboard.ts";
-import { CapacityUnit, capacityToBytes, sizeToString } from "../../../../util/index.ts";
+import { sizeToString } from "../../../../util/index.ts";
+import ByteSizeInput from "../../../Common/ByteSizeInput.tsx";
 import {
   DenseFilledTextField,
   NoWrapCell,
@@ -65,12 +66,15 @@ const GiftCodes = () => {
   // Generate form state
   const [genType, setGenType] = useState<"points" | "storage" | "group" | "traffic" | "stream_traffic">("points");
   const [genAmount, setGenAmount] = useState(100);
-  const [genAmountUnit, setGenAmountUnit] = useState<CapacityUnit>("GB");
   const [genGroup, setGenGroup] = useState(0);
   const [genDuration, setGenDuration] = useState(0);
   const [genQty, setGenQty] = useState(1);
   const [genDes, setGenDes] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Points/groups keep an integer amount; storage and traffic codes store
+  // bytes and are edited with a unit picker like the capacity packs.
+  const isByteAmount = genType === "storage" || genType === "traffic" || genType === "stream_traffic";
 
   const load = useCallback(() => {
     dispatch(adminListGiftCodes(pagination.page, pagination.perPage)).then((res) => setResult(res));
@@ -102,12 +106,7 @@ const GiftCodes = () => {
     dispatch(
       adminCreateGiftCode({
         type: genType,
-        amount:
-          genType === "group"
-            ? genGroup
-            : genType === "points"
-              ? genAmount
-              : capacityToBytes(genAmount, genAmountUnit),
+        amount: genType === "group" ? genGroup : genAmount,
         duration: genDuration > 0 ? genDuration : undefined,
         qty: genQty,
         des: genDes || undefined,
@@ -233,7 +232,9 @@ const GiftCodes = () => {
               <SettingForm
                 title={genType === "points" ? t("giftCodes.giftCodePointsAmount") : t("giftCodes.giftCodeAmount")}
               >
-                {genType === "points" ? (
+                {isByteAmount ? (
+                  <ByteSizeInput bytes={genAmount} onChange={setGenAmount} required />
+                ) : (
                   <DenseFilledTextField
                     fullWidth
                     type="number"
@@ -241,27 +242,6 @@ const GiftCodes = () => {
                     slotProps={{ htmlInput: { min: 1, step: 1 } }}
                     onChange={(e) => setGenAmount(parseInt(e.target.value) || 0)}
                   />
-                ) : (
-                  <Stack direction="row" spacing={1}>
-                    <DenseFilledTextField
-                      fullWidth
-                      type="number"
-                      value={genAmount}
-                      slotProps={{ htmlInput: { min: 0, step: "any" } }}
-                      onChange={(e) => setGenAmount(Number(e.target.value) || 0)}
-                    />
-                    <FormControl size="small" sx={{ minWidth: 96 }}>
-                      <InputLabel>{t("vas.capacityUnit")}</InputLabel>
-                      <Select
-                        value={genAmountUnit}
-                        label={t("vas.capacityUnit")}
-                        onChange={(e) => setGenAmountUnit(e.target.value as CapacityUnit)}
-                      >
-                        <MenuItem value="GB">GB</MenuItem>
-                        <MenuItem value="TB">TB</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Stack>
                 )}
                 <NoMarginHelperText>
                   {genType === "points"

@@ -1922,6 +1922,8 @@
     "durationDay": "유효 기간 (일)",
     "durationDayDes": "각 용량 팩의 유효 기간",
     "priceYuan": "단가 (위안)",
+    "priceStoredAs": "{{amount}}(으)로 저장됩니다(최소 화폐 단위 {{minor}}).",
+    "priceStepHint": "소수 입력 가능, 최소 {{min}}.",
     "packPriceDes": "용량 팩의 단가",
     "priceCredits": "단가 (포인트)",
     "priceCreditsDes": "포인트를 사용하여 구매할 때의 가격으로, 0으로 입력하면 포인트로 구매할 수 없습니다",

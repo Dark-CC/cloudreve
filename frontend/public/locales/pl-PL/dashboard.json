@@ -1920,6 +1920,8 @@
     "durationDay": "Czas trwania (dni)",
     "durationDayDes": "Czas ważności każdego pakietu pamięci.",
     "priceYuan": "Cena (PLN)",
+    "priceStoredAs": "Zapisane jako {{amount}} ({{minor}} najmniejszych jednostek).",
+    "priceStepHint": "Dozwolone ułamki, minimum {{min}}.",
     "packPriceDes": "Cena pakietu pamięci.",
     "priceCredits": "Cena (Kredyty)",
     "priceCreditsDes": "Cena przy użyciu kredytów do zakupu, wpisz 0 oznacza brak możliwości zakupu za kredyty.",

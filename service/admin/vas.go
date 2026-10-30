@@ -18,6 +18,9 @@ type (
 	SkuListParamCtx struct{}
 
 	// SkuUpsertService creates or updates one product. ID zero creates.
+	// The payload is the same JSON shape the admin client has always sent;
+	// validation of every numeric field happens in upsertSku so the create
+	// and update paths cannot diverge again.
 	SkuUpsertService struct {
 		Sku *ent.Sku `json:"sku" binding:"required"`
 	}
@@ -118,7 +121,7 @@ func (service *SkuUpsertService) Create(c *gin.Context) (*ent.Sku, error) {
 func upsertSku(c *gin.Context, s *ent.Sku) (*ent.Sku, error) {
 	dep := dependency.FromContext(c)
 
-	if s.Name == "" || s.Amount <= 0 || s.Duration < 0 || s.Price < 0 || s.Weight < 0 {
+	if s.Amount <= 0 || s.Duration < 0 || s.Price < 0 || s.Weight < 0 {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid product fields", nil)
 	}
 	if s.Points != nil && *s.Points <= 0 {
@@ -129,7 +132,6 @@ func upsertSku(c *gin.Context, s *ent.Sku) (*ent.Sku, error) {
 			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid target group", err)
 		}
 	}
-
 	res, err := dep.VasClient().UpsertSku(c, s)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to save product", err)

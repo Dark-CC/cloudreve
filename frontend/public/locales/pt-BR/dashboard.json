@@ -1922,6 +1922,8 @@
     "durationDay": "Duração (dia)",
     "durationDayDes": "Duração válida de cada pacote de armazenamento.",
     "priceYuan": "Preço (Yuan)",
+    "priceStoredAs": "Salvo como {{amount}} ({{minor}} unidades monetárias).",
+    "priceStepHint": "Decimais permitidos, mínimo {{min}}.",
     "packPriceDes": "Preço do pacote de armazenamento.",
     "priceCredits": "Preço (Créditos)",
     "priceCreditsDes": "O preço ao usar créditos para comprar, preencha 0 significa que não pode usar créditos para comprar.",
