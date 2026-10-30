@@ -31,8 +31,7 @@ func StripeWebhook(c *gin.Context) {
 // text rather than the usual JSON envelope; rejections answer non-200 so the
 // gateway retries later.
 func EasypayNotify(c *gin.Context) {
-	svc := ParametersFromContext[*usersvc.EasypayNotifyService](c, usersvc.EasypayNotifyParamCtx{})
-	res, err := svc.Create(c)
+	res, err := (&usersvc.EasypayNotifyService{}).Create(c)
 	if err != nil {
 		status := http.StatusBadRequest
 		c.String(status, "fail")
@@ -44,8 +43,7 @@ func EasypayNotify(c *gin.Context) {
 // EasypayReturn sends the buyer's browser back to the shop after the gateway
 // cashier; settlement is left to the notification or the status poll.
 func EasypayReturn(c *gin.Context) {
-	svc := ParametersFromContext[*usersvc.EasypayReturnService](c, usersvc.EasypayReturnParamCtx{})
-	c.Redirect(http.StatusFound, svc.Return(c))
+	c.Redirect(http.StatusFound, (&usersvc.EasypayReturnService{}).Return(c))
 }
 
 // RemoteCallback process callback request to complete upload

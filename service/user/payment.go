@@ -56,15 +56,13 @@ type (
 	// EasypayNotifyService ingests the asynchronous GET notification of the
 	// 易支付 gateway. The payload is signature-verified and its amount is
 	// compared against the order before fulfillment.
-	EasypayNotifyService  struct{}
-	EasypayNotifyParamCtx struct{}
+	EasypayNotifyService struct{}
 
 	// EasypayReturnService handles the buyer's browser coming back from the
 	// gateway. It verifies the signature, settles the order when the payment
 	// already succeeded, and redirects to the shop; nothing is granted at
 	// return time — the notification or the status poll is authoritative.
-	EasypayReturnService  struct{}
-	EasypayReturnParamCtx struct{}
+	EasypayReturnService struct{}
 
 	CheckoutResponse struct {
 		OrderID string `json:"order_id"`
