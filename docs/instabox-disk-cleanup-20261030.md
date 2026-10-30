@@ -5,17 +5,19 @@
 执行时间：第一轮 2026-10-30 14:38–14:52 UTC；第二轮（批准三项）14:46–14:58 UTC；第三轮（停服务 + 清下载）14:58–15:05 UTC。
 执行方式：InstaBox exec API（`POST /v1/machines/{id}/exec`）。
 
-## 总览：三轮结果
+## 总览：四轮结果
 
-| 盘 | 初始（报告口径） | 第一轮后 | 第二轮后 | **最终** | 累计释放 |
-|---|---|---|---|---|---|
-| `/`（16G） | 8.2G / 55% | 8.1G / 55% | 5.0G / 34% | **5.0G / 34%**，可用 9.9G | **约 3.1 GiB** |
-| `/data`（20G） | 16G / **82%** | 16G / 55% | 7.0G / 36% | **6.8G / 35%**，可用 13G | **约 10.5 GiB** |
+| 盘 | 初始（报告口径） | 第一轮后 | 第二轮后 | 第三轮后 | **最终** | 累计释放 |
+|---|---|---|---|---|---|---|
+| `/`（16G） | 8.2G / 55% | 8.1G / 55% | 5.0G / 34% | 5.0G / 34% | **5.0G / 34%**，可用 9.9G | **约 3.1 GiB** |
+| `/data`（20G） | 16G / **82%** | 16G / 55% | 7.0G / 36% | 6.8G / 35% | **6.7G / 35%**，可用 13G | **约 10.6 GiB** |
 
 - **第一轮**（约束内安全项）：重复 yarn/go 缓存、crB 可重建依赖、临时目录、npm 缓存、journal —— 约 5.5 GiB。
 - **第二轮**（批准三项）：5212 的 aria2 剧集 5346 MiB、Playwright 镜像 3.1 GiB、site302 僵尸进程 —— 约 8.4 GiB。
 - **第三轮**（新指令）：停 15214 / 5212 / aria2，清光 `data/temp/aria2` 下全部下载残留（含已涨到 3.3 GiB 的 wim）
-  —— 约 3.3 GiB。**5212 与 aria2 现为 inactive（enabled 保留）**，重启命令见 §8。
+  —— 约 3.3 GiB。5212 与 aria2 当时为 inactive（enabled 保留）。
+- **第四轮**（新指令「只保留 15212 和 Pro」）：**5212 与 aria2 被彻底删除**——两个 service 已 `disable` 并删掉
+  unit 文件，`/data/ouFmtYpb` 整目录删除，aria2 的配置/会话/下载目录删除。重建步骤见 §11。
 
 ## 0. 相对排查报告的前提校正
 
@@ -244,13 +246,15 @@ rm -rf /data/workspace/*/frontend/node_modules /data/workspace/*/frontend/build
 
 ## 7. 一句话结论
 
-三轮合计，`/data` 从 **82% 降到 35%**（释放约 **10.5 GiB**，可用 3.6 → 13 GiB），
+四轮合计，`/data` 从 **82% 降到 35%**（释放约 **10.6 GiB**，可用 3.6 → 13 GiB），
 `/` 从 **55% 降到 34%**（释放约 3.1 GiB）。三项大头（5212 剧集、Playwright 镜像、site302 僵尸进程）
-在第一轮按约束跳过、经批准后在第二轮清完；第三轮按新指令停掉 15214/5212/aria2 并清光
-`data/temp/aria2` 下全部下载残留。12 MiB 的部署存档仍因是回滚依据而主动保留。
+在第一轮按约束跳过、经批准后在第二轮清完；第三轮停掉 15214/5212/aria2 并清光 `data/temp/aria2`
+下的下载残留；**第四轮把 5212 与 aria2 彻底删除**（disable + 删 unit 文件 + 删 `/data/ouFmtYpb`
+与 aria2 配置数据）。12 MiB 的部署存档仍因是回滚依据而主动保留。
 
-结束后：**15212 / 15213 均返回 200**；**5212 与 aria2 已停且端口不再监听**（两者 `enabled` 保留，
-重启命令见 §8）；测试站容器 `cloudreve-fork-test` 与 5 个镜像未变；未使用 `docker image prune -af`。
+结束后：**15212 / 15213 Pro 均返回 200**，容器 Up，两个数据目录完好；**5212 与 aria2 已不存在**
+（`systemctl is-enabled` 返回 `not-found`，端口不再监听，重建步骤见 §11）；测试站容器
+`cloudreve-fork-test` 与 5 个镜像未变；未使用 `docker image prune -af`。
 
 ## 8. 第三轮：停服务与清空下载残留
 
@@ -349,38 +353,247 @@ sudo find /proc/*/fd -lname "*temp/aria2*" | wc -l   → 0
 | 5212 端口 | 无监听 ✓ |
 | 6800（aria2 RPC） | 无监听 ✓ |
 | 15214（site302） | 无监听 ✓ |
-| 镜像 | 5 个全部保留，未 `prune` |
 
-## 9. 如何把 5212 与 aria2 重新拉起来
+## 9. 第三轮的临时停止说明（已被第四轮推翻）
 
-两条命令即可（都是 `enabled`，配置完整保留）：
+> ⚠️ 第三轮只是「停一下」，当时写的是「`systemctl start` 即可重启，`enabled` 配置保留」。
+> **第四轮已把两个 service 连同配置、数据、目录全部删除**，`systemctl start` 不再能拉起任何东西。
+> **重建步骤见 §11。**
 
-```bash
-# 启动 5212 cloudreve 从机（在 InstaBox 上执行）
-sudo systemctl start cloudreve
-
-# 启动 aria2 RPC 守护（127.0.0.1:6800）
-sudo systemctl start aria2
-```
-
-一次拉齐两个，并验证：
+第三轮的停止方式（历史记录）：
 
 ```bash
-sudo systemctl start cloudreve aria2
-sleep 3
-systemctl is-active cloudreve aria2          # 期望两个都是 active
-sudo ss -ltnp | grep -E ':5212|:6800'        # 期望两个都在监听
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5212/   # slave 模式返回 404 属正常
+sudo systemctl stop cloudreve      # active: inactive
+sudo systemctl stop aria2          # active: failed(status=7) → reset-failed → inactive
+# 两者 enabled 均保留
 ```
 
-补充说明：
+## 10. 第四轮：彻底删除 5212 与 aria2
 
-- **aria2 队列已清空**。重启后要恢复之前的下载任务，先把备份的 session 拷回：
-  `sudo cp /data/home/.aria2/aria2.session.bak-stop-20261030 /data/home/.aria2/aria2.session`
-  再 `sudo systemctl restart aria2`。**注意**：备份里包含刚被我们清掉的那部剧集与 wim，
-  拷回去会让 aria2 重新去下载它们（aria2 会对着已不存在的目录重建任务）。只想恢复别的任务，
-  就手动编辑 session 去掉那两行 `dir=` 指向 `temp/aria2/a235a09d-…` 与 `33806012-…` 的条目。
-- 若只是临时停一下（重启机器）：`systemctl enable` 状态仍在，开机会自动拉起这两个服务；
-  若希望重启后**不要**自启，需额外执行 `sudo systemctl disable cloudreve aria2`（本次未做）。
-- `/opt/site302`（15214）**没有** systemd 单元、目录已删，**不是一条命令能拉起的**；
-  要恢复需先从备份重建目录（`/data/backup-site302` 只有库快照与容器定义，没有二进制）。
+用户原话：「5212和a2可以删除了，只保留15212和Pro」。执行时间 2026-10-30 15:10–15:22 UTC。
+
+### 10.1 删前边界证明（三个目录的实测路径）
+
+| 对象 | 实际路径 | 大小 | 与 `/data/ouFmtYpb` 是否相交 |
+|---|---|---|---|
+| **15212** 测试站数据 | `/data/cloudreve-fork-test`（容器 `cloudreve-fork-test` 挂载为 `/cloudreve/data`） | 5 MiB | **无** |
+| **15213 Pro** | `/data/pro15213`（`cloudreve-pro15213.service`，`WorkingDirectory=/data/pro15213`） | 89 MiB | **无** |
+| **5212**（待删） | `/data/ouFmtYpb` | 89 MiB | — |
+
+额外校验：
+
+- `findmnt -T /data/ouFmtYpb` → `/data /dev/vdb`，即它是 `/data` 下的**普通目录**，不是独立挂载点；
+- `readlink -f /data/ouFmtYpb` → `/data/ouFmtYpb`，不是软链；
+- `grep -rls "ouFmtYpb" /etc/systemd/system/` → **只命中 `cloudreve.service`**（就是要删的那个），
+  无其它服务引用；
+- 遍历全部容器（`docker ps -a` + `inspect .Mounts`），**无任何容器挂载 `ouFmtYpb`**。
+
+### 10.2 逐项删除了什么
+
+| # | 对象 | 操作 | 结果 |
+|---|---|---|---|
+| 1 | `cloudreve.service` | `systemctl disable --now cloudreve` | 移除 `multi-user.target.wants` 软链 → `inactive` / `disabled` |
+| 2 | `aria2.service` | `systemctl disable --now aria2` | 同上 → `inactive` / `disabled` |
+| 3 | `/data/ouFmtYpb/`（整目录） | `rm -rf` | rc=0，目录已不存在 |
+| 4 | `/data/home/.aria2/`（`aria2.conf`、`aria2.session` 及 5 个备份、`aria2.log`） | `rm -rf` | rc=0 |
+| 5 | `/data/home/aria2-downloads/`（下载目录） | `rm -rf` | rc=0（当时已空） |
+| 6 | `/etc/systemd/system/aria2.service` | `rm -f` | 已删 |
+| 7 | `/etc/systemd/system/cloudreve.service` | `rm -f` | 已删 |
+| 8 | `systemctl daemon-reload` | — | ok |
+
+**保留未动**：`/usr/bin/aria2c` 及其 apt 包（理由见 10.3）；`/data/cloudreve-fork-test`；`/data/pro15213`；
+5 个 docker 镜像；`cloudreve-fork-test` 容器；`~/.cache/*`。
+
+删除后校验：`systemctl is-enabled cloudreve` → **`not-found`**，`aria2` 同样 → `not-found`
+（unit 文件已不在，不是 disable 态而是不存在）；`5212` 与 `6800` 端口均无监听；
+`find /proc/*/fd` 扫 `ouFmtYpb`/`aria2` → 空；`lsof +L1` 无 >50 MB 的 deleted 文件（无残留占用）。
+
+### 10.3 为什么保留 aria2c 二进制而删配置
+
+选的是**「只删配置与数据、保留 apt 包」**（也是用户建议的做法）：
+
+- 这台机器上 aria2 的唯一使用者就是 5212 的 cloudreve 从机（`aria2.service` 专为它而建，
+  配置里 `dir=/data/home/aria2-downloads`）。5212 已删，没人再调 6800 RPC。
+- 二进制本身很小（`/usr/bin/aria2c`），留着的收益大于风险：将来重建 5212 时**不用联网重装**。
+- 配置与数据才是「有状态、有隐私」的部分（RPC secret、下载任务列表），真正该清的就是它们。
+- 它不白占资源：无 unit、无进程，只是个静态文件。
+
+### 10.4 删后健康证据（硬底线）
+
+| 项 | 证据 |
+|---|---|
+| **15212** `GET /` | **200** |
+| **15213 Pro** `GET /` | **200** |
+| 容器 `cloudreve-fork-test` | `Up 57 minutes`，镜像 `cloudreve-fork:admin-r7` 未变 |
+| `cloudreve-pro15213.service` | `active` |
+| 15212 数据目录 | `/data/cloudreve-fork-test` 5 MiB，在 |
+| 15213 数据目录 | `/data/pro15213` 89 MiB，在 |
+| 端口 | `15212`、`15213` 在监听；`5212`、`6800` 已消失 |
+| 镜像 | 5 个全在（`admin-r7`/`vas-1030-r3`/`admin-r6`/`easypay-1030-r2`/`debian:bookworm-slim`），未 `prune` |
+
+### 10.5 最终占用
+
+```
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        16G  5.0G  9.9G  34% /
+/dev/vdb         20G  6.7G   13G  35% /data
+```
+
+`/data` 最终构成（MiB）：`home` 5073、`workspace` 1617、`pro15213` 89、测试站 5、存档 ≈90。
+**`ouFmtYpb` 已从列表中消失。** 本轮直接释放约 89 MiB（目录本身）；在此之前第三轮已清掉其中的
+3.3 GiB 下载数据，所以 5212 的「大头」实际是在第三轮释放的。
+
+## 11. 如何从零重建 5212 与 aria2（删后版）
+
+⚠️ 下面的信息是在删除前实测抄录的。**二进制、配置、数据库、license 都已随目录删除**，
+重建需从外部重新拿。
+
+### 11.1 删除前的 5212 完整配置（用于重建参考）
+
+**目录结构**（`/data/ouFmtYpb`，共 89 MiB）：
+
+```
+/data/ouFmtYpb/
+├── cloudreve.log                                  9 KB
+├── aria2/
+│   └── c97e8bc7-ec7b-4a91-a955-8cd7126709c2/      (空目录)
+└── cloudreve_v4.18.0_linux_amd64/
+    ├── cloudreve_v4.18.0                          91.6 MB  二进制
+    ├── config.ini                                 275 B
+    ├── license_key                                130 B    两行：CR_HEXOR_DATA / LICENSE_KEY
+    ├── start.sh                                   1337 B
+    └── data/
+        ├── cloudreve.db                           663 KB   SQLite 库
+        ├── cache_persist.bin                      119 B
+        └── temp/aria2/                            (已清空)
+```
+
+**systemd unit**（`/etc/systemd/system/cloudreve.service`，已删，原文抄录）：
+
+```ini
+[Unit]
+Description=Cloudreve (slave node, :5212)
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/data
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64
+ExecStart=/data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64/cloudreve_v4.18.0 -c config.ini
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**config.ini 全文**：
+
+```ini
+[System]
+Mode = slave
+Listen = :5212
+
+[Slave]
+Secret = <已随目录删除，不再记录原值>
+
+[CORS]
+AllowOrigins = *
+AllowMethods = OPTIONS,GET,POST
+AllowHeaders = *
+```
+
+**启动方式（二选一）**：
+
+- 当时生产用的是 systemd（`ExecStart` 直接跑二进制、`-c config.ini`，不传 license 参数，
+  因为 `data/cloudreve.db` 里已有 license 记录）。
+- `start.sh` 是首次初始化用的：读 `license_key` 两行 → `export CR_HEXOR_DATA` →
+  `./cloudreve_v4.18.0 --license-key="$LICENSE_KEY"`。**首次启动才需要**。
+
+### 11.2 重建 5212 的步骤
+
+```bash
+# 1) 重建目录并放入二进制（从外部重新获取 v4.18.0 或改用当前 fork 镜像）
+sudo mkdir -p /data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64/data
+#    放入 cloudreve 二进制、config.ini（内容见 11.1）、license_key
+
+# 2) 重建 unit（内容见 11.1 的 ini 块）
+sudo tee /etc/systemd/system/cloudreve.service >/dev/null <<'EOF'
+... 粘贴 11.1 的 unit 内容 ...
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now cloudreve
+
+# 3) 验证
+sudo ss -ltnp | grep :5212
+journalctl -u cloudreve -n 30 --no-pager
+```
+
+注意：slave 模式对 license 检查宽松（`data/cloudreve.db` 的 license 为空也能跑）；master 模式必须有 license。
+**数据库 `cloudreve.db`（663 KB）已随目录删除**，重建的将从空库开始，需要在 master 端重新登记这个从机。
+
+### 11.3 重建 aria2 的步骤
+
+`aria2c` 二进制还在（`/usr/bin/aria2c`，apt 包 `aria2`）。只需重建配置与 unit：
+
+```bash
+# 1) 配置目录与文件
+sudo mkdir -p /data/home/.aria2 /data/home/aria2-downloads
+sudo tee /data/home/.aria2/aria2.conf >/dev/null <<'EOF'
+enable-rpc=true
+rpc-listen-all=false
+rpc-listen-port=6800
+rpc-secret=<自定一个新的>
+rpc-allow-origin-all=false
+dir=/data/home/aria2-downloads
+continue=true
+max-concurrent-downloads=1
+max-connection-per-server=8
+split=8
+min-split-size=1M
+file-allocation=none
+disk-cache=32M
+auto-file-renaming=true
+allow-overwrite=false
+input-file=/data/home/.aria2/aria2.session
+save-session=/data/home/.aria2/aria2.session
+save-session-interval=60
+force-save=false
+log=/data/home/.aria2/aria2.log
+log-level=notice
+EOF
+
+# 2) unit
+sudo tee /etc/systemd/system/aria2.service >/dev/null <<'EOF'
+[Unit]
+Description=Aria2 RPC daemon (127.0.0.1:6800)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=HOME=/root
+WorkingDirectory=/data/home
+ExecStart=/usr/bin/aria2c --conf-path=/data/home/.aria2/aria2.conf --daemon=false
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload && sudo systemctl enable --now aria2
+sudo ss -ltnp | grep :6800
+```
+
+如果连二进制也要重装：`sudo apt-get install -y aria2`（Debian/Ubuntu）。
