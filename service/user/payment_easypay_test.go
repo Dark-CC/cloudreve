@@ -332,3 +332,65 @@ func swapEasypayGateway(t *testing.T, g payment.EasypayGateway) {
 	payment.Easypay = g
 	t.Cleanup(func() { payment.Easypay = orig })
 }
+
+// A product priced 0.01 has to survive the whole cash path: the order stores
+// one minor unit, 易支付 is charged "0.01", and the notification carrying that
+// same amount fulfils the order. Before the price input accepted decimals the
+// smallest reachable price was a whole currency unit, so this path had no test.
+func TestEasypaySmallestPriceCheckoutAndNotify(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	// One minor unit in a cent-style currency = 0.01.
+	s = client.Sku.UpdateOne(s).SetPrice(1).SaveX(ctx)
+	cfg := easypayCfg()
+	dep := newEasypayDep(t, client, cfg)
+	enc := mustHasher(t)
+
+	res, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	require.Equal(t, "0.01", res.Params["money"])
+
+	order, err := client.PaymentOrder.Query().Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), order.Amount)
+
+	fields := map[string]string{
+		"pid":          "1005",
+		"trade_no":     "E-cheap",
+		"out_trade_no": order.SessionID,
+		"type":         "alipay",
+		"name":         "Stream",
+		"money":        "0.01",
+		"trade_status": payment.EasypayTradeSuccess,
+	}
+	svc := &EasypayNotifyService{}
+	out, err := svc.Create(easypayNotifyCtx(t, dep, cfg.Easypay.Key, fields))
+	require.NoError(t, err)
+	require.Equal(t, "success", out)
+	require.Equal(t, paymentorder.StatusPaid, client.PaymentOrder.GetX(ctx, order.ID).Status)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+}
+
+// The charge handed to the gateway follows the site currency's minor unit, so
+// a zero-decimal currency (unit 1) is not charged 100x too little.
+func TestEasypayCheckoutHonoursCurrencyUnit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	s = client.Sku.UpdateOne(s).SetPrice(15).SaveX(ctx) // 15 of the smallest unit
+	cfg := easypayCfg()
+	cfg.CurrencyUnit = 1
+	dep := newEasypayDep(t, client, cfg)
+	enc := mustHasher(t)
+
+	res, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	require.Equal(t, "15.00", res.Params["money"])
+}
