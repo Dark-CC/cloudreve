@@ -2,18 +2,20 @@
 
 依据：[#46](todo:JG1q-Ghal_MHomBBLPbsz) 的只读排查报告 `docs/instabox-disk-audit-20261030.md`。
 机器：InstaBox `m_agqw5litn4acpbo7b5axu3ycku`（x86_64，4 vCPU / 8 GiB，`/` 16G + `/data` 20G）。
-执行时间：第一轮 2026-10-30 14:38–14:52 UTC；第二轮（用户批准后）14:46–14:58 UTC。
+执行时间：第一轮 2026-10-30 14:38–14:52 UTC；第二轮（批准三项）14:46–14:58 UTC；第三轮（停服务 + 清下载）14:58–15:05 UTC。
 执行方式：InstaBox exec API（`POST /v1/machines/{id}/exec`）。
 
-## 总览：两轮结果
+## 总览：三轮结果
 
-| 盘 | 初始（报告口径） | 第一轮后 | **最终** | 累计释放 |
-|---|---|---|---|---|
-| `/`（16G） | 8.2G / 55% | 8.1G / 55% | **5.0G / 34%**，可用 9.9G | **约 3.1 GiB** |
-| `/data`（20G） | 16G / **82%** | 16G / 55% | **7.0G / 36%**，可用 13G | **约 10.3 GiB** |
+| 盘 | 初始（报告口径） | 第一轮后 | 第二轮后 | **最终** | 累计释放 |
+|---|---|---|---|---|---|
+| `/`（16G） | 8.2G / 55% | 8.1G / 55% | 5.0G / 34% | **5.0G / 34%**，可用 9.9G | **约 3.1 GiB** |
+| `/data`（20G） | 16G / **82%** | 16G / 55% | 7.0G / 36% | **6.8G / 35%**，可用 13G | **约 10.5 GiB** |
 
 - **第一轮**（约束内安全项）：重复 yarn/go 缓存、crB 可重建依赖、临时目录、npm 缓存、journal —— 约 5.5 GiB。
-- **第二轮**（用户批准的三项）：5212 的 aria2 剧集 5346 MiB、Playwright 镜像 3.1 GiB、site302 僵尸进程 —— 约 8.4 GiB。
+- **第二轮**（批准三项）：5212 的 aria2 剧集 5346 MiB、Playwright 镜像 3.1 GiB、site302 僵尸进程 —— 约 8.4 GiB。
+- **第三轮**（新指令）：停 15214 / 5212 / aria2，清光 `data/temp/aria2` 下全部下载残留（含已涨到 3.3 GiB 的 wim）
+  —— 约 3.3 GiB。**5212 与 aria2 现为 inactive（enabled 保留）**，重启命令见 §8。
 
 ## 0. 相对排查报告的前提校正
 
@@ -242,8 +244,143 @@ rm -rf /data/workspace/*/frontend/node_modules /data/workspace/*/frontend/build
 
 ## 7. 一句话结论
 
-两轮合计，`/data` 从 **82% 降到 36%**（释放约 **10.3 GiB**，可用 3.6 → 13 GiB），
+三轮合计，`/data` 从 **82% 降到 35%**（释放约 **10.5 GiB**，可用 3.6 → 13 GiB），
 `/` 从 **55% 降到 34%**（释放约 3.1 GiB）。三项大头（5212 剧集、Playwright 镜像、site302 僵尸进程）
-在第一轮按约束跳过、经用户批准后在第二轮清完；12 MiB 的部署存档仍因是回滚依据而主动保留。
+在第一轮按约束跳过、经批准后在第二轮清完；第三轮按新指令停掉 15214/5212/aria2 并清光
+`data/temp/aria2` 下全部下载残留。12 MiB 的部署存档仍因是回滚依据而主动保留。
 
-清理后 15212、15213、5212 三个实例均正常（HTTP 200 / 进程在），测试站容器与 5 个镜像未变。
+结束后：**15212 / 15213 均返回 200**；**5212 与 aria2 已停且端口不再监听**（两者 `enabled` 保留，
+重启命令见 §8）；测试站容器 `cloudreve-fork-test` 与 5 个镜像未变；未使用 `docker image prune -af`。
+
+## 8. 第三轮：停服务与清空下载残留
+
+用户在反馈中的原话：「15214 停止 然后a2和5212 也停止 然后5.2G 剧集 清理掉」。
+执行时间 2026-10-30 14:58–15:05 UTC。
+
+### 8.1 15214
+
+停前复核：`ss -ltn | grep :15214` 无输出，上一轮 `kill -TERM 653159 653156` 已生效，无残留进程。
+**本次未恢复 `/opt/site302`**（按要求）。
+
+### 8.2 停 5212（`cloudreve.service`）
+
+```
+sudo systemctl stop cloudreve     → active: inactive
+sudo systemctl is-enabled cloudreve → enabled（保留自启配置，未 disable）
+```
+
+单元原文（停前实际读取）：
+
+```ini
+[Unit]
+Description=Cloudreve (slave node, :5212)
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/data
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64
+ExecStart=/data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64/cloudreve_v4.18.0 -c config.ini
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+停前运行状态（供对比）：PID 30019，`root`，已运行 **4 天 19 小时 58 分**，`cwd` =
+`/data/ouFmtYpb/cloudreve_v4.18.0_linux_amd64`，`exe` = 同目录下的 `cloudreve_v4.18.0`，
+监听 `*:5212`，模式为 slave（`Mode=slave`，连 master `https://pan.cdn.ad`）。
+
+### 8.3 停 aria2（`aria2.service`）
+
+```
+sudo systemctl stop aria2        → active: failed (Result: exit-code, status=7 = SIGTERM 正常退出)
+sudo systemctl reset-failed aria2 → active: inactive
+sudo systemctl is-enabled aria2   → enabled（保留，未 disable）
+```
+
+单元要点（原文）：`User=root`、`Environment=HOME=/root`、`WorkingDirectory=/data/home`、
+`ExecStart=/usr/bin/aria2c --conf-path=/data/home/.aria2/aria2.conf --daemon=false`。
+配置文件 `/data/home/.aria2/aria2.conf`：`rpc-listen-port=6800`、`max-concurrent-downloads=1`、
+`save-session=/data/home/.aria2/aria2.session`（`save-session-interval=60`）。
+
+停前已 **备份 session** 到 `/data/home/.aria2/aria2.session.bak-stop-20261030`，重启后可用它恢复队列。
+
+### 8.4 清空 `data/temp/aria2`
+
+两个服务停掉后先确认句柄归零：
+
+```
+sudo find /proc/*/fd -lname "*temp/aria2*" | wc -l   → 0
+```
+
+然后清空该目录。**过程中踩到的两个坑**：
+
+1. `rm -rf .../aria2/*` 执行 `rc=0` 但目录里的 `SurfaceLaptop_BMR_*.wim` **仍在**——停服瞬间它还在写，
+   通配展开时该目录被重新创建。必须 **点名 `rm -f` 具体文件**再 `rmdir` 空目录。
+2. 那个 wim 是 **8.7 GB 的稀疏文件**（`ls` 显示 8709965972 B，`du` 只算 3460 MiB）——
+   看 `ls` 大小会大幅高估占用，要以 `du` 为准。
+
+```
+清理前 /data/ouFmtYpb                              3460 MiB
+清理后 /data/ouFmtYpb                                89 MiB
+清理前 /data                                        52%
+清理后 /data                                        35%
+清后 sudo find /proc/*/fd -lname "*ouFmtYpb*"      → 空
+清后 sudo lsof +L1 | awk '$8>100000000'             → 无（无 >100MB 的 deleted 文件）
+```
+
+**边界遵守**：只清 `data/temp/aria2/` 下的下载数据；`/data/ouFmtYpb` 本体、`cloudreve_v4.18.0`
+二进制、`config.ini`、`data/` 下的数据库与用户文件全部保留。清后 `/data/ouFmtYpb` 剩 89 MiB
+（二进制 + 配置 + 库）。
+
+### 8.5 第三轮健康复查
+
+| 项 | 结果 |
+|---|---|
+| **15212** `GET /` | **200**（容器 `cloudreve-fork-test` Up） |
+| **15213** `GET /` | **200**（`cloudreve-pro15213` active/running，**未被连带停掉**） |
+| 5212 端口 | 无监听 ✓ |
+| 6800（aria2 RPC） | 无监听 ✓ |
+| 15214（site302） | 无监听 ✓ |
+| 镜像 | 5 个全部保留，未 `prune` |
+
+## 9. 如何把 5212 与 aria2 重新拉起来
+
+两条命令即可（都是 `enabled`，配置完整保留）：
+
+```bash
+# 启动 5212 cloudreve 从机（在 InstaBox 上执行）
+sudo systemctl start cloudreve
+
+# 启动 aria2 RPC 守护（127.0.0.1:6800）
+sudo systemctl start aria2
+```
+
+一次拉齐两个，并验证：
+
+```bash
+sudo systemctl start cloudreve aria2
+sleep 3
+systemctl is-active cloudreve aria2          # 期望两个都是 active
+sudo ss -ltnp | grep -E ':5212|:6800'        # 期望两个都在监听
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5212/   # slave 模式返回 404 属正常
+```
+
+补充说明：
+
+- **aria2 队列已清空**。重启后要恢复之前的下载任务，先把备份的 session 拷回：
+  `sudo cp /data/home/.aria2/aria2.session.bak-stop-20261030 /data/home/.aria2/aria2.session`
+  再 `sudo systemctl restart aria2`。**注意**：备份里包含刚被我们清掉的那部剧集与 wim，
+  拷回去会让 aria2 重新去下载它们（aria2 会对着已不存在的目录重建任务）。只想恢复别的任务，
+  就手动编辑 session 去掉那两行 `dir=` 指向 `temp/aria2/a235a09d-…` 与 `33806012-…` 的条目。
+- 若只是临时停一下（重启机器）：`systemctl enable` 状态仍在，开机会自动拉起这两个服务；
+  若希望重启后**不要**自启，需额外执行 `sudo systemctl disable cloudreve aria2`（本次未做）。
+- `/opt/site302`（15214）**没有** systemd 单元、目录已删，**不是一条命令能拉起的**；
+  要恢复需先从备份重建目录（`/data/backup-site302` 只有库快照与容器定义，没有二进制）。
