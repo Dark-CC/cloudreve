@@ -1922,6 +1922,8 @@
     "durationDay": "有效期 (天)",
     "durationDayDes": "每個容量包的有效期",
     "priceYuan": "單價 (元)",
+    "priceStoredAs": "實際入帳 {{amount}}（記為 {{minor}} 個最小貨幣單位）。",
+    "priceStepHint": "支援小數，最小可填 {{min}}。",
     "packPriceDes": "容量包的單價",
     "priceCredits": "單價 (積分)",
     "priceCreditsDes": "使用積分購買時的價格，填寫為 0 表示不能使用積分購買",

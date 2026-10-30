@@ -24,6 +24,7 @@ import { useAppDispatch } from "../../../../redux/hooks.ts";
 import { adminCreateGiftCode, adminDeleteGiftCode, adminListGiftCodes, getGroupList } from "../../../../api/api.ts";
 import { GiftCode, GiftCodeListResponse, GroupEnt } from "../../../../api/dashboard.ts";
 import { sizeToString } from "../../../../util/index.ts";
+import ByteSizeInput from "../../../Common/ByteSizeInput.tsx";
 import {
   DenseFilledTextField,
   NoWrapCell,
@@ -70,6 +71,10 @@ const GiftCodes = () => {
   const [genQty, setGenQty] = useState(1);
   const [genDes, setGenDes] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Points/groups keep an integer amount; storage and traffic codes store
+  // bytes and are edited with a unit picker like the capacity packs.
+  const isByteAmount = genType === "storage" || genType === "traffic" || genType === "stream_traffic";
 
   const load = useCallback(() => {
     dispatch(adminListGiftCodes(pagination.page, pagination.perPage)).then((res) => setResult(res));
@@ -227,12 +232,16 @@ const GiftCodes = () => {
               <SettingForm
                 title={genType === "points" ? t("giftCodes.giftCodePointsAmount") : t("giftCodes.giftCodeAmount")}
               >
-                <DenseFilledTextField
-                  fullWidth
-                  type="number"
-                  value={genAmount}
-                  onChange={(e) => setGenAmount(parseInt(e.target.value) || 0)}
-                />
+                {isByteAmount ? (
+                  <ByteSizeInput bytes={genAmount} onChange={setGenAmount} required />
+                ) : (
+                  <DenseFilledTextField
+                    fullWidth
+                    type="number"
+                    value={genAmount}
+                    onChange={(e) => setGenAmount(parseInt(e.target.value) || 0)}
+                  />
+                )}
                 <NoMarginHelperText>
                   {genType === "points"
                     ? t("giftCodes.giftCodePointsAmountHelp")

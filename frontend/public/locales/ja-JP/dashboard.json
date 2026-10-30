@@ -1920,6 +1920,8 @@
     "durationDay": "有効期限（日）",
     "durationDayDes": "各容量パックの有効期限",
     "priceYuan": "単価（元）",
+    "priceStoredAs": "{{amount}} で保存されます（最小通貨単位 {{minor}}）。",
+    "priceStepHint": "小数可、最小 {{min}}。",
     "packPriceDes": "容量パックの単価",
     "priceCredits": "単価（ポイント）",
     "priceCreditsDes": "ポイント購入時の価格（ポイントで購入不可の場合は0を入力）",

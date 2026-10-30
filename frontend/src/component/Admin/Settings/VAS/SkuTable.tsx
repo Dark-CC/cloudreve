@@ -24,8 +24,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { adminDeleteSku, adminListSkus, adminUpsertSku, getGroupList } from "../../../../api/api.ts";
 import { GroupEnt, Sku } from "../../../../api/dashboard.ts";
-import { useAppDispatch } from "../../../../redux/hooks.ts";
+import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
 import { sizeToString } from "../../../../util/index.ts";
+import { fromMinorUnits, smallestPriceStep, toMinorUnits } from "../../../../util/price.ts";
+import ByteSizeInput from "../../../Common/ByteSizeInput.tsx";
 import {
   DenseFilledTextField,
   NoWrapCell,
@@ -81,6 +83,10 @@ const SkuTable = ({ type }: SkuTableProps) => {
   const { t } = useTranslation("dashboard");
   const isTraffic = type === "traffic" || type === "stream_traffic";
   const dispatch = useAppDispatch();
+  // Prices are stored in the currency's minor units; the dialog edits major
+  // units (0.01 style) and converts at the edge.
+  const currencyUnit = useAppSelector((state) => state.siteConfig.basic.config.payment_currency_unit ?? 100);
+  const currencyMark = useAppSelector((state) => state.siteConfig.basic.config.payment_currency_mark ?? "");
   const [skus, setSkus] = useState<Sku[] | undefined>(undefined);
   const [groups, setGroups] = useState<GroupEnt[]>([]);
   const [form, setForm] = useState<SkuForm | undefined>(undefined);
@@ -109,7 +115,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
       name: s.name,
       amount: s.amount,
       durationDays: Math.round((s.duration ?? 0) / DAY_SECONDS),
-      price: s.price ?? 0,
+      price: fromMinorUnits(s.price, currencyUnit),
       allowPoints: s.points != null,
       points: s.points ?? 0,
       label: s.label ?? "",
@@ -133,7 +139,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
         amount: form.amount,
         // Traffic packs are permanent; duration is not applicable.
         duration: isTraffic ? 0 : Math.max(0, form.durationDays) * DAY_SECONDS,
-        price: Math.max(0, form.price),
+        price: toMinorUnits(form.price, currencyUnit),
         points: form.allowPoints ? Math.max(1, form.points) : undefined,
         label: form.label || undefined,
         des: form.des || undefined,
@@ -197,7 +203,9 @@ const SkuTable = ({ type }: SkuTableProps) => {
                       ? t("application:vas.validDurationDays", { num: Math.round((s.duration ?? 0) / DAY_SECONDS) })
                       : t("application:shop.permanent")}
                   </NoWrapCell>
-                  <NoWrapCell>{s.price ?? 0}</NoWrapCell>
+                  <NoWrapCell>
+                    {s.price ? `${currencyMark}${fromMinorUnits(s.price, currencyUnit).toFixed(2)}` : "-"}
+                  </NoWrapCell>
                   <NoWrapCell>{s.points != null ? s.points : "-"}</NoWrapCell>
                   <NoWrapCell>
                     <Chip
@@ -276,11 +284,10 @@ const SkuTable = ({ type }: SkuTableProps) => {
                 </SettingForm>
               ) : (
                 <SettingForm title={isTraffic ? t("vas.trafficSize") : t("vas.size")}>
-                  <DenseFilledTextField
-                    fullWidth
-                    type="number"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
+                  <ByteSizeInput
+                    bytes={form.amount}
+                    onChange={(amount) => setForm({ ...form, amount })}
+                    required
                   />
                   <NoMarginHelperText>{isTraffic ? t("vas.trafficSizeDes") : t("vas.packSizeDes")}</NoMarginHelperText>
                 </SettingForm>
@@ -300,14 +307,28 @@ const SkuTable = ({ type }: SkuTableProps) => {
                 </SettingForm>
               )}
 
-              <SettingForm title={t("vas.priceYuan")}>
+              <SettingForm title={t("vas.price")}>
                 <DenseFilledTextField
                   fullWidth
                   type="number"
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: parseInt(e.target.value) || 0 })}
+                  slotProps={{ htmlInput: { step: "any", min: 0 } }}
+                  onChange={(e) => {
+                    // Free-form decimals: 0.01 must be enterable, so the value
+                    // is kept as typed and rounded to a whole minor unit only.
+                    const v = Number(e.target.value);
+                    setForm({ ...form, price: Number.isFinite(v) ? Math.max(0, v) : 0 });
+                  }}
                 />
-                <NoMarginHelperText>{t("vas.packPriceDes")}</NoMarginHelperText>
+                <NoMarginHelperText>
+                  {t("vas.packPriceDes")}
+                  {form.price > 0
+                    ? ` ${t("vas.priceStoredAs", {
+                        amount: `${currencyMark}${form.price.toFixed(2)}`,
+                        minor: toMinorUnits(form.price, currencyUnit),
+                      })}`
+                    : ` ${t("vas.priceStepHint", { min: smallestPriceStep(currencyUnit) })}`}
+                </NoMarginHelperText>
               </SettingForm>
 
               <SettingForm lgWidth={5}>
