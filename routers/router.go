@@ -572,6 +572,16 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				"stripe",
 				controllers.StripeWebhook,
 			)
+			// 易支付 asynchronous notification (GET, returns plain "success")
+			callback.GET(
+				"easypay/notify",
+				controllers.EasypayNotify,
+			)
+			// 易支付 browser return — redirects to the shop
+			callback.GET(
+				"easypay/return",
+				controllers.EasypayReturn,
+			)
 			// 远程策略上传回调
 			callback.POST(
 				"remote/:sessionID/:key",

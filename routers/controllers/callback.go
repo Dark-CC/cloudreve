@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/upyun"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
@@ -22,6 +24,26 @@ func StripeWebhook(c *gin.Context) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
+}
+
+// EasypayNotify ingests the 易支付 asynchronous notification. The gateway
+// requires the literal body "success" to stop retrying, so the reply is plain
+// text rather than the usual JSON envelope; rejections answer non-200 so the
+// gateway retries later.
+func EasypayNotify(c *gin.Context) {
+	res, err := (&usersvc.EasypayNotifyService{}).Create(c)
+	if err != nil {
+		status := http.StatusBadRequest
+		c.String(status, "fail")
+		return
+	}
+	c.String(200, res)
+}
+
+// EasypayReturn sends the buyer's browser back to the shop after the gateway
+// cashier; settlement is left to the notification or the status poll.
+func EasypayReturn(c *gin.Context) {
+	c.Redirect(http.StatusFound, (&usersvc.EasypayReturnService{}).Return(c))
 }
 
 // RemoteCallback process callback request to complete upload

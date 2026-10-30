@@ -332,10 +332,11 @@ type (
 	UseFirstSiteUrlCtxKey = struct{}
 )
 
-// PaymentSettings carries the Stripe cash-checkout configuration. Enabled
-// requires a secret key; the webhook secret is required before webhook
-// fulfillment is accepted. CurrencyCode/Mark/Unit describe the site-wide
-// display currency shared by all payment providers.
+// PaymentSettings carries the cash-checkout configuration. Enabled requires a
+// secret key; the webhook secret is required before webhook fulfillment is
+// accepted. CurrencyCode/Mark/Unit describe the site-wide display currency
+// shared by all payment providers. Easypay carries the 易支付 gateway settings
+// when that provider is configured.
 type PaymentSettings struct {
 	Enabled        bool
 	SecretKey      string
@@ -344,6 +345,25 @@ type PaymentSettings struct {
 	Currency       string
 	CurrencyMark   string
 	CurrencyUnit   int
+	Easypay        EasypaySettings
+}
+
+// EasypaySettings is the 易支付 (aggregation-payment) channel configuration.
+// Enabled requires the gateway URL, the merchant id and the merchant key.
+// PayType is the default channel (alipay/wxpay/qqpay); empty shows the
+// gateway's own cashier so the buyer picks one.
+type EasypaySettings struct {
+	Enabled bool
+	// GatewayURL is the gateway origin, e.g. https://pay.example.com.
+	GatewayURL string
+	PID        string
+	Key        string
+	PayType    string
+}
+
+// Ready reports whether the channel has everything a checkout needs.
+func (e EasypaySettings) Ready() bool {
+	return e.Enabled && e.GatewayURL != "" && e.PID != "" && e.Key != ""
 }
 
 // NewProvider creates a new setting provider.
@@ -1060,6 +1080,13 @@ func (s *settingProvider) Payment(ctx context.Context) *PaymentSettings {
 		Currency:       currency,
 		CurrencyMark:   s.getString(ctx, "payment_currency_mark", "$"),
 		CurrencyUnit:   int(s.getFloat64(ctx, "payment_currency_unit", 100)),
+		Easypay: EasypaySettings{
+			Enabled:    s.getBoolean(ctx, "payment_easypay_enabled", false),
+			GatewayURL: strings.TrimSpace(s.getString(ctx, "payment_easypay_gateway", "")),
+			PID:        strings.TrimSpace(s.getString(ctx, "payment_easypay_pid", "")),
+			Key:        s.getString(ctx, "payment_easypay_key", ""),
+			PayType:    strings.TrimSpace(s.getString(ctx, "payment_easypay_type", "")),
+		},
 	}
 }
 
