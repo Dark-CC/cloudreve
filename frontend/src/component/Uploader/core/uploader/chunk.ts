@@ -20,8 +20,20 @@ export default abstract class Chunk extends Base {
   private progressUpdateMutex = Promise.resolve(); // Ensure progress updates are serialized
 
   public upload = async () => {
-    this.logger.info("Preparing uploading file chunks.");
     this.initBeforeUploadChunks();
+
+    // Some storages already hold the file's content and sign no part at all
+    // (the 139 cloud drive answers /file/create with `exist` / `rapidUpload`).
+    // Such an upload has nothing to transfer, but it is not complete either:
+    // the backend still has to be told through the completion callback, which
+    // afterUpload() (base.ts) sends after this returns. Bailing out here
+    // without running the pool is fine — uploadChunksWithDynamicPool() returns
+    // immediately when there is nothing pending — but the caller must never
+    // skip afterUpload(), or the file stays stuck in "uploading".
+    if (this.chunks.length === 0) {
+      this.logger.info("Storage already holds this content, no part to upload.");
+      return;
+    }
 
     this.logger.info("Starting concurrent uploading of file chunks:", this.chunks);
     this.updateLocalCache();
@@ -37,6 +49,7 @@ export default abstract class Chunk extends Base {
 
     if (chunksToUpload.length === 0) {
       this.logger.info("All chunks already uploaded, skipping.");
+      this.notifyResumeProgress();
       return;
     }
 

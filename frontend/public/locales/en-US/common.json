@@ -103,7 +103,10 @@
     "50004": "I/O operation failed. ({{message}})",
     "50005": "Internal error.",
     "50010": "Desired node is unavailable.",
-    "50011": "Failed to query file metadata."
+    "50011": "Failed to query file metadata.",
+    "40097": "The content audit service is unavailable, please try again later.",
+    "40098": "The cloud drive rejected this content in its audit, please try another file.",
+    "40099": "The storage login state has expired, please update the Authorization and App Key in the storage policy."
   },
   "delete": "Delete",
   "save": "Save"

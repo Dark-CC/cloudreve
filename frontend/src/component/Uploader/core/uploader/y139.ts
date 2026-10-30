@@ -9,6 +9,10 @@ import Chunk, { ChunkInfo } from "./chunk";
  * so no file content passes through Cloudreve.
  */
 export default class Y139 extends Chunk {
+  // The drive answers /file/create with `rapidUpload` / `exist` when it already
+  // holds this content: the backend then signs no part URL at all, and the
+  // upload runs with nothing to transfer. afterUpload() below still has to be
+  // called in that case — it is what completes the upload on our side.
   protected async uploadChunk(chunkInfo: ChunkInfo) {
     const session = this.task.session!;
     const url = session.upload_urls[chunkInfo.index];
