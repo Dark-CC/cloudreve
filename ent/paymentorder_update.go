@@ -167,6 +167,67 @@ func (pou *PaymentOrderUpdate) SetNillableStatus(pa *paymentorder.Status) *Payme
 	return pou
 }
 
+// SetManual sets the "manual" field.
+func (pou *PaymentOrderUpdate) SetManual(b bool) *PaymentOrderUpdate {
+	pou.mutation.SetManual(b)
+	return pou
+}
+
+// SetNillableManual sets the "manual" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableManual(b *bool) *PaymentOrderUpdate {
+	if b != nil {
+		pou.SetManual(*b)
+	}
+	return pou
+}
+
+// SetManualBy sets the "manual_by" field.
+func (pou *PaymentOrderUpdate) SetManualBy(i int) *PaymentOrderUpdate {
+	pou.mutation.ResetManualBy()
+	pou.mutation.SetManualBy(i)
+	return pou
+}
+
+// SetNillableManualBy sets the "manual_by" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableManualBy(i *int) *PaymentOrderUpdate {
+	if i != nil {
+		pou.SetManualBy(*i)
+	}
+	return pou
+}
+
+// AddManualBy adds i to the "manual_by" field.
+func (pou *PaymentOrderUpdate) AddManualBy(i int) *PaymentOrderUpdate {
+	pou.mutation.AddManualBy(i)
+	return pou
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (pou *PaymentOrderUpdate) ClearManualBy() *PaymentOrderUpdate {
+	pou.mutation.ClearManualBy()
+	return pou
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (pou *PaymentOrderUpdate) SetManualReason(s string) *PaymentOrderUpdate {
+	pou.mutation.SetManualReason(s)
+	return pou
+}
+
+// SetNillableManualReason sets the "manual_reason" field if the given value is not nil.
+func (pou *PaymentOrderUpdate) SetNillableManualReason(s *string) *PaymentOrderUpdate {
+	if s != nil {
+		pou.SetManualReason(*s)
+	}
+	return pou
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (pou *PaymentOrderUpdate) ClearManualReason() *PaymentOrderUpdate {
+	pou.mutation.ClearManualReason()
+	return pou
+}
+
 // SetUser sets the "user" edge to the User entity.
 func (pou *PaymentOrderUpdate) SetUser(u *User) *PaymentOrderUpdate {
 	return pou.SetUserID(u.ID)
@@ -293,6 +354,24 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pou.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := pou.mutation.Manual(); ok {
+		_spec.SetField(paymentorder.FieldManual, field.TypeBool, value)
+	}
+	if value, ok := pou.mutation.ManualBy(); ok {
+		_spec.SetField(paymentorder.FieldManualBy, field.TypeInt, value)
+	}
+	if value, ok := pou.mutation.AddedManualBy(); ok {
+		_spec.AddField(paymentorder.FieldManualBy, field.TypeInt, value)
+	}
+	if pou.mutation.ManualByCleared() {
+		_spec.ClearField(paymentorder.FieldManualBy, field.TypeInt)
+	}
+	if value, ok := pou.mutation.ManualReason(); ok {
+		_spec.SetField(paymentorder.FieldManualReason, field.TypeString, value)
+	}
+	if pou.mutation.ManualReasonCleared() {
+		_spec.ClearField(paymentorder.FieldManualReason, field.TypeString)
 	}
 	if pou.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -509,6 +588,67 @@ func (pouo *PaymentOrderUpdateOne) SetNillableStatus(pa *paymentorder.Status) *P
 	return pouo
 }
 
+// SetManual sets the "manual" field.
+func (pouo *PaymentOrderUpdateOne) SetManual(b bool) *PaymentOrderUpdateOne {
+	pouo.mutation.SetManual(b)
+	return pouo
+}
+
+// SetNillableManual sets the "manual" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableManual(b *bool) *PaymentOrderUpdateOne {
+	if b != nil {
+		pouo.SetManual(*b)
+	}
+	return pouo
+}
+
+// SetManualBy sets the "manual_by" field.
+func (pouo *PaymentOrderUpdateOne) SetManualBy(i int) *PaymentOrderUpdateOne {
+	pouo.mutation.ResetManualBy()
+	pouo.mutation.SetManualBy(i)
+	return pouo
+}
+
+// SetNillableManualBy sets the "manual_by" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableManualBy(i *int) *PaymentOrderUpdateOne {
+	if i != nil {
+		pouo.SetManualBy(*i)
+	}
+	return pouo
+}
+
+// AddManualBy adds i to the "manual_by" field.
+func (pouo *PaymentOrderUpdateOne) AddManualBy(i int) *PaymentOrderUpdateOne {
+	pouo.mutation.AddManualBy(i)
+	return pouo
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (pouo *PaymentOrderUpdateOne) ClearManualBy() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearManualBy()
+	return pouo
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (pouo *PaymentOrderUpdateOne) SetManualReason(s string) *PaymentOrderUpdateOne {
+	pouo.mutation.SetManualReason(s)
+	return pouo
+}
+
+// SetNillableManualReason sets the "manual_reason" field if the given value is not nil.
+func (pouo *PaymentOrderUpdateOne) SetNillableManualReason(s *string) *PaymentOrderUpdateOne {
+	if s != nil {
+		pouo.SetManualReason(*s)
+	}
+	return pouo
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (pouo *PaymentOrderUpdateOne) ClearManualReason() *PaymentOrderUpdateOne {
+	pouo.mutation.ClearManualReason()
+	return pouo
+}
+
 // SetUser sets the "user" edge to the User entity.
 func (pouo *PaymentOrderUpdateOne) SetUser(u *User) *PaymentOrderUpdateOne {
 	return pouo.SetUserID(u.ID)
@@ -665,6 +805,24 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 	}
 	if value, ok := pouo.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := pouo.mutation.Manual(); ok {
+		_spec.SetField(paymentorder.FieldManual, field.TypeBool, value)
+	}
+	if value, ok := pouo.mutation.ManualBy(); ok {
+		_spec.SetField(paymentorder.FieldManualBy, field.TypeInt, value)
+	}
+	if value, ok := pouo.mutation.AddedManualBy(); ok {
+		_spec.AddField(paymentorder.FieldManualBy, field.TypeInt, value)
+	}
+	if pouo.mutation.ManualByCleared() {
+		_spec.ClearField(paymentorder.FieldManualBy, field.TypeInt)
+	}
+	if value, ok := pouo.mutation.ManualReason(); ok {
+		_spec.SetField(paymentorder.FieldManualReason, field.TypeString, value)
+	}
+	if pouo.mutation.ManualReasonCleared() {
+		_spec.ClearField(paymentorder.FieldManualReason, field.TypeString)
 	}
 	if pouo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

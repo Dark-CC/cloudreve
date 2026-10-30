@@ -1130,6 +1130,25 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
+				// 支付订单（全站）与手动补单
+				payOrder := admin.Group("payment-orders")
+				{
+					payOrder.GET("",
+						controllers.FromQuery[usersvc.AdminPaymentOrderListService](usersvc.AdminPaymentOrderListParamCtx{}),
+						controllers.AdminPaymentOrderList,
+					)
+					payOrder.GET(":id",
+						controllers.FromUri[usersvc.AdminPaymentOrderService](usersvc.AdminPaymentOrderParamCtx{}),
+						controllers.AdminPaymentOrder,
+					)
+					// 手动补单：先查单，查不到才可由管理员强制补单（需原因）
+					payOrder.POST(":id/reconcile",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromUriJSON[usersvc.AdminReconcilePaymentOrderService](usersvc.AdminReconcilePaymentOrderParamCtx{}),
+						controllers.AdminReconcilePaymentOrder,
+					)
+				}
+
 				// 用户组管理
 				group := admin.Group("group", middleware.AdminSection(types.GroupPermissionAdminGroups))
 				{
@@ -1757,6 +1776,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RequiredScopes(types.ScopeUserInfoRead),
 						controllers.FromUri[usersvc.PaymentOrderService](usersvc.PaymentOrderParamCtx{}),
 						controllers.UserPaymentOrder,
+					)
+					// 我的支付订单（仅限本人）
+					shop.GET("orders",
+						middleware.RequiredScopes(types.ScopeUserInfoRead),
+						controllers.FromQuery[usersvc.PaymentOrderListService](usersvc.PaymentOrderListParamCtx{}),
+						controllers.UserPaymentOrderList,
+					)
+					// 继续支付未完成订单（沿用原订单号重新取码）
+					shop.POST("order/:id/resume",
+						middleware.RequiredScopes(types.ScopeUserInfoWrite),
+						middleware.RateLimitByIP("checkout", 20, time.Hour),
+						controllers.FromUri[usersvc.PaymentOrderResumeService](usersvc.PaymentOrderResumeParamCtx{}),
+						controllers.UserResumePaymentOrder,
 					)
 				}
 			}

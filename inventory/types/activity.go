@@ -66,4 +66,7 @@ const (
 	EventOAuthTokenExchange      = 60
 	EventOAuthGrantRevoke        = 61
 	EventContentAuditBlocked     = 62
+	// A forced manual settlement of a payment order — always carries the
+	// acting admin and the stated reason.
+	EventPaymentManualReconcile = 63
 )

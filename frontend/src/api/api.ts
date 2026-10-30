@@ -115,6 +115,10 @@ import {
   PrepareLoginResponse,
   PreparePasskeyLoginResponse,
   RefreshTokenRequest,
+  AdminPaymentOrder,
+  AdminPaymentOrderList,
+  AdminReconcileResult,
+  PaymentOrderList,
   ResetPasswordService,
   SendResetEmailService,
   ShopSku,
@@ -3110,6 +3114,89 @@ export function getPaymentOrder(id: string): ThunkResponse<PaymentOrder> {
       send(
         `/user/shop/order/${id}`,
         { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function listPaymentOrders(page = 1, pageSize = 20): ThunkResponse<PaymentOrderList> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/shop/orders`,
+        { method: "GET", params: { page, page_size: pageSize } },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+/** Re-opens a still-payable order; reuses the original merchant reference. */
+export function resumePaymentOrder(id: string): ThunkResponse<CheckoutSession> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/shop/order/${id}/resume`,
+        { method: "POST" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+/** Every user's orders, for the admin console. */
+export function adminListPaymentOrders(params: {
+  page?: number;
+  page_size?: number;
+  user_id?: string;
+  status?: string;
+  created_after?: string;
+  created_before?: string;
+}): ThunkResponse<AdminPaymentOrderList> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/payment-orders`,
+        { method: "GET", params },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminGetPaymentOrder(id: string): ThunkResponse<AdminPaymentOrder> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/payment-orders/${id}`,
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+/** Settle an order by hand; `force` is required when the channel cannot confirm it. */
+export function adminReconcilePaymentOrder(
+  id: string,
+  payload: { reason: string; force?: boolean },
+): ThunkResponse<AdminReconcileResult> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/payment-orders/${id}/reconcile`,
+        { method: "POST", data: payload },
         {
           ...defaultOpts,
         },

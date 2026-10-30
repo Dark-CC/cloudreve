@@ -36,6 +36,12 @@ const (
 	FieldCurrency = "currency"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldManual holds the string denoting the manual field in the database.
+	FieldManual = "manual"
+	// FieldManualBy holds the string denoting the manual_by field in the database.
+	FieldManualBy = "manual_by"
+	// FieldManualReason holds the string denoting the manual_reason field in the database.
+	FieldManualReason = "manual_reason"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeSku holds the string denoting the sku edge name in mutations.
@@ -71,6 +77,9 @@ var Columns = []string{
 	FieldAmount,
 	FieldCurrency,
 	FieldStatus,
+	FieldManual,
+	FieldManualBy,
+	FieldManualReason,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -101,6 +110,8 @@ var (
 	DefaultProvider string
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
+	// DefaultManual holds the default value on creation for the "manual" field.
+	DefaultManual bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -186,6 +197,21 @@ func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByManual orders the results by the manual field.
+func ByManual(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldManual, opts...).ToFunc()
+}
+
+// ByManualBy orders the results by the manual_by field.
+func ByManualBy(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldManualBy, opts...).ToFunc()
+}
+
+// ByManualReason orders the results by the manual_reason field.
+func ByManualReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldManualReason, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

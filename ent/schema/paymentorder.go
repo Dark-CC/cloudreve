@@ -33,6 +33,18 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Enum("status").
 			Values("pending", "paid", "expired").
 			Default("pending"),
+		// The next three are the audit trail of a manual reconciliation
+		// (an admin settling an order by hand because no notification and no
+		// query could confirm it). manual is set once and never cleared, so a
+		// reconciled order stays recognisable afterwards.
+		field.Bool("manual").
+			Default(false),
+		field.Int("manual_by").
+			Optional().
+			Nillable(),
+		field.String("manual_reason").
+			Optional().
+			Nillable(),
 	}
 }
 

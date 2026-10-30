@@ -613,6 +613,9 @@ var (
 		{Name: "amount", Type: field.TypeInt64},
 		{Name: "currency", Type: field.TypeString, Default: "usd"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "paid", "expired"}, Default: "pending"},
+		{Name: "manual", Type: field.TypeBool, Default: false},
+		{Name: "manual_by", Type: field.TypeInt, Nullable: true},
+		{Name: "manual_reason", Type: field.TypeString, Nullable: true},
 		{Name: "sku_id", Type: field.TypeInt},
 		{Name: "user_id", Type: field.TypeInt},
 	}
@@ -624,13 +627,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_skus_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[9]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[12]},
 				RefColumns: []*schema.Column{SkusColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "payment_orders_users_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[10]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[13]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -639,7 +642,7 @@ var (
 			{
 				Name:    "paymentorder_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[10]},
+				Columns: []*schema.Column{PaymentOrdersColumns[13]},
 			},
 		},
 	}

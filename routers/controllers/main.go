@@ -133,6 +133,28 @@ func FromUri[T any](ctxKey any) gin.HandlerFunc {
 	}
 }
 
+// FromUriJSON binds a service from both the URI path and the JSON body. A
+// service that carries an id in the path plus a payload (an action on one
+// resource) cannot use FromUri alone: that binds the URI and silently drops
+// the body.
+func FromUriJSON[T any](ctxKey any) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var service T
+		if err := c.ShouldBindUri(&service); err != nil {
+			c.JSON(200, ErrorResponse(c, err))
+			c.Abort()
+			return
+		}
+		if err := c.ShouldBindJSON(&service); err != nil {
+			c.JSON(200, ErrorResponse(c, err))
+			c.Abort()
+			return
+		}
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
+		c.Next()
+	}
+}
+
 // ParametersFromContext retrieves request parameters from context
 func ParametersFromContext[T any](c *gin.Context, ctxKey any) T {
 	return c.Request.Context().Value(ctxKey).(T)

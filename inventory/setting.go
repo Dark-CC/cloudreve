@@ -558,6 +558,7 @@ var DefaultSettings = map[string]string{
 	"payment_easypay_pid":                        ``,
 	"payment_easypay_key":                        ``,
 	"payment_easypay_type":                       `alipay`,
+	"payment_order_ttl_minutes":                  `30`,
 	"maxEditSize":                                `52428800`,
 	"archive_timeout":                            `600`,
 	"upload_session_timeout":                     `86400`,

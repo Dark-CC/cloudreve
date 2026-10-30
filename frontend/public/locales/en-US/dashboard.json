@@ -44,7 +44,8 @@
     "customProps": "Custom properties",
     "fullTextSearch": "Full-text search",
     "abuseReport": "Abuse report",
-    "oauthClients": "OAuth Apps"
+    "oauthClients": "OAuth Apps",
+    "paymentOrders": "Payment orders"
   },
   "oauth": {
     "oauthClients": "OAuth Apps",
@@ -801,6 +802,7 @@
       "points_change": "Points changed",
       "payment_paid": "Payment paid",
       "payment_fulfilled": "Order fulfilled",
+      "payment_manual_reconcile": "Manual payment reconciliation",
       "payment_fulfill_failed": "Order fulfill failed",
       "storage_added": "Storage added",
       "group_changed": "Group changed",
@@ -2068,5 +2070,39 @@
     "containerHint": "This server runs in a container. Update the image instead: docker compose pull && docker compose up -d",
     "unsupported": "In-place update is not supported in this environment. Download the release manually.",
     "timeout": "The server did not come back in time — check the logs and reload."
+  },
+  "paymentOrders": {
+    "orderNo": "Order",
+    "buyer": "User",
+    "item": "Item",
+    "amount": "Amount",
+    "provider": "Channel",
+    "status": "Status",
+    "createdAt": "Created",
+    "paidAt": "Paid",
+    "actions": "Actions",
+    "allStatus": "All statuses",
+    "statusPending": "Unpaid",
+    "statusPaid": "Paid",
+    "statusExpired": "Expired",
+    "userId": "User ID",
+    "createdAfter": "Created after",
+    "createdBefore": "Created before",
+    "refresh": "Refresh",
+    "empty": "No orders",
+    "detail": "Order detail",
+    "manual": "Manual",
+    "manualYes": "Manual",
+    "no": "No",
+    "reconcile": "Reconcile",
+    "reconcileTitle": "Settle this order by hand",
+    "reconcileHint": "The payment channel is queried first. The order settles normally when the channel confirms payment; when it cannot, you may force the settlement below, which records who did it and why.",
+    "force": "Force settlement when the channel cannot confirm",
+    "forceHint": "A forced settlement grants goods without channel evidence. Make sure the payment was verified elsewhere — this is audited.",
+    "forceConfirm": "I understand, settle anyway",
+    "reason": "Reason",
+    "reasonHint": "Required; recorded in the audit log",
+    "reconcileSuccess": "Order settled and the item granted",
+    "alreadyPaid": "This order is already paid — nothing was granted again"
   }
 }

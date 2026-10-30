@@ -4,12 +4,15 @@ import (
 	"context"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
 	"github.com/cloudreve/Cloudreve/v4/ent/paymentorder"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/payment"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
@@ -73,7 +76,7 @@ func easypayNotifyCtx(t *testing.T, dep dependency.Dep, key string, fields map[s
 	return c
 }
 
-func TestEasypayCheckoutBuildsSignedForm(t *testing.T) {
+func TestEasypayCheckoutReturnsPaymentDialog(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
@@ -82,30 +85,56 @@ func TestEasypayCheckoutBuildsSignedForm(t *testing.T) {
 	dep := newEasypayDep(t, client, easypayCfg())
 	enc := mustHasher(t)
 
+	fake := &stubGateway{qrcode: "weixin://wxpay/bizpayurl?pr=abc"}
+	swapEasypayGateway(t, fake)
+
 	res, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
 		paymentTestCtx(t, dep, u, nil))
 	require.NoError(t, err)
 	require.Equal(t, "easypay", res.Provider)
-	require.Equal(t, "POST", res.Method)
-	require.Equal(t, "https://pay.example.com/submit.php", res.URL)
-	require.Equal(t, "1005", res.Params["pid"])
-	require.Equal(t, "4.99", res.Params["money"])
-	require.Len(t, res.Params["sign"], 32)
-	// The signature must verify over exactly what the browser will POST.
-	flat := map[string]string{}
-	for k, v := range res.Params {
-		flat[k] = v
-	}
-	require.Equal(t, payment.EasypaySign(flat, "testkey"), res.Params["sign"])
+	// No form POST and no redirect: the dialog gets the QR payload instead.
+	require.Empty(t, res.Method)
+	require.Nil(t, res.Params)
+	require.NotNil(t, res.Payment)
+	require.Equal(t, "weixin://wxpay/bizpayurl?pr=abc", res.Payment.Qrcode)
+	require.Empty(t, res.Payment.PayURL)
+	require.Equal(t, int64(499), res.Amount)
+
+	// The gateway must have been asked to create the order with the amount in
+	// yuan and the order reference signed in.
+	require.Equal(t, "4.99", fake.lastParams.Money)
+	require.Equal(t, "https://example.com/api/v4/callback/easypay/notify", fake.lastParams.NotifyURL)
+	// The merchant id is filled in by the gateway from the settings, not by
+	// the caller; the params carry only what the caller decides.
+	require.Empty(t, fake.lastParams.PID)
 
 	order, err := client.PaymentOrder.Query().Only(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "easypay", order.Provider)
 	require.Equal(t, paymentorder.StatusPending, order.Status)
-	// The out_trade_no doubles as the session id so the notification can find
-	// the order.
-	require.Equal(t, order.SessionID, res.Params["out_trade_no"])
-	require.Equal(t, res.Params["notify_url"], "https://example.com/api/v4/callback/easypay/notify")
+	// The out_trade_no doubles as the session id so both the notification and
+	// the status poll can find the order.
+	require.Equal(t, order.SessionID, fake.lastParams.OutTradeNo)
+	require.Equal(t, res.OrderID, fake.lastParams.Param)
+}
+
+// Channels without a QR payload (alipay/qqpay) surface only a cashier URL.
+func TestEasypayCheckoutCashierFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	u, s := paymentFixtureSvc(t, client)
+	dep := newEasypayDep(t, client, easypayCfg())
+	enc := mustHasher(t)
+
+	swapEasypayGateway(t, &stubGateway{payurl: "https://pay.example.com/pay/submit/1/"})
+
+	res, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	require.NotNil(t, res.Payment)
+	require.Empty(t, res.Payment.Qrcode)
+	require.Equal(t, "https://pay.example.com/pay/submit/1/", res.Payment.PayURL)
 }
 
 func TestEasypayCheckoutRequiresChoiceWhenBothEnabled(t *testing.T) {
@@ -315,8 +344,20 @@ type stubGateway struct {
 	paid  bool
 	money string
 	err   error
+	// qrcode/payurl mirror what mapi.php hands back for the channel.
+	qrcode string
+	payurl string
+	// lastParams records what the service asked the gateway to charge.
+	lastParams payment.EasypayParams
 }
 
+func (s *stubGateway) CreateOrder(_ context.Context, _ payment.EasypayConfig, p payment.EasypayParams) (*payment.EasypayOrder, error) {
+	s.lastParams = p
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &payment.EasypayOrder{Qrcode: s.qrcode, PayURL: s.payurl}, nil
+}
 func (s *stubGateway) BuildCheckout(cfg payment.EasypayConfig, p payment.EasypayParams) (*payment.EasypayCheckout, error) {
 	return payment.EasypayBuildCheckout(cfg, p)
 }
@@ -331,4 +372,349 @@ func swapEasypayGateway(t *testing.T, g payment.EasypayGateway) {
 	orig := payment.Easypay
 	payment.Easypay = g
 	t.Cleanup(func() { payment.Easypay = orig })
+}
+
+// Resuming an order must reuse the merchant reference so a buyer who left and
+// came back is still paying the SAME order — never a second charge.
+func TestEasypayResumeReusesOrderReference(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	dep := newEasypayDep(t, client, easypayCfg())
+	enc := mustHasher(t)
+
+	fake := &stubGateway{qrcode: "weixin://wxpay/bizpayurl?pr=first"}
+	swapEasypayGateway(t, fake)
+
+	first, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	firstRef := fake.lastParams.OutTradeNo
+	require.NotEmpty(t, firstRef)
+
+	order, err := client.PaymentOrder.Query().Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, paymentorder.StatusPending, order.Status)
+
+	// "Refresh and come back": resume through the order history.
+	fake.qrcode = "weixin://wxpay/bizpayurl?pr=second"
+	resumed, err := (&PaymentOrderResumeService{ID: first.OrderID}).Resume(paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	require.Equal(t, first.OrderID, resumed.OrderID)
+	require.Equal(t, "weixin://wxpay/bizpayurl?pr=second", resumed.Payment.Qrcode)
+	// The critical assertion: the same merchant order reference, so the
+	// gateway treats it as one order.
+	require.Equal(t, firstRef, fake.lastParams.OutTradeNo)
+	require.Equal(t, order.SessionID, fake.lastParams.OutTradeNo)
+
+	// No second order row was created.
+	count, err := client.PaymentOrder.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+}
+
+// Past its deadline the order can no longer be resumed, and it is persisted as
+// expired rather than staying pending forever.
+func TestEasypayResumeRejectsExpired(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	cfg := easypayCfg()
+	cfg.OrderTTLMinutes = 30
+	dep := newEasypayDep(t, client, cfg)
+	enc := mustHasher(t)
+
+	swapEasypayGateway(t, &stubGateway{qrcode: "weixin://wxpay/bizpayurl?pr=x"})
+	first, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+
+	// Age the order past the 30 minute window. created_at is maintained by the
+	// ent mixin and cannot be Set through the generated builder, so backdate it
+	// with raw SQL.
+	order, err := client.PaymentOrder.Query().Only(ctx)
+	require.NoError(t, err)
+	backdateOrder(t, client, order.ID, 31*time.Minute)
+
+	_, err = (&PaymentOrderResumeService{ID: first.OrderID}).Resume(paymentTestCtx(t, dep, u, nil))
+	require.Error(t, err)
+
+	stored, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.Equal(t, paymentorder.StatusExpired, stored.Status)
+}
+
+// A payment that lands after the window closed must still be honoured — the
+// money is real, so the order settles instead of being swallowed.
+func TestEasypayLatePaymentSettlesExpiredOrder(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	dep := newEasypayDep(t, client, easypayCfg())
+
+	order, err := dep.VasClient().CreatePaymentOrder(ctx, u.ID, s.ID, "easypay", s.Price, "cny")
+	require.NoError(t, err)
+	require.NoError(t, dep.VasClient().BindPaymentSession(ctx, order.ID, "O-LATE"))
+	backdateOrder(t, client, order.ID, 2*time.Hour)
+
+	// The lazy expiry path closes it first...
+	expired, err := dep.VasClient().ExpirePaymentOrder(ctx, order.ID)
+	require.NoError(t, err)
+	require.True(t, expired)
+
+	// ...and then the gateway notification arrives for that expired order.
+	swapEasypayGateway(t, &stubGateway{paid: true, money: "4.99"})
+	notifyCtx := easypayNotifyCtx(t, dep, "testkey", map[string]string{
+		"pid": "1005", "trade_no": "T-LATE", "out_trade_no": "O-LATE",
+		"type": "wxpay", "name": "Traffic", "money": "4.99",
+		"trade_status": payment.EasypayTradeSuccess,
+	})
+	// The notify handler needs a response writer to read; the service itself
+	// returns the body string.
+	body, err := (&EasypayNotifyService{}).Create(notifyCtx)
+	require.NoError(t, err)
+	require.Equal(t, "success", body)
+
+	stored, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.Equal(t, paymentorder.StatusPaid, stored.Status)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+
+	// Replaying the same notification does not grant twice.
+	body, err = (&EasypayNotifyService{}).Create(easypayNotifyCtx(t, dep, "testkey", map[string]string{
+		"pid": "1005", "trade_no": "T-LATE", "out_trade_no": "O-LATE",
+		"type": "wxpay", "name": "Traffic", "money": "4.99",
+		"trade_status": payment.EasypayTradeSuccess,
+	}))
+	require.NoError(t, err)
+	require.Equal(t, "success", body)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+}
+
+// The history lists only the caller's own orders.
+func TestPaymentOrderListIsScopedToUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	// A second user on the same group, to prove the list is scoped.
+	g := client.Group.Query().FirstX(ctx)
+	other := client.User.Create().SetEmail("other@example.com").SetNick("other").SetStatus("active").
+		SetGroup(g).SetSettings(&types.UserSetting{}).SetStreamTraffic(0).SaveX(ctx)
+	dep := newEasypayDep(t, client, easypayCfg())
+
+	mine, err := dep.VasClient().CreatePaymentOrder(ctx, u.ID, s.ID, "easypay", s.Price, "cny")
+	require.NoError(t, err)
+	require.NoError(t, dep.VasClient().BindPaymentSession(ctx, mine.ID, "O-MINE"))
+	theirs, err := dep.VasClient().CreatePaymentOrder(ctx, other.ID, s.ID, "easypay", s.Price, "cny")
+	require.NoError(t, err)
+	require.NoError(t, dep.VasClient().BindPaymentSession(ctx, theirs.ID, "O-THEIRS"))
+
+	res, err := (&PaymentOrderListService{}).List(paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+	require.Len(t, res.Orders, 1)
+	require.Equal(t, "pending", res.Orders[0].Status)
+	require.NotZero(t, res.Orders[0].ExpiresAt)
+}
+
+// backdateOrder moves an order's created_at into the past so the TTL path can
+// be exercised without waiting.
+func backdateOrder(t *testing.T, client *ent.Client, orderID int, age time.Duration) {
+	t.Helper()
+	_, err := client.PaymentOrder.Update().
+		Where(paymentorder.ID(orderID)).
+		SetUpdatedAt(time.Now().Add(-age)).
+		Save(context.Background())
+	require.NoError(t, err)
+	// ent exposes no setter for created_at; use the underlying SQL handle.
+	_, err = client.ExecContext(context.Background(),
+		"UPDATE payment_orders SET created_at = ? WHERE id = ?", time.Now().Add(-age), orderID)
+	require.NoError(t, err)
+}
+
+// reconcileFixture builds an order plus an admin to act on it.
+func reconcileFixture(t *testing.T) (*ent.Client, dependency.Dep, *ent.User, *ent.User, *ent.PaymentOrder, string) {
+	t.Helper()
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	u, s := paymentFixtureSvc(t, client)
+	cfg := easypayCfg()
+	cfg.OrderTTLMinutes = 30
+	dep := newEasypayDep(t, client, cfg)
+	enc := mustHasher(t)
+
+	g := client.Group.Query().FirstX(ctx)
+	admin := client.User.Create().SetEmail("admin@example.com").SetNick("admin").SetStatus("active").
+		SetGroup(g).SetSettings(&types.UserSetting{}).SaveX(ctx)
+
+	swapEasypayGateway(t, &stubGateway{qrcode: "weixin://wxpay/bizpayurl?pr=r"})
+	res, err := (&CheckoutSessionService{Sku: hashid.EncodeSkuID(enc, s.ID), Provider: "easypay"}).Create(
+		paymentTestCtx(t, dep, u, nil))
+	require.NoError(t, err)
+	order, err := client.PaymentOrder.Query().Only(ctx)
+	require.NoError(t, err)
+	return client, dep, u, admin, order, res.OrderID
+}
+
+// A channel-confirmed reconciliation settles the order through the normal
+// path and does NOT mark it manual — no audit exception is needed when the
+// gateway vouches for the payment.
+func TestAdminReconcileConfirmedByGateway(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client, dep, u, admin, order, orderHash := reconcileFixture(t)
+	ctx := context.Background()
+
+	swapEasypayGateway(t, &stubGateway{paid: true, money: "4.99"})
+	res, err := (&AdminReconcilePaymentOrderService{ID: orderHash, Reason: "buyer sent a receipt"}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.True(t, res.Confirmed)
+	require.True(t, res.Fulfilled)
+	require.Equal(t, "paid", res.Order.Status)
+	require.False(t, res.Order.Manual)
+
+	stored, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.Equal(t, paymentorder.StatusPaid, stored.Status)
+	require.False(t, stored.Manual)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+}
+
+// Without channel confirmation, nothing is granted unless the admin forces it,
+// and a forced settlement carries the operator and reason.
+func TestAdminReconcileForceRecordsAudit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client, dep, u, admin, order, orderHash := reconcileFixture(t)
+	ctx := context.Background()
+
+	// Gateway says unpaid: a plain reconcile is refused and grants nothing.
+	swapEasypayGateway(t, &stubGateway{paid: false})
+	res, err := (&AdminReconcilePaymentOrderService{ID: orderHash, Reason: "call with the buyer"}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.False(t, res.Confirmed)
+	require.False(t, res.Fulfilled)
+	require.Equal(t, "pending", res.Order.Status)
+	require.Equal(t, int64(0), client.User.GetX(ctx, u.ID).StreamTraffic)
+
+	// Forced: settles, flags the order, records who and why.
+	res, err = (&AdminReconcilePaymentOrderService{ID: orderHash, Reason: "call with the buyer", Force: true}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.True(t, res.Fulfilled)
+	require.Equal(t, "paid", res.Order.Status)
+	require.True(t, res.Order.Manual)
+	require.Equal(t, "call with the buyer", res.Order.ManualReason)
+	require.NotEmpty(t, res.Order.ManualByNick)
+
+	stored, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.True(t, stored.Manual)
+	require.Equal(t, admin.ID, *stored.ManualBy)
+	require.Equal(t, "call with the buyer", *stored.ManualReason)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+
+	// Repeat: refused, and the balance is unchanged — no double grant.
+	res, err = (&AdminReconcilePaymentOrderService{ID: orderHash, Reason: "again", Force: true}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.False(t, res.Fulfilled)
+	require.Equal(t, "Order already paid", res.Message)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+}
+
+// An expired order whose payment really did arrive is the main reason this
+// feature exists, so reconciliation must settle it.
+func TestAdminReconcileExpiredOrderAfterPayment(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client, dep, u, admin, order, orderHash := reconcileFixture(t)
+	ctx := context.Background()
+
+	// Past the 30 minute window, and the lazy expiry has already closed it.
+	backdateOrder(t, client, order.ID, 2*time.Hour)
+	expired, err := dep.VasClient().ExpirePaymentOrder(ctx, order.ID)
+	require.NoError(t, err)
+	require.True(t, expired)
+
+	swapEasypayGateway(t, &stubGateway{paid: true, money: "4.99"})
+	res, err := (&AdminReconcilePaymentOrderService{ID: orderHash, Reason: "late settlement"}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.True(t, res.Confirmed)
+	require.True(t, res.Fulfilled)
+	require.Equal(t, "paid", res.Order.Status)
+	require.Equal(t, int64(2048), client.User.GetX(ctx, u.ID).StreamTraffic)
+}
+
+// A reason is mandatory: nobody may settle an order without saying why.
+func TestAdminReconcileRequiresReason(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_, dep, _, admin, _, orderHash := reconcileFixture(t)
+	swapEasypayGateway(t, &stubGateway{paid: true, money: "4.99"})
+
+	_, err := (&AdminReconcilePaymentOrderService{ID: orderHash}).
+		Reconcile(paymentTestCtx(t, dep, admin, nil))
+	require.Error(t, err)
+}
+
+// The admin list honours the filters and is not scoped to one user.
+func TestAdminListPaymentOrdersFilters(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client, dep, u, admin, order, _ := reconcileFixture(t)
+	ctx := context.Background()
+
+	res, err := (&AdminPaymentOrderListService{}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+	require.Equal(t, u.Email, res.Orders[0].UserEmail)
+
+	// Filter by status.
+	res, err = (&AdminPaymentOrderListService{Status: "paid"}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, res.Total)
+
+	res, err = (&AdminPaymentOrderListService{Status: "pending"}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+
+	// Filter by user.
+	enc := mustHasher(t)
+	res, err = (&AdminPaymentOrderListService{UserID: hashid.EncodeUserID(enc, admin.ID)}).
+		List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, res.Total)
+
+	// Filter by creation time.
+	future := strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)
+	res, err = (&AdminPaymentOrderListService{CreatedAfter: future}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, res.Total)
+
+	// Reading the admin list must not settle anything: stored state is shown.
+	stored, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.Equal(t, paymentorder.StatusPending, stored.Status)
+}
+
+// The admin detail view has to identify the buyer: an order's audit value
+// collapses if the operator cannot see who it belongs to.
+func TestAdminPaymentOrderDetailShowsBuyer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_, dep, u, admin, _, orderHash := reconcileFixture(t)
+
+	res, err := (&AdminPaymentOrderService{ID: orderHash}).Get(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, u.Email, res.UserEmail)
+	require.Equal(t, u.Nick, res.UserNick)
+	require.NotEmpty(t, res.UserID)
+	require.NotEmpty(t, res.SkuName)
 }

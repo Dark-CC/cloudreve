@@ -95,6 +95,32 @@ type (
 		// SKU's grant in the same transaction. Returns false when the order
 		// was already settled — callers treat that as a successful no-op.
 		FulfillPaymentOrder(ctx context.Context, orderID int) (bool, error)
+		// ExpirePaymentOrder flips a pending order to expired. The update is
+		// conditional on the order still being pending, so it can never close
+		// an order that was settled concurrently; it returns false in that
+		// case rather than an error.
+		ExpirePaymentOrder(ctx context.Context, orderID int) (bool, error)
+		// ListAllPaymentOrders pages every user's orders, for the admin
+		// console, honouring a filter.
+		ListAllPaymentOrders(ctx context.Context, opts ListPaymentOrdersOptions) ([]*ent.PaymentOrder, int, error)
+		// MarkPaymentOrderManual flags an order as settled by hand and
+		// records who did it and why. Claiming the flag is conditional on the
+		// order not being flagged yet, so the same order cannot be handed to
+		// two different administrators.
+		MarkPaymentOrderManual(ctx context.Context, orderID, adminID int, reason string) (bool, error)
+	}
+
+	// ListPaymentOrdersOptions filters the admin order list.
+	ListPaymentOrdersOptions struct {
+		// UserID limits to one buyer; 0 means everyone.
+		UserID int
+		// Status limits to pending/paid/expired; empty means any.
+		Status string
+		// CreatedAfter/CreatedBefore bound created_at; zero means unbounded.
+		CreatedAfter  time.Time
+		CreatedBefore time.Time
+		Page          int
+		PageSize      int
 	}
 
 	CreateGiftCodeParams struct {
