@@ -553,6 +553,11 @@ var DefaultSettings = map[string]string{
 	"payment_stripe_webhook_secret":              ``,
 	"payment_stripe_publishable_key":             ``,
 	"payment_stripe_currency":                    `usd`,
+	"payment_easypay_enabled":                    `0`,
+	"payment_easypay_gateway":                    `https://pay.urldwz.com`,
+	"payment_easypay_pid":                        ``,
+	"payment_easypay_key":                        ``,
+	"payment_easypay_type":                       `alipay`,
 	"maxEditSize":                                `52428800`,
 	"archive_timeout":                            `600`,
 	"upload_session_timeout":                     `86400`,
@@ -781,6 +786,7 @@ var RedactedSettings = map[string]struct{}{
 	"wechat_connect_app_secret":     {},
 	"payment_stripe_secret_key":     {},
 	"payment_stripe_webhook_secret": {},
+	"payment_easypay_key":           {},
 }
 
 func init() {

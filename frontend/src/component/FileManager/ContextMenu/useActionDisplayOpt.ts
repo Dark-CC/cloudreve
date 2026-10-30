@@ -279,7 +279,12 @@ export const getActionOpt = (
   display.showCustomProps = display.showChangeIcon;
   display.showDownload =
     display.hasReadable && display.orCapability && display.orCapability.enabled(NavigatorCapability.download_file);
+  // Direct links address a single stored entity, so a folder has none: the
+  // server rejects folder URIs with "entity not exist". Only offer the action
+  // when every selected target is a file, otherwise the menu entry fails with
+  // a bare error as soon as it is clicked.
   display.showDirectLink =
+    display.hasFile &&
     (display.hasOwned || groupBs.enabled(GroupPermission.is_admin)) &&
     display.orCapability &&
     // Folders only when the group grants folder direct links; the number of
@@ -289,7 +294,7 @@ export const getActionOpt = (
     ((display.hasFolder && !display.hasFile) ||
       (currentUserAnonymous?.group?.direct_link_batch_size ?? 0) >= targets.length) &&
     display.orCapability.enabled(NavigatorCapability.download_file);
-  display.showDirectLinkManagement = display.showDirectLink && targets.length == 1 && display.hasFile;
+  display.showDirectLinkManagement = display.showDirectLink && targets.length == 1;
   display.showOpen =
     targets.length == 1 &&
     display.hasFile &&

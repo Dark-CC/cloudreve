@@ -20,8 +20,24 @@ export default abstract class Chunk extends Base {
   private progressUpdateMutex = Promise.resolve(); // Ensure progress updates are serialized
 
   public upload = async () => {
-    this.logger.info("Preparing uploading file chunks.");
     this.initBeforeUploadChunks();
+
+    // Some storages already hold the file's content and sign no part at all
+    // (the 139 cloud drive answers /file/create with `exist` / `rapidUpload`,
+    // the backend then reports `no_parts_uploaded`). Such an upload has nothing
+    // to transfer, but it is not complete either: the backend still has to be
+    // told through the completion callback, which afterUpload() (base.ts) sends
+    // after this returns. So bail out here — but never let the caller skip
+    // afterUpload(), or the file stays stuck in "uploading".
+    if (this.task.session?.no_parts_uploaded) {
+      this.logger.info("Storage already holds this content, no part to upload.");
+      return;
+    }
+
+    if (this.chunks.length === 0) {
+      this.logger.info("Nothing to upload for an empty file.");
+      return;
+    }
 
     this.logger.info("Starting concurrent uploading of file chunks:", this.chunks);
     this.updateLocalCache();
@@ -31,12 +47,19 @@ export default abstract class Chunk extends Base {
 
   private async uploadChunksWithDynamicPool() {
     // Get chunks that need to be uploaded
+    // A part with no signed URL was not meant to be transferred: the storage
+    // already holds this content and the backend reported `no_parts_uploaded`,
+    // or it signed fewer URLs than there are parts. Trying to PUT it would fail
+    // with "No upload URL signed" and leave the upload stuck.
+    const signedUrls = this.task.session?.upload_urls || [];
     const chunksToUpload = this.chunks
       .map((chunk, index) => ({ chunk, index }))
-      .filter(({ chunk, index }) => this.task.chunkProgress[index].loaded < chunk.size || chunk.size === 0);
+      .filter(({ chunk, index }) => this.task.chunkProgress[index].loaded < chunk.size || chunk.size === 0)
+      .filter(({ index }) => !!signedUrls[index]);
 
     if (chunksToUpload.length === 0) {
       this.logger.info("All chunks already uploaded, skipping.");
+      this.notifyResumeProgress();
       return;
     }
 

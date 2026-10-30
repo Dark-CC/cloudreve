@@ -3107,12 +3107,12 @@ export function purchaseSku(sku: string): ThunkResponse<CreditInfo> {
   };
 }
 
-export function checkoutSku(sku: string): ThunkResponse<CheckoutSession> {
+export function checkoutSku(sku: string, provider?: string): ThunkResponse<CheckoutSession> {
   return async (dispatch, _getState) => {
     return await dispatch(
       send(
         "/user/shop/checkout",
-        { method: "POST", data: { sku } },
+        { method: "POST", data: provider ? { sku, provider } : { sku } },
         {
           ...defaultOpts,
         },

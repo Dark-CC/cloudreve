@@ -264,6 +264,12 @@ type (
 		// RapidUploaded marks that the file was materialized from an existing
 		// identical entity — the client must not transfer any bytes.
 		RapidUploaded bool `json:"rapid_uploaded,omitempty"`
+		// NoPartsUploaded tells the client that the storage already holds this
+		// exact content, so there is no part to PUT. The upload is still not
+		// complete: unlike RapidUploaded the client must call the completion
+		// callback, because the server only learns of the upload's outcome
+		// from it.
+		NoPartsUploaded bool `json:"no_parts_uploaded,omitempty"`
 	}
 
 	// UploadSession stores the information of an upload session, used in server side.
@@ -293,6 +299,15 @@ type (
 		// arbitrary-range uploads (e.g. WebDAV Content-Range PUTs). Used to
 		// trigger CompleteUpload only after the whole file is covered.
 		RangesReceived [][2]int64
+		// StorageSideDeduplicated is set by a driver whose storage reported the
+		// content as already stored while handing out the upload credential, so
+		// no bytes will ever be transferred for this session. The placeholder
+		// entity then holds nothing and the completion step links an existing
+		// identical entity instead of promoting the placeholder. Distinct from
+		// Props.RapidUploaded, which marks an upload short-circuited by
+		// Cloudreve before any driver was involved and which skips the
+		// browser's completion callback entirely.
+		StorageSideDeduplicated bool
 	}
 
 	// UploadProps properties of an upload session/request.

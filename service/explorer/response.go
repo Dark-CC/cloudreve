@@ -166,6 +166,10 @@ type UploadSessionResponse struct {
 	// RapidUploaded marks that the file already exists identically on the
 	// server — no bytes need to be transferred.
 	RapidUploaded bool `json:"rapid_uploaded,omitempty"`
+	// NoPartsUploaded marks that the storage already holds this exact content,
+	// so the client has no part to PUT but must still call the completion
+	// callback — the server needs it to finish the upload.
+	NoPartsUploaded bool `json:"no_parts_uploaded,omitempty"`
 }
 
 func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Encoder) *UploadSessionResponse {
@@ -184,6 +188,7 @@ func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Enco
 		UploadPolicy:    session.UploadPolicy,
 		EncryptMetadata: session.EncryptMetadata,
 		RapidUploaded:   session.RapidUploaded,
+		NoPartsUploaded: session.NoPartsUploaded,
 	}
 
 	if session.EncryptMetadata != nil {

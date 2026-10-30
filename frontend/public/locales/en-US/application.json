@@ -1247,6 +1247,7 @@
     "pointsUnavailable": "Not purchasable with points",
     "noProductsDescription": "When the site operator adds memberships or packs, they will show up here.",
     "buyWithCard": "Pay {{price}}",
+    "buyWithEasypay": "Pay {{price}}",
     "paymentSuccess": "\"{{name}}\" activated",
     "paymentPending": "Payment is being processed; your purchase will appear shortly"
   },

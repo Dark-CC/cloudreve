@@ -111,13 +111,16 @@ type SiteConfig struct {
 	// omitempty: the default is visible, so an explicit false must serialize.
 	ShopNav bool `json:"shop_nav"`
 
-	// PaymentEnabled exposes whether cash checkout (Stripe) is configured.
-	// PaymentCurrency is the charge currency used for SKU cash prices;
-	// Mark/Unit let clients render prices in the site-wide display currency.
-	PaymentEnabled     bool   `json:"payment_enabled,omitempty"`
-	PaymentCurrency    string `json:"payment_currency,omitempty"`
-	PaymentCurrencyMark string `json:"payment_currency_mark,omitempty"`
-	PaymentCurrencyUnit int    `json:"payment_currency_unit,omitempty"`
+	// PaymentEnabled exposes whether any cash checkout channel is configured.
+	// PaymentProviders lists the channels a client may offer (stripe,
+	// easypay); PaymentCurrency is the charge currency used for SKU cash
+	// prices; Mark/Unit let clients render prices in the site-wide display
+	// currency.
+	PaymentEnabled      bool     `json:"payment_enabled,omitempty"`
+	PaymentProviders    []string `json:"payment_providers,omitempty"`
+	PaymentCurrency     string   `json:"payment_currency,omitempty"`
+	PaymentCurrencyMark string   `json:"payment_currency_mark,omitempty"`
+	PaymentCurrencyUnit int      `json:"payment_currency_unit,omitempty"`
 
 	// ScoreEnabled reports whether the credit system is on: paid shares can
 	// be created and purchased with credits. No omitempty: the default is
@@ -277,6 +280,13 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	customHTML := settings.CustomHTML(c)
 	shareDefaults := settings.ShareDefaults(c)
 	paymentCfg := settings.Payment(c)
+	paymentProviders := make([]string, 0, 2)
+	if paymentCfg.Enabled && paymentCfg.SecretKey != "" {
+		paymentProviders = append(paymentProviders, "stripe")
+	}
+	if paymentCfg.Easypay.Ready() {
+		paymentProviders = append(paymentProviders, "easypay")
+	}
 	taskNodes, allowSelect := taskNodesForUser(c, dep, u)
 	return &SiteConfig{
 		InstanceID:                 siteBasic.ID,
@@ -303,7 +313,8 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
 		DownloadCDNShuffle:         settings.DownloadCDNShuffle(c),
 		AbuseCaptcha:               settings.AbuseCaptchaEnabled(c),
-		PaymentEnabled:             paymentCfg.Enabled && paymentCfg.SecretKey != "",
+		PaymentEnabled:             len(paymentProviders) > 0,
+		PaymentProviders:           paymentProviders,
 		PaymentCurrency:            paymentCfg.Currency,
 		PaymentCurrencyMark:        paymentCfg.CurrencyMark,
 		PaymentCurrencyUnit:        paymentCfg.CurrencyUnit,

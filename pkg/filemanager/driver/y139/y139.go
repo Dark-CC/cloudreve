@@ -427,7 +427,19 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	if created.Exist || (created.RapidUpload && len(created.Parts) == 0) {
 		// Identical content already exists on the drive, skip the transfer.
-		credential.RapidUploaded = true
+		//
+		// The drive in this case hands back the file it already holds
+		// complete: there is no upload to finalize (UploadID is empty) and no
+		// part to PUT. The upload still has to be *completed* on our side, so
+		// the browser must call the callback exactly like a real transfer
+		// does — hence RapidUploaded stays false (it would make the client
+		// skip its callback and leave the file stuck in "uploading") and the
+		// callback URL is kept. CompleteUpload() recognizes the empty
+		// UploadID as this case and finalizes without talking to the drive.
+		handler.l.Debug("139 cloud drive already holds the content for %q, upload transfer skipped.",
+			file.Props.SavePath)
+		credential.UploadURLs = nil
+		credential.NoPartsUploaded = true
 		return credential, nil
 	}
 
@@ -481,8 +493,16 @@ func (handler *Driver) CancelToken(ctx context.Context, uploadSession *fs.Upload
 }
 
 // CompleteUpload finalizes the multipart upload and verifies the stored size.
+//
+// An empty UploadID means the drive answered /file/create with `exist` or
+// `rapidUpload`: it already holds this exact content, so there is nothing to
+// sign, transfer or finalize there and this is a no-op. The Cloudreve side of
+// the upload is still completed by the caller, which is what makes such an
+// upload finish instead of hanging.
 func (handler *Driver) CompleteUpload(ctx context.Context, session *fs.UploadSession) error {
 	if session.UploadID == "" {
+		handler.l.Debug("139 cloud drive reported the content of %q as already stored, nothing to finalize.",
+			session.Props.SavePath)
 		return nil
 	}
 
