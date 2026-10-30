@@ -50,8 +50,10 @@ export interface SkuTableProps {
 interface SkuForm {
   id: number;
   name: string;
+  // Capacity is edited in a unit the operator picks; it is stored as bytes.
   amount: number;
   durationDays: number;
+  // Price is edited in yuan; it is stored in the smallest currency unit.
   price: number;
   allowPoints: boolean;
   points: number;
@@ -284,11 +286,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
                 </SettingForm>
               ) : (
                 <SettingForm title={isTraffic ? t("vas.trafficSize") : t("vas.size")}>
-                  <ByteSizeInput
-                    bytes={form.amount}
-                    onChange={(amount) => setForm({ ...form, amount })}
-                    required
-                  />
+                  <ByteSizeInput bytes={form.amount} onChange={(amount) => setForm({ ...form, amount })} required />
                   <NoMarginHelperText>{isTraffic ? t("vas.trafficSizeDes") : t("vas.packSizeDes")}</NoMarginHelperText>
                 </SettingForm>
               )}

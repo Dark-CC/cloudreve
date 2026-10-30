@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -74,10 +76,26 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 	ae := serializer.NewAggregateError()
 	res := make([]DirectLink, 0, len(urls))
 	useRedirect := inventory.EffectiveGroup(m.user).Settings.RedirectedSource
+	folderDirectLink := inventory.EffectiveGroup(m.user).Settings.FolderDirectLink
 	fileClient := m.dep.FileClient()
 	siteUrl := m.settings.SiteURL(ctx)
 
-	for _, url := range urls {
+	// pending holds the URIs still to be turned into direct links. A folder
+	// admitted by folder_direct_link is expanded in place into the files
+	// beneath it, appended here so they go through the very same per-file
+	// path as a directly requested file: same /f/:id/:name link, metering,
+	// revocation and unique-link reuse.
+	pending := make([]*fs.URI, 0, len(urls))
+	pending = append(pending, urls...)
+	// budget is how many URIs this request may yield in total. The service
+	// layer has already capped the requested count; a folder's expanded
+	// contents must fit the same source_batch cap, never more.
+	budget := directLinkBudget(inventory.EffectiveGroup(m.user).Settings.SourceBatchSize, len(urls))
+
+	for len(pending) > 0 {
+		url := pending[0]
+		pending = pending[1:]
+
 		file, err := m.fs.Get(
 			ctx, url,
 			dbfs.WithFileEntities(),
@@ -94,6 +112,29 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 		}
 
 		if file.Type() != types.FileTypeFile {
+			// A folder has no downloadable entity of its own: expand it into
+			// the files underneath it instead of rejecting the request.
+			if file.Type() == types.FileTypeFolder && folderDirectLink {
+				children, err := m.walkDirectLinkFolder(ctx, url)
+				if err != nil {
+					ae.Add(url.String(), err)
+					continue
+				}
+
+				if len(res)+len(pending)+len(children) > budget {
+					ae.Add(url.String(), serializer.NewError(serializer.CodeBatchSourceSize, "", nil))
+					continue
+				}
+
+				if len(children) == 0 {
+					ae.Add(url.String(), fs.ErrEntityNotExist)
+					continue
+				}
+
+				pending = append(pending, children...)
+				continue
+			}
+
 			ae.Add(url.String(), fs.ErrEntityNotExist)
 			continue
 		}
@@ -160,6 +201,48 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 	}
 
 	return res, ae.Aggregate()
+}
+
+// directLinkBudget returns how many direct links one request may yield: the
+// group's source_batch cap, or the requested count when the cap is unset/zero.
+// The requested count is never lowered below what the caller asked for — the
+// service layer already rejected over-cap requests.
+func directLinkBudget(sourceBatch, requested int) int {
+	if sourceBatch <= 0 || requested > sourceBatch {
+		return requested
+	}
+
+	return sourceBatch
+}
+
+// walkDirectLinkFolder expands a folder into the URIs of every file beneath
+// it, in walk order. Nested folders are recursed into by fs.Walk itself and
+// the count is capped by the group's MaxWalkedFiles, the very limit every
+// other walk-based operation (archive, move, delete) is subject to. Hitting
+// that limit fails the whole folder rather than quietly handing back a
+// partial list.
+func (m *manager) walkDirectLinkFolder(ctx context.Context, root *fs.URI) ([]*fs.URI, error) {
+	var children []*fs.URI
+
+	if err := m.fs.Walk(ctx, root, math.MaxInt, func(file fs.File, level int) error {
+		if file.IsNil() || file.Type() != types.FileTypeFile {
+			return nil
+		}
+
+		if !file.Capabilities().Enabled(int(dbfs.NavigatorCapabilityDownloadFile)) {
+			return nil
+		}
+
+		children = append(children, file.Uri(false))
+		return nil
+	}, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile)); err != nil {
+		if errors.Is(err, dbfs.ErrFileCountLimitedReached) {
+			return nil, serializer.NewError(serializer.CodeBatchSourceSize, "", err)
+		}
+		return nil, err
+	}
+
+	return children, nil
 }
 
 func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.DirectLink, opts ...fs.Option) (*EntityUrl, *time.Time, error) {

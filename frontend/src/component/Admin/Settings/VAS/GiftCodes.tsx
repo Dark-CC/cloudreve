@@ -239,6 +239,7 @@ const GiftCodes = () => {
                     fullWidth
                     type="number"
                     value={genAmount}
+                    slotProps={{ htmlInput: { min: 1, step: 1 } }}
                     onChange={(e) => setGenAmount(parseInt(e.target.value) || 0)}
                   />
                 )}

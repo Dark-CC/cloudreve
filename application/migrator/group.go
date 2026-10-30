@@ -45,6 +45,7 @@ func (m *Migrator) migrateGroup() error {
 			RemoteDownloadOptions: opts.Aria2Options,
 			SourceBatchSize:       opts.SourceBatchSize,
 			RedirectedSource:      opts.RedirectedSource,
+			FolderDirectLink:      opts.FolderDirectLink,
 			Aria2BatchSize:        opts.Aria2BatchSize,
 			MaxWalkedFiles:        100000,
 			TrashRetention:        7 * 24 * 3600,

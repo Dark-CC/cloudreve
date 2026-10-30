@@ -637,6 +637,7 @@
     "listingFileError": "Failed to list files: {{message}}",
     "generatingSourceLinks": "Generating source links...",
     "noFileCanGenerateSourceLink": "There is no file that can be used to generate source link",
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead.",
     "sourceBatchSizeExceeded": "The current user group can generate source links for a maximum of {{limit}} files at the same time.",
     "directLinkFolderModeTitle": "Folder direct link mode",
     "directLinkFolderModeDescription": "The selected items contain folders. How would you like to generate direct links?",

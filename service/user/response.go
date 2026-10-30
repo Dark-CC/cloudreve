@@ -180,6 +180,9 @@ type Group struct {
 	Name                string              `json:"name"`
 	Permission          *boolset.BooleanSet `json:"permission,omitempty"`
 	DirectLinkBatchSize int                 `json:"direct_link_batch_size,omitempty"`
+	// FolderDirectLink, when true, allows taking a direct link on a folder;
+	// it expands into one direct link per file beneath it.
+	FolderDirectLink    bool                `json:"folder_direct_link,omitempty"`
 	TrashRetention      int                 `json:"trash_retention,omitempty"`
 }
 
@@ -273,6 +276,7 @@ func BuildGroup(group *ent.Group, idEncoder hashid.Encoder) *Group {
 		Name:                group.Name,
 		Permission:          group.Permissions,
 		DirectLinkBatchSize: group.Settings.SourceBatchSize,
+		FolderDirectLink:    group.Settings.FolderDirectLink,
 		TrashRetention:      group.Settings.TrashRetention,
 	}
 }

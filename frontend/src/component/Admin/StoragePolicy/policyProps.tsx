@@ -245,7 +245,9 @@ export const PolicyPropsMap: Record<PolicyType, PolicyProps> = {
     wizardSize: "md",
     wizard: Y139Wizard,
     bucketName: "policy.y139Root",
-    endpointName: "policy.policyEndpoint",
+    // No endpointName/endpointDes on purpose: neither the add wizard nor the
+    // edit form renders an endpoint for this type, the driver discovers the
+    // storage host from the credentials instead.
     akName: "policy.y139Authorization",
     skName: "policy.y139AppKey",
     // The drive signs at most 100 parts per call and 100MB is what its own

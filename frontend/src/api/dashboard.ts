@@ -76,6 +76,7 @@ export interface GroupSetting {
   max_walked_files?: number;
   trash_retention?: number;
   redirected_source?: boolean;
+  folder_direct_link?: boolean;
   login_ip_whitelist?: string[];
   default_pinned?: number[];
   allowed_nodes?: number[];

@@ -87,6 +87,16 @@ func AdminListPolicies(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// AdminListRefreshNotices lists policies whose credential renewal is failing.
+func AdminListRefreshNotices(c *gin.Context) {
+	service := ParametersFromContext[*admin.RefreshNoticeService](c, admin.RefreshNoticeParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 func AdminGetPolicy(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleStoragePolicyService](c, admin.GetStoragePolicyParamCtx{})
 	res, err := service.Get(c)

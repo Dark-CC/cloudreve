@@ -356,6 +356,7 @@ func mergeGroupSettings(dst, src *types.GroupSetting) {
 	// immediately, so most-permissive is the larger value.
 	dst.TrashRetention = max(dst.TrashRetention, src.TrashRetention)
 	dst.RedirectedSource = dst.RedirectedSource || src.RedirectedSource
+	dst.FolderDirectLink = dst.FolderDirectLink || src.FolderDirectLink
 	dst.AllowSelectNode = dst.AllowSelectNode || src.AllowSelectNode
 	dst.WeightedPolicies = dst.WeightedPolicies || src.WeightedPolicies
 	if len(src.RemoteDownloadOptions) > 0 {

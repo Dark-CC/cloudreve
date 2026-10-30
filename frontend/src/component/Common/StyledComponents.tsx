@@ -210,6 +210,10 @@ export const DenseSelect = styled(Select)(({ theme }) => ({
     alignItems: "center",
     paddingTop: "6px",
     paddingBottom: "6px",
+    // Match DenseFilledTextField / plain outlined inputs on the same form:
+    // without this the outlined select inherits MUI's 16px and reads visibly
+    // larger than the text fields beside it.
+    fontSize: theme.typography.body2.fontSize,
   },
   "& .MuiFilledInput-input": {
     paddingTop: "4px",

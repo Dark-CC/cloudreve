@@ -813,6 +813,9 @@ var (
 		{Name: "dir_name_rule", Type: field.TypeString, Nullable: true},
 		{Name: "file_name_rule", Type: field.TypeString, Nullable: true},
 		{Name: "settings", Type: field.TypeJSON, Nullable: true},
+		{Name: "last_refresh_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_refresh_error", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "last_refresh_error_kind", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "node_id", Type: field.TypeInt, Nullable: true},
 	}
 	// StoragePoliciesTable holds the schema information for the "storage_policies" table.
@@ -823,7 +826,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "storage_policies_nodes_storage_policy",
-				Columns:    []*schema.Column{StoragePoliciesColumns[16]},
+				Columns:    []*schema.Column{StoragePoliciesColumns[19]},
 				RefColumns: []*schema.Column{NodesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

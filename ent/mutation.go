@@ -23718,43 +23718,46 @@ func (m *SsoBindingMutation) ResetEdge(name string) error {
 // StoragePolicyMutation represents an operation that mutates the StoragePolicy nodes in the graph.
 type StoragePolicyMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *int
-	created_at            *time.Time
-	updated_at            *time.Time
-	deleted_at            *time.Time
-	name                  *string
-	_type                 *string
-	status                *storagepolicy.Status
-	server                *string
-	bucket_name           *string
-	is_private            *bool
-	access_key            *string
-	secret_key            *string
-	max_size              *int64
-	addmax_size           *int64
-	dir_name_rule         *string
-	file_name_rule        *string
-	settings              **types.PolicySetting
-	clearedFields         map[string]struct{}
-	groups                map[int]struct{}
-	removedgroups         map[int]struct{}
-	clearedgroups         bool
-	files                 map[int]struct{}
-	removedfiles          map[int]struct{}
-	clearedfiles          bool
-	entities              map[int]struct{}
-	removedentities       map[int]struct{}
-	clearedentities       bool
-	allowed_groups        map[int]struct{}
-	removedallowed_groups map[int]struct{}
-	clearedallowed_groups bool
-	node                  *int
-	clearednode           bool
-	done                  bool
-	oldValue              func(context.Context) (*StoragePolicy, error)
-	predicates            []predicate.StoragePolicy
+	op                      Op
+	typ                     string
+	id                      *int
+	created_at              *time.Time
+	updated_at              *time.Time
+	deleted_at              *time.Time
+	name                    *string
+	_type                   *string
+	status                  *storagepolicy.Status
+	server                  *string
+	bucket_name             *string
+	is_private              *bool
+	access_key              *string
+	secret_key              *string
+	max_size                *int64
+	addmax_size             *int64
+	dir_name_rule           *string
+	file_name_rule          *string
+	settings                **types.PolicySetting
+	last_refresh_at         *time.Time
+	last_refresh_error      *string
+	last_refresh_error_kind *string
+	clearedFields           map[string]struct{}
+	groups                  map[int]struct{}
+	removedgroups           map[int]struct{}
+	clearedgroups           bool
+	files                   map[int]struct{}
+	removedfiles            map[int]struct{}
+	clearedfiles            bool
+	entities                map[int]struct{}
+	removedentities         map[int]struct{}
+	clearedentities         bool
+	allowed_groups          map[int]struct{}
+	removedallowed_groups   map[int]struct{}
+	clearedallowed_groups   bool
+	node                    *int
+	clearednode             bool
+	done                    bool
+	oldValue                func(context.Context) (*StoragePolicy, error)
+	predicates              []predicate.StoragePolicy
 }
 
 var _ ent.Mutation = (*StoragePolicyMutation)(nil)
@@ -24546,6 +24549,153 @@ func (m *StoragePolicyMutation) ResetSettings() {
 	delete(m.clearedFields, storagepolicy.FieldSettings)
 }
 
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (m *StoragePolicyMutation) SetLastRefreshAt(t time.Time) {
+	m.last_refresh_at = &t
+}
+
+// LastRefreshAt returns the value of the "last_refresh_at" field in the mutation.
+func (m *StoragePolicyMutation) LastRefreshAt() (r time.Time, exists bool) {
+	v := m.last_refresh_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshAt returns the old "last_refresh_at" field's value of the StoragePolicy entity.
+// If the StoragePolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StoragePolicyMutation) OldLastRefreshAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshAt: %w", err)
+	}
+	return oldValue.LastRefreshAt, nil
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (m *StoragePolicyMutation) ClearLastRefreshAt() {
+	m.last_refresh_at = nil
+	m.clearedFields[storagepolicy.FieldLastRefreshAt] = struct{}{}
+}
+
+// LastRefreshAtCleared returns if the "last_refresh_at" field was cleared in this mutation.
+func (m *StoragePolicyMutation) LastRefreshAtCleared() bool {
+	_, ok := m.clearedFields[storagepolicy.FieldLastRefreshAt]
+	return ok
+}
+
+// ResetLastRefreshAt resets all changes to the "last_refresh_at" field.
+func (m *StoragePolicyMutation) ResetLastRefreshAt() {
+	m.last_refresh_at = nil
+	delete(m.clearedFields, storagepolicy.FieldLastRefreshAt)
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (m *StoragePolicyMutation) SetLastRefreshError(s string) {
+	m.last_refresh_error = &s
+}
+
+// LastRefreshError returns the value of the "last_refresh_error" field in the mutation.
+func (m *StoragePolicyMutation) LastRefreshError() (r string, exists bool) {
+	v := m.last_refresh_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshError returns the old "last_refresh_error" field's value of the StoragePolicy entity.
+// If the StoragePolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StoragePolicyMutation) OldLastRefreshError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshError: %w", err)
+	}
+	return oldValue.LastRefreshError, nil
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (m *StoragePolicyMutation) ClearLastRefreshError() {
+	m.last_refresh_error = nil
+	m.clearedFields[storagepolicy.FieldLastRefreshError] = struct{}{}
+}
+
+// LastRefreshErrorCleared returns if the "last_refresh_error" field was cleared in this mutation.
+func (m *StoragePolicyMutation) LastRefreshErrorCleared() bool {
+	_, ok := m.clearedFields[storagepolicy.FieldLastRefreshError]
+	return ok
+}
+
+// ResetLastRefreshError resets all changes to the "last_refresh_error" field.
+func (m *StoragePolicyMutation) ResetLastRefreshError() {
+	m.last_refresh_error = nil
+	delete(m.clearedFields, storagepolicy.FieldLastRefreshError)
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (m *StoragePolicyMutation) SetLastRefreshErrorKind(s string) {
+	m.last_refresh_error_kind = &s
+}
+
+// LastRefreshErrorKind returns the value of the "last_refresh_error_kind" field in the mutation.
+func (m *StoragePolicyMutation) LastRefreshErrorKind() (r string, exists bool) {
+	v := m.last_refresh_error_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshErrorKind returns the old "last_refresh_error_kind" field's value of the StoragePolicy entity.
+// If the StoragePolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StoragePolicyMutation) OldLastRefreshErrorKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshErrorKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshErrorKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshErrorKind: %w", err)
+	}
+	return oldValue.LastRefreshErrorKind, nil
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (m *StoragePolicyMutation) ClearLastRefreshErrorKind() {
+	m.last_refresh_error_kind = nil
+	m.clearedFields[storagepolicy.FieldLastRefreshErrorKind] = struct{}{}
+}
+
+// LastRefreshErrorKindCleared returns if the "last_refresh_error_kind" field was cleared in this mutation.
+func (m *StoragePolicyMutation) LastRefreshErrorKindCleared() bool {
+	_, ok := m.clearedFields[storagepolicy.FieldLastRefreshErrorKind]
+	return ok
+}
+
+// ResetLastRefreshErrorKind resets all changes to the "last_refresh_error_kind" field.
+func (m *StoragePolicyMutation) ResetLastRefreshErrorKind() {
+	m.last_refresh_error_kind = nil
+	delete(m.clearedFields, storagepolicy.FieldLastRefreshErrorKind)
+}
+
 // SetNodeID sets the "node_id" field.
 func (m *StoragePolicyMutation) SetNodeID(i int) {
 	m.node = &i
@@ -24872,7 +25022,7 @@ func (m *StoragePolicyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *StoragePolicyMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 19)
 	if m.created_at != nil {
 		fields = append(fields, storagepolicy.FieldCreatedAt)
 	}
@@ -24918,6 +25068,15 @@ func (m *StoragePolicyMutation) Fields() []string {
 	if m.settings != nil {
 		fields = append(fields, storagepolicy.FieldSettings)
 	}
+	if m.last_refresh_at != nil {
+		fields = append(fields, storagepolicy.FieldLastRefreshAt)
+	}
+	if m.last_refresh_error != nil {
+		fields = append(fields, storagepolicy.FieldLastRefreshError)
+	}
+	if m.last_refresh_error_kind != nil {
+		fields = append(fields, storagepolicy.FieldLastRefreshErrorKind)
+	}
 	if m.node != nil {
 		fields = append(fields, storagepolicy.FieldNodeID)
 	}
@@ -24959,6 +25118,12 @@ func (m *StoragePolicyMutation) Field(name string) (ent.Value, bool) {
 		return m.FileNameRule()
 	case storagepolicy.FieldSettings:
 		return m.Settings()
+	case storagepolicy.FieldLastRefreshAt:
+		return m.LastRefreshAt()
+	case storagepolicy.FieldLastRefreshError:
+		return m.LastRefreshError()
+	case storagepolicy.FieldLastRefreshErrorKind:
+		return m.LastRefreshErrorKind()
 	case storagepolicy.FieldNodeID:
 		return m.NodeID()
 	}
@@ -25000,6 +25165,12 @@ func (m *StoragePolicyMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldFileNameRule(ctx)
 	case storagepolicy.FieldSettings:
 		return m.OldSettings(ctx)
+	case storagepolicy.FieldLastRefreshAt:
+		return m.OldLastRefreshAt(ctx)
+	case storagepolicy.FieldLastRefreshError:
+		return m.OldLastRefreshError(ctx)
+	case storagepolicy.FieldLastRefreshErrorKind:
+		return m.OldLastRefreshErrorKind(ctx)
 	case storagepolicy.FieldNodeID:
 		return m.OldNodeID(ctx)
 	}
@@ -25116,6 +25287,27 @@ func (m *StoragePolicyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSettings(v)
 		return nil
+	case storagepolicy.FieldLastRefreshAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshAt(v)
+		return nil
+	case storagepolicy.FieldLastRefreshError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshError(v)
+		return nil
+	case storagepolicy.FieldLastRefreshErrorKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshErrorKind(v)
+		return nil
 	case storagepolicy.FieldNodeID:
 		v, ok := value.(int)
 		if !ok {
@@ -25198,6 +25390,15 @@ func (m *StoragePolicyMutation) ClearedFields() []string {
 	if m.FieldCleared(storagepolicy.FieldSettings) {
 		fields = append(fields, storagepolicy.FieldSettings)
 	}
+	if m.FieldCleared(storagepolicy.FieldLastRefreshAt) {
+		fields = append(fields, storagepolicy.FieldLastRefreshAt)
+	}
+	if m.FieldCleared(storagepolicy.FieldLastRefreshError) {
+		fields = append(fields, storagepolicy.FieldLastRefreshError)
+	}
+	if m.FieldCleared(storagepolicy.FieldLastRefreshErrorKind) {
+		fields = append(fields, storagepolicy.FieldLastRefreshErrorKind)
+	}
 	if m.FieldCleared(storagepolicy.FieldNodeID) {
 		fields = append(fields, storagepolicy.FieldNodeID)
 	}
@@ -25244,6 +25445,15 @@ func (m *StoragePolicyMutation) ClearField(name string) error {
 		return nil
 	case storagepolicy.FieldSettings:
 		m.ClearSettings()
+		return nil
+	case storagepolicy.FieldLastRefreshAt:
+		m.ClearLastRefreshAt()
+		return nil
+	case storagepolicy.FieldLastRefreshError:
+		m.ClearLastRefreshError()
+		return nil
+	case storagepolicy.FieldLastRefreshErrorKind:
+		m.ClearLastRefreshErrorKind()
 		return nil
 	case storagepolicy.FieldNodeID:
 		m.ClearNodeID()
@@ -25300,6 +25510,15 @@ func (m *StoragePolicyMutation) ResetField(name string) error {
 		return nil
 	case storagepolicy.FieldSettings:
 		m.ResetSettings()
+		return nil
+	case storagepolicy.FieldLastRefreshAt:
+		m.ResetLastRefreshAt()
+		return nil
+	case storagepolicy.FieldLastRefreshError:
+		m.ResetLastRefreshError()
+		return nil
+	case storagepolicy.FieldLastRefreshErrorKind:
+		m.ResetLastRefreshErrorKind()
 		return nil
 	case storagepolicy.FieldNodeID:
 		m.ResetNodeID()

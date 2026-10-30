@@ -16,6 +16,11 @@ import { AddWizardProps } from "../../AddWizardDialog";
  * Authorization header the official web client sends. The administrator copies
  * it out of the devtools network panel once; the driver keeps the session alive
  * by refreshing the token before it expires.
+ *
+ * The same four fields are editable later on the policy detail page, except the
+ * endpoint, which neither form shows: the driver discovers it from the
+ * credentials (`queryRoutePolicy`) and the optional `server` value a policy may
+ * carry is an operator override, not something to type in an add dialog.
  */
 const Y139Wizard = ({ onSubmit }: AddWizardProps) => {
   const { t } = useTranslation("dashboard");
@@ -87,15 +92,9 @@ const Y139Wizard = ({ onSubmit }: AddWizardProps) => {
           <NoMarginHelperText>{t("policy.y139RootDes")}</NoMarginHelperText>
         </SettingForm>
 
-        <SettingForm title={t("policy.policyEndpoint")} lgWidth={12}>
-          <DenseFilledTextField
-            fullWidth
-            value={policy.server}
-            onChange={(e) => setPolicy({ ...policy, server: e.target.value })}
-          />
-          <NoMarginHelperText>{t("policy.y139EndpointDes")}</NoMarginHelperText>
-        </SettingForm>
-
+        {/* No endpoint field: the drive resolves its storage host from the
+            credentials at request time, so there is nothing for the
+            administrator to fill in here. */}
         <Alert severity="warning">
           <Typography variant="body2" component="div" sx={{ whiteSpace: "pre-line" }}>
             {t("policy.y139Risk")}

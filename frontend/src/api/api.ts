@@ -1885,6 +1885,23 @@ export function getDashboardSummary(generateCharts?: boolean): ThunkResponse<Hom
   };
 }
 
+export interface RefreshNotice {
+  policy_id: number;
+  policy_name: string;
+  policy_type: string;
+  kind: "refresh_failed" | "persist_failed" | "expired" | string;
+  message: string;
+  at: string;
+}
+
+export function getCredentialRefreshNotices(): ThunkResponse<RefreshNotice[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(`/admin/credential-notices`, { method: "GET" }, { ...defaultOpts }),
+    );
+  };
+}
+
 export function getSettings(keys: GetSettingService): ThunkResponse<{
   [key: string]: string;
 }> {
