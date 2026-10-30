@@ -386,6 +386,56 @@ func UserPaymentOrder(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// UserPaymentOrderList pages the caller's own payment orders.
+func UserPaymentOrderList(c *gin.Context) {
+	service := ParametersFromContext[*user.PaymentOrderListService](c, user.PaymentOrderListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserResumePaymentOrder re-opens a still-payable order.
+func UserResumePaymentOrder(c *gin.Context) {
+	service := ParametersFromContext[*user.PaymentOrderResumeService](c, user.PaymentOrderResumeParamCtx{})
+	res, err := service.Resume(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// AdminPaymentOrderList lists every user's orders for the console.
+func AdminPaymentOrderList(c *gin.Context) {
+	service := ParametersFromContext[*user.AdminPaymentOrderListService](c, user.AdminPaymentOrderListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// AdminPaymentOrder returns one order, read-only.
+func AdminPaymentOrder(c *gin.Context) {
+	service := ParametersFromContext[*user.AdminPaymentOrderService](c, user.AdminPaymentOrderParamCtx{})
+	res, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// AdminReconcilePaymentOrder settles an order by hand.
+func AdminReconcilePaymentOrder(c *gin.Context) {
+	service := ParametersFromContext[*user.AdminReconcilePaymentOrderService](c, user.AdminReconcilePaymentOrderParamCtx{})
+	res, err := service.Reconcile(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 // UserInit2FA 初始化二步验证
 func UserInit2FA(c *gin.Context) {
 	secret, err := user.Init2FA(c)

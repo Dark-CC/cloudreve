@@ -62,6 +62,9 @@ type EasypayParams struct {
 	// Param is echoed back by the gateway untouced; unused here but kept for
 	// parity with the protocol.
 	Param string
+	// ClientIP is the buyer's address, which the gateway uses for its own risk
+	// checks. Some merchants require it and reject the order without it.
+	ClientIP string
 }
 
 // EasypayValues renders the parameter set as the gateway expects it: empty
@@ -79,6 +82,9 @@ func (p EasypayParams) values() url.Values {
 	v.Set("money", p.Money)
 	if p.Param != "" {
 		v.Set("param", p.Param)
+	}
+	if p.ClientIP != "" {
+		v.Set("clientip", p.ClientIP)
 	}
 	return v
 }
@@ -198,10 +204,35 @@ func EasypayParseNotify(values map[string]string, key string) (*EasypayNotify, e
 	}, nil
 }
 
+// EasypayOrder is what the mapi.php call hands back to the storefront so it
+// can render an in-page payment dialog instead of redirecting to the cashier.
+//
+// The gateway returns at most one of qrcode/payurl/urlscheme:
+//   - qrcode is a real payload to render as a QR code (a weixin:// link);
+//   - payurl is a cashier page that has to be opened (or framed) instead;
+//   - urlscheme is a mini-program deep link.
+//
+// Which one arrives depends on the channel: wxpay answers with qrcode, while
+// alipay and qqpay only ever return payurl.
+type EasypayOrder struct {
+	TradeNo string
+	// Qrcode is the payload to encode into a QR code, empty when the gateway
+	// did not return one for this channel.
+	Qrcode string
+	// PayURL is the cashier page to open when there is no QR payload.
+	PayURL string
+	// URLScheme is the mini-program deep link, when the gateway chose it.
+	URLScheme string
+}
+
 // EasypayGateway is the seam the service layer talks to. It is an interface so
 // tests can stub the gateway without network access.
 type EasypayGateway interface {
-	// BuildCheckout signs a checkout and returns the form the browser POSTs.
+	// CreateOrder signs a checkout and asks mapi.php for a payable handle
+	// (QR payload or cashier URL) that the storefront can show in a dialog.
+	CreateOrder(ctx context.Context, cfg EasypayConfig, p EasypayParams) (*EasypayOrder, error)
+	// BuildCheckout signs a checkout and returns the form the browser POSTs to
+	// submit.php. Kept as a fallback for gateways whose mapi.php is disabled.
 	BuildCheckout(cfg EasypayConfig, p EasypayParams) (*EasypayCheckout, error)
 	// ParseNotify verifies an incoming notification's signature.
 	ParseNotify(values map[string]string, key string) (*EasypayNotify, error)
@@ -224,19 +255,117 @@ func (g *easypayGateway) BuildCheckout(cfg EasypayConfig, p EasypayParams) (*Eas
 	return EasypayBuildCheckout(cfg, p)
 }
 
+// easypayMapiResponse is the mapi.php reply carrying the payment handle.
+type easypayMapiResponse struct {
+	Code      EasypayInt `json:"code"`
+	Msg       string     `json:"msg"`
+	TradeNo   string     `json:"trade_no"`
+	PayURL    string     `json:"payurl"`
+	Qrcode    string     `json:"qrcode"`
+	URLScheme string     `json:"urlscheme"`
+}
+
+// EasypayCreateOrder posts the signed parameter set to mapi.php and returns
+// the payable handle. The request is a form POST, the reply is JSON.
+func EasypayCreateOrder(ctx context.Context, client *http.Client, cfg EasypayConfig, p EasypayParams) (*EasypayOrder, error) {
+	if cfg.GatewayURL == "" || cfg.PID == "" || cfg.Key == "" {
+		return nil, fmt.Errorf("easypay gateway is not configured")
+	}
+	if p.OutTradeNo == "" || p.Money == "" {
+		return nil, fmt.Errorf("easypay checkout requires out_trade_no and money")
+	}
+	if p.PayType == "" {
+		p.PayType = cfg.PayType
+	}
+	p.PID = cfg.PID
+
+	values := p.values()
+	flat := make(map[string]string, len(values))
+	for k := range values {
+		flat[k] = values.Get(k)
+	}
+	flat["sign"] = EasypaySign(flat, cfg.Key)
+	flat["sign_type"] = "MD5"
+
+	// Sign the flat set and post exactly that: url.Values would drop the
+	// optional empty fields, but sign/sign_type have to travel with the body.
+	form := url.Values{}
+	for k, v := range flat {
+		form.Set(k, v)
+	}
+
+	endpoint := strings.TrimRight(cfg.GatewayURL, "/") + "/mapi.php"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+	if err != nil {
+		return nil, err
+	}
+
+	var r easypayMapiResponse
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("unexpected easypay reply: %w", err)
+	}
+	if r.Code != 1 {
+		return nil, fmt.Errorf("easypay order creation failed: code=%d msg=%s", int(r.Code), r.Msg)
+	}
+	if r.Qrcode == "" && r.PayURL == "" && r.URLScheme == "" {
+		return nil, fmt.Errorf("easypay order creation returned no payment handle")
+	}
+	return &EasypayOrder{TradeNo: r.TradeNo, Qrcode: r.Qrcode, PayURL: r.PayURL, URLScheme: r.URLScheme}, nil
+}
+
+func (g *easypayGateway) CreateOrder(ctx context.Context, cfg EasypayConfig, p EasypayParams) (*EasypayOrder, error) {
+	return EasypayCreateOrder(ctx, g.client, cfg, p)
+}
+
 func (g *easypayGateway) ParseNotify(values map[string]string, key string) (*EasypayNotify, error) {
 	return EasypayParseNotify(values, key)
 }
 
 // easypayAPIResponse is the [API]查询单个订单 reply.
+//
+// code and status arrive as either numbers or numeric strings depending on the
+// gateway build (this one answers {"status":"0"}), so they are decoded into
+// EasypayInt rather than a plain int.
 type easypayAPIResponse struct {
-	Code       int    `json:"code"`
-	Msg        string `json:"msg"`
-	TradeNo    string `json:"trade_no"`
-	OutTradeNo string `json:"out_trade_no"`
-	Money      string `json:"money"`
+	Code       EasypayInt `json:"code"`
+	Msg        string     `json:"msg"`
+	TradeNo    string     `json:"trade_no"`
+	OutTradeNo string     `json:"out_trade_no"`
+	Money      string     `json:"money"`
 	// Status is 1 for paid, 0 for unpaid.
-	Status int `json:"status"`
+	Status EasypayInt `json:"status"`
+}
+
+// EasypayInt is an integer that accepts both a JSON number and a JSON string
+// holding one, because gateway replies are inconsistent about it.
+type EasypayInt int
+
+func (i *EasypayInt) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(strings.TrimSpace(string(b)), `"`)
+	if s == "" || s == "null" {
+		*i = 0
+		return nil
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		// A value that is neither a number nor a numeric string is treated as
+		// not-yet-paid rather than failing the whole query.
+		*i = 0
+		return nil //nolint:nilerr // lenient by design, see above
+	}
+	*i = EasypayInt(n)
+	return nil
 }
 
 func (g *easypayGateway) OrderPaid(ctx context.Context, cfg EasypayConfig, outTradeNo string) (bool, string, error) {
@@ -267,15 +396,15 @@ func (g *easypayGateway) OrderPaid(ctx context.Context, cfg EasypayConfig, outTr
 	if err := json.Unmarshal(body, &r); err != nil {
 		return false, "", fmt.Errorf("unexpected easypay reply: %w", err)
 	}
-	if r.Code != 1 {
-		return false, "", fmt.Errorf("easypay order query failed: code=%d msg=%s", r.Code, r.Msg)
+	if int(r.Code) != 1 {
+		return false, "", fmt.Errorf("easypay order query failed: code=%d msg=%s", int(r.Code), r.Msg)
 	}
 	// The query API identifies the order by out_trade_no; guard against a
 	// gateway that echoes a different order.
 	if r.OutTradeNo != "" && r.OutTradeNo != outTradeNo {
 		return false, "", fmt.Errorf("easypay replied for order %q, expected %q", r.OutTradeNo, outTradeNo)
 	}
-	return r.Status == 1, r.Money, nil
+	return int(r.Status) == 1, r.Money, nil
 }
 
 // ParseMoneyCents converts an easypay "money" string (yuan, at most two

@@ -2,6 +2,9 @@ package payment
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -218,4 +221,115 @@ func swapEasypayGateway(t *testing.T, g EasypayGateway) {
 	orig := Easypay
 	Easypay = g
 	t.Cleanup(func() { Easypay = orig })
+}
+
+// mapi.php answers with exactly one of qrcode/payurl/urlscheme; the gateway
+// must hand whichever arrived to the storefront untouched.
+func TestEasypayCreateOrderParsesHandle(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want EasypayOrder
+	}{
+		{
+			name: "qrcode",
+			body: `{"code":1,"trade_no":"T1","qrcode":"weixin://wxpay/bizpayurl?pr=abc"}`,
+			want: EasypayOrder{TradeNo: "T1", Qrcode: "weixin://wxpay/bizpayurl?pr=abc"},
+		},
+		{
+			name: "payurl",
+			body: `{"code":1,"trade_no":"T2","payurl":"https:\/\/pay.example.com\/pay\/submit\/T2\/"}`,
+			want: EasypayOrder{TradeNo: "T2", PayURL: "https://pay.example.com/pay/submit/T2/"},
+		},
+		{
+			name: "urlscheme",
+			body: `{"code":1,"trade_no":"T3","urlscheme":"weixin://dl/business/?ticket=x"}`,
+			want: EasypayOrder{TradeNo: "T3", URLScheme: "weixin://dl/business/?ticket=x"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Assertions run outside the handler goroutine: a failing
+			// require there aborts the handler mid-response.
+			var seen map[string]string
+			var seenMethod, seenPath string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = r.ParseForm()
+				seenMethod, seenPath = r.Method, r.URL.Path
+				seen = map[string]string{}
+				for k := range r.PostForm {
+					seen[k] = r.PostForm.Get(k)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer srv.Close()
+
+			got, err := EasypayCreateOrder(context.Background(), srv.Client(), EasypayConfig{
+				GatewayURL: srv.URL, PID: "1005", Key: "testkey", PayType: "alipay",
+			}, EasypayParams{
+				OutTradeNo: "1-1700000000", NotifyURL: "https://shop.example.com/notify",
+				ReturnURL: "https://shop.example.com/return", Name: "Traffic", Money: "4.99",
+			})
+			require.NoError(t, err)
+			require.Equal(t, tc.want, *got)
+
+			require.Equal(t, http.MethodPost, seenMethod)
+			require.Equal(t, "/mapi.php", seenPath)
+			// The signature covers the posted fields, so it must verify.
+			require.Equal(t, EasypaySign(seen, "testkey"), seen["sign"])
+			require.Equal(t, "4.99", seen["money"])
+			require.Equal(t, "1005", seen["pid"])
+			require.Equal(t, "alipay", seen["type"])
+			require.Equal(t, "1-1700000000", seen["out_trade_no"])
+			require.Equal(t, "MD5", seen["sign_type"])
+		})
+	}
+}
+
+// A gateway error must not look like a payable order.
+func TestEasypayCreateOrderRejectsFailure(t *testing.T) {
+	for _, body := range []string{
+		`{"code":-1,"msg":"sign error"}`,
+		`{"code":1,"trade_no":"T4"}`,
+		`not json`,
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(body))
+		}))
+		got, err := EasypayCreateOrder(context.Background(), srv.Client(), EasypayConfig{
+			GatewayURL: srv.URL, PID: "1005", Key: "testkey",
+		}, EasypayParams{OutTradeNo: "1-1", Money: "4.99"})
+		srv.Close()
+		require.Error(t, err, body)
+		require.Nil(t, got)
+	}
+}
+
+// The buyer's IP travels with the order (some merchants reject the request
+// without it) and is covered by the signature.
+func TestEasypayCreateOrderSendsClientIP(t *testing.T) {
+	var seen url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		seen = r.PostForm
+		_, _ = w.Write([]byte(`{"code":1,"trade_no":"T1","qrcode":"weixin://x"}`))
+	}))
+	defer srv.Close()
+
+	cfg := EasypayConfig{GatewayURL: srv.URL, PID: "1005", Key: "k"}
+	_, err := EasypayCreateOrder(context.Background(), srv.Client(), cfg, EasypayParams{
+		OutTradeNo: "O-1",
+		Money:      "0.01",
+		ClientIP:   "203.0.113.9",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "203.0.113.9", seen.Get("clientip"))
+
+	// And it is part of the signed set.
+	flat := map[string]string{}
+	for k := range seen {
+		flat[k] = seen.Get(k)
+	}
+	require.Equal(t, EasypaySign(flat, "k"), seen.Get("sign"))
 }

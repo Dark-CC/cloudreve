@@ -44,7 +44,8 @@
     "customProps": "Właściwości niestandardowe",
     "fullTextSearch": "Wyszukiwanie pełnotekstowe",
     "abuseReport": "Zgłoszenia nadużyć",
-    "oauthClients": "Aplikacje OAuth"
+    "oauthClients": "Aplikacje OAuth",
+    "paymentOrders": "Order Management"
   },
   "oauth": {
     "oauthClients": "Aplikacje OAuth",
@@ -945,7 +946,17 @@
     "secretKeepHint": "Leave empty to keep the current value",
     "providerAlipay": "Alipay",
     "providerCustom": "Niestandardowy kanał płatności",
-    "providerUnsupported": "Wymaga obsługi backendu"
+    "providerUnsupported": "Wymaga obsługi backendu",
+    "easypayProvider": "Easypay (易支付)",
+    "paymentEasypayEnabledDes": "Accept Alipay / WeChat / QQ Wallet via an easypay aggregation gateway; the buyer is redirected to the gateway cashier",
+    "paymentEasypayGateway": "Gateway URL",
+    "paymentEasypayGatewayDes": "Root URL of the easypay site, e.g. https://pay.example.com; /submit.php is appended automatically",
+    "paymentEasypayPid": "Merchant ID",
+    "paymentEasypayPidDes": "Merchant ID (pid) from the easypay dashboard",
+    "paymentEasypayKey": "Merchant key",
+    "paymentEasypayKeyDes": "Merchant key used for MD5 signature verification. Never exposed to users. Async notify URL: {{notify}}, return URL: {{ret}}",
+    "paymentEasypayType": "Default channel",
+    "paymentEasypayTypeDes": "alipay / wxpay / qqpay; leave empty to show the gateway cashier so the buyer picks a channel"
   },
   "giftCodes": {
     "giftCodesSettings": "Kody podarunkowe",
@@ -1306,7 +1317,12 @@
     "lbWeight": "Waga",
     "lbAddChild": "Dodaj politykę podrzędną",
     "lbChildrenDes": "Nowe przesyłania są rozdzielane między polityki podrzędne proporcjonalnie do ich wagi.",
-    "lbWizardDes": "Polityka równoważenia rozdziela przesyłania między polityki podrzędne z uwzględnieniem wagi. Podrzędne konfiguruje się po utworzeniu."
+    "lbWizardDes": "Polityka równoważenia rozdziela przesyłania między polityki podrzędne z uwzględnieniem wagi. Podrzędne konfiguruje się po utworzeniu.",
+    "chunkSizeDesY139": "The cloud drive signs at most 100 part URLs per request and its own client uses 100MB parts below 30GB, so 100MB is the recommended chunk size.",
+    "downloadRelayLockedY139": "China Mobile Cloud policies always download by direct link and cannot be proxied by Cloudreve.",
+    "uploadRelayLockedY139": "China Mobile Cloud policies always upload directly and cannot be relayed (locked).",
+    "unknownPolicyType": "Unknown type",
+    "unknownPolicyTypeHint": "This policy is type \"{{type}}\", which this build has no driver for (it was created by another Cloudreve build or its driver was removed). It cannot be edited here; delete it if unneeded."
   },
   "node": {
     "slave": "podrzędny",
@@ -2045,5 +2061,43 @@
     "containerHint": "Ten serwer działa w kontenerze. Zaktualizuj obraz: docker compose pull && docker compose up -d",
     "unsupported": "Aktualizacja w miejscu nie jest obsługiwana w tym środowisku. Pobierz wydanie ręcznie.",
     "timeout": "Serwer nie wrócił na czas — sprawdź logi i przeładuj stronę."
+  },
+  "paymentOrders": {
+    "orderNo": "Order",
+    "buyer": "User",
+    "item": "Item",
+    "amount": "Amount",
+    "provider": "Channel",
+    "status": "Status",
+    "createdAt": "Created",
+    "paidAt": "Paid",
+    "actions": "Actions",
+    "allStatus": "All statuses",
+    "statusPending": "Unpaid",
+    "statusPaid": "Paid",
+    "statusExpired": "Expired",
+    "statusRefunded": "Refunded",
+    "statusFailed": "Failed",
+    "userId": "User ID",
+    "userSearch": "User ID or email",
+    "createdAfter": "Created after",
+    "createdBefore": "Created before",
+    "refresh": "Refresh",
+    "applyFilter": "Filter",
+    "empty": "No orders",
+    "detail": "Order detail",
+    "manual": "Manual",
+    "manualYes": "Manual",
+    "no": "No",
+    "reconcile": "Reconcile",
+    "reconcileTitle": "Settle this order by hand",
+    "reconcileHint": "The payment channel is queried first. The order settles normally when the channel confirms payment; when it cannot, you may force the settlement below, which records who did it and why.",
+    "force": "Force settlement when the channel cannot confirm",
+    "forceHint": "A forced settlement grants goods without channel evidence. Make sure the payment was verified elsewhere — this is audited.",
+    "forceConfirm": "I understand, settle anyway",
+    "reason": "Reason",
+    "reasonHint": "Required; recorded in the audit log",
+    "reconcileSuccess": "Order settled and the item granted",
+    "alreadyPaid": "This order is already paid — nothing was granted again"
   }
 }

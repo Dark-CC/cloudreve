@@ -382,9 +382,18 @@ export interface CheckoutSession {
   url: string;
   /** Channel the order was created on: "stripe" or "easypay". */
   provider?: string;
-  /** "POST" when the browser must form-POST `params` to `url` (易支付). */
+  /** "POST" when the browser must form-POST `params` to `url`. */
   method?: string;
   params?: Record<string, string>;
+  /**
+   * Payable handle for an in-page dialog (易支付). `qrcode` is a real QR
+   * payload; `pay_url` is a cashier page for channels that return no QR.
+   */
+  payment?: { qrcode?: string; pay_url?: string; url_scheme?: string };
+  amount?: number;
+  currency?: string;
+  /** Unix deadline of the order; absent when there is none. */
+  expires_at?: number;
 }
 
 export interface PaymentOrder {
@@ -396,4 +405,51 @@ export interface PaymentOrder {
   currency: string;
   status: "pending" | "paid" | "expired";
   created_at: number;
+  /** Unix time the order settled, 0 while unpaid. */
+  paid_at?: number;
+  /** Unix deadline after which a pending order can no longer be paid. */
+  expires_at?: number;
+}
+
+export interface PaymentOrderList {
+  orders: PaymentOrder[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/** One row of the admin payment-order console. */
+export interface AdminPaymentOrder {
+  id: string;
+  user_id: string;
+  user_nick: string;
+  user_email: string;
+  sku_id: string;
+  sku_name: string;
+  provider: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "paid" | "expired";
+  created_at: number;
+  paid_at?: number;
+  expires_at?: number;
+  manual: boolean;
+  manual_by_nick?: string;
+  manual_reason?: string;
+}
+
+export interface AdminPaymentOrderList {
+  orders: AdminPaymentOrder[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminReconcileResult {
+  order: AdminPaymentOrder;
+  /** The channel itself reported the order paid. */
+  confirmed: boolean;
+  /** false when the order was already settled — nothing was granted twice. */
+  fulfilled: boolean;
+  message: string;
 }

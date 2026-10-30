@@ -1,5 +1,5 @@
 import { Icon as Iconify } from "@iconify/react";
-import { GridView, GridViewOutlined } from "@mui/icons-material";
+import { CreditCard, CreditCardOutlined, GridView, GridViewOutlined } from "@mui/icons-material";
 import { Box, SvgIconProps, useTheme } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon/SvgIcon";
 import { memo, useMemo } from "react";
@@ -216,6 +216,12 @@ AdminNavigationItems = [
     label: "dashboard:nav.events",
     icon: [SendLoggingFilled, SendLogging],
     path: "/admin/event",
+    permission: GroupPermission.admin_events,
+  },
+  {
+    label: "dashboard:nav.paymentOrders",
+    icon: [CreditCard, CreditCardOutlined],
+    path: "/admin/payment-orders",
     permission: GroupPermission.admin_events,
   },
   {

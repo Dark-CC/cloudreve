@@ -493,6 +493,7 @@ export const AuditLogType = {
   oauth_token_exchange: 60,
   oauth_grant_revoke: 61,
   content_audit_blocked: 62,
+  payment_manual_reconcile: 63,
 };
 
 export interface MultipleUriService {

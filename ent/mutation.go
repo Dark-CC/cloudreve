@@ -17707,6 +17707,10 @@ type PaymentOrderMutation struct {
 	addamount     *int64
 	currency      *string
 	status        *paymentorder.Status
+	manual        *bool
+	manual_by     *int
+	addmanual_by  *int
+	manual_reason *string
 	clearedFields map[string]struct{}
 	user          *int
 	cleareduser   bool
@@ -18221,6 +18225,161 @@ func (m *PaymentOrderMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetManual sets the "manual" field.
+func (m *PaymentOrderMutation) SetManual(b bool) {
+	m.manual = &b
+}
+
+// Manual returns the value of the "manual" field in the mutation.
+func (m *PaymentOrderMutation) Manual() (r bool, exists bool) {
+	v := m.manual
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManual returns the old "manual" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldManual(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManual is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManual requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManual: %w", err)
+	}
+	return oldValue.Manual, nil
+}
+
+// ResetManual resets all changes to the "manual" field.
+func (m *PaymentOrderMutation) ResetManual() {
+	m.manual = nil
+}
+
+// SetManualBy sets the "manual_by" field.
+func (m *PaymentOrderMutation) SetManualBy(i int) {
+	m.manual_by = &i
+	m.addmanual_by = nil
+}
+
+// ManualBy returns the value of the "manual_by" field in the mutation.
+func (m *PaymentOrderMutation) ManualBy() (r int, exists bool) {
+	v := m.manual_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManualBy returns the old "manual_by" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldManualBy(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManualBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManualBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManualBy: %w", err)
+	}
+	return oldValue.ManualBy, nil
+}
+
+// AddManualBy adds i to the "manual_by" field.
+func (m *PaymentOrderMutation) AddManualBy(i int) {
+	if m.addmanual_by != nil {
+		*m.addmanual_by += i
+	} else {
+		m.addmanual_by = &i
+	}
+}
+
+// AddedManualBy returns the value that was added to the "manual_by" field in this mutation.
+func (m *PaymentOrderMutation) AddedManualBy() (r int, exists bool) {
+	v := m.addmanual_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (m *PaymentOrderMutation) ClearManualBy() {
+	m.manual_by = nil
+	m.addmanual_by = nil
+	m.clearedFields[paymentorder.FieldManualBy] = struct{}{}
+}
+
+// ManualByCleared returns if the "manual_by" field was cleared in this mutation.
+func (m *PaymentOrderMutation) ManualByCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldManualBy]
+	return ok
+}
+
+// ResetManualBy resets all changes to the "manual_by" field.
+func (m *PaymentOrderMutation) ResetManualBy() {
+	m.manual_by = nil
+	m.addmanual_by = nil
+	delete(m.clearedFields, paymentorder.FieldManualBy)
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (m *PaymentOrderMutation) SetManualReason(s string) {
+	m.manual_reason = &s
+}
+
+// ManualReason returns the value of the "manual_reason" field in the mutation.
+func (m *PaymentOrderMutation) ManualReason() (r string, exists bool) {
+	v := m.manual_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManualReason returns the old "manual_reason" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldManualReason(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManualReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManualReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManualReason: %w", err)
+	}
+	return oldValue.ManualReason, nil
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (m *PaymentOrderMutation) ClearManualReason() {
+	m.manual_reason = nil
+	m.clearedFields[paymentorder.FieldManualReason] = struct{}{}
+}
+
+// ManualReasonCleared returns if the "manual_reason" field was cleared in this mutation.
+func (m *PaymentOrderMutation) ManualReasonCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldManualReason]
+	return ok
+}
+
+// ResetManualReason resets all changes to the "manual_reason" field.
+func (m *PaymentOrderMutation) ResetManualReason() {
+	m.manual_reason = nil
+	delete(m.clearedFields, paymentorder.FieldManualReason)
+}
+
 // ClearUser clears the "user" edge to the User entity.
 func (m *PaymentOrderMutation) ClearUser() {
 	m.cleareduser = true
@@ -18309,7 +18468,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -18340,6 +18499,15 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.status != nil {
 		fields = append(fields, paymentorder.FieldStatus)
 	}
+	if m.manual != nil {
+		fields = append(fields, paymentorder.FieldManual)
+	}
+	if m.manual_by != nil {
+		fields = append(fields, paymentorder.FieldManualBy)
+	}
+	if m.manual_reason != nil {
+		fields = append(fields, paymentorder.FieldManualReason)
+	}
 	return fields
 }
 
@@ -18368,6 +18536,12 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Currency()
 	case paymentorder.FieldStatus:
 		return m.Status()
+	case paymentorder.FieldManual:
+		return m.Manual()
+	case paymentorder.FieldManualBy:
+		return m.ManualBy()
+	case paymentorder.FieldManualReason:
+		return m.ManualReason()
 	}
 	return nil, false
 }
@@ -18397,6 +18571,12 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldCurrency(ctx)
 	case paymentorder.FieldStatus:
 		return m.OldStatus(ctx)
+	case paymentorder.FieldManual:
+		return m.OldManual(ctx)
+	case paymentorder.FieldManualBy:
+		return m.OldManualBy(ctx)
+	case paymentorder.FieldManualReason:
+		return m.OldManualReason(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -18476,6 +18656,27 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case paymentorder.FieldManual:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManual(v)
+		return nil
+	case paymentorder.FieldManualBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManualBy(v)
+		return nil
+	case paymentorder.FieldManualReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManualReason(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -18487,6 +18688,9 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 	if m.addamount != nil {
 		fields = append(fields, paymentorder.FieldAmount)
 	}
+	if m.addmanual_by != nil {
+		fields = append(fields, paymentorder.FieldManualBy)
+	}
 	return fields
 }
 
@@ -18497,6 +18701,8 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case paymentorder.FieldAmount:
 		return m.AddedAmount()
+	case paymentorder.FieldManualBy:
+		return m.AddedManualBy()
 	}
 	return nil, false
 }
@@ -18513,6 +18719,13 @@ func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddAmount(v)
 		return nil
+	case paymentorder.FieldManualBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddManualBy(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder numeric field %s", name)
 }
@@ -18526,6 +18739,12 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(paymentorder.FieldSessionID) {
 		fields = append(fields, paymentorder.FieldSessionID)
+	}
+	if m.FieldCleared(paymentorder.FieldManualBy) {
+		fields = append(fields, paymentorder.FieldManualBy)
+	}
+	if m.FieldCleared(paymentorder.FieldManualReason) {
+		fields = append(fields, paymentorder.FieldManualReason)
 	}
 	return fields
 }
@@ -18546,6 +18765,12 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldSessionID:
 		m.ClearSessionID()
+		return nil
+	case paymentorder.FieldManualBy:
+		m.ClearManualBy()
+		return nil
+	case paymentorder.FieldManualReason:
+		m.ClearManualReason()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder nullable field %s", name)
@@ -18584,6 +18809,15 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case paymentorder.FieldManual:
+		m.ResetManual()
+		return nil
+	case paymentorder.FieldManualBy:
+		m.ResetManualBy()
+		return nil
+	case paymentorder.FieldManualReason:
+		m.ResetManualReason()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)

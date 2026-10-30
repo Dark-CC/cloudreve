@@ -4,8 +4,15 @@ import { useSnackbar } from "notistack";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { checkoutSku, getCredit, getPaymentOrder, getShopSkus, purchaseSku } from "../../../api/api.ts";
-import { CreditInfo, ShopSku } from "../../../api/user.ts";
+import {
+  checkoutSku,
+  getCredit,
+  getPaymentOrder,
+  getShopSkus,
+  purchaseSku,
+  resumePaymentOrder,
+} from "../../../api/api.ts";
+import { CheckoutSession, CreditInfo, PaymentOrder, ShopSku } from "../../../api/user.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { sizeToString } from "../../../util/index.ts";
 import { formatDuration } from "../../../util/datetime.ts";
@@ -15,12 +22,15 @@ import Nothing from "../../Common/Nothing.tsx";
 import ResponsiveTabs from "../../Common/ResponsiveTabs.tsx";
 import PageContainer from "../PageContainer.tsx";
 import PageHeader, { PageTabQuery } from "../PageHeader.tsx";
+import CheckoutDialog from "./CheckoutDialog.tsx";
+import OrderHistory from "./OrderHistory.tsx";
 
 export enum ShopPageTab {
   Membership = "membership",
   Storage = "storage",
   Traffic = "traffic",
   Redeem = "redeem",
+  Orders = "orders",
 }
 
 const Shop = () => {
@@ -32,6 +42,13 @@ const Shop = () => {
   const [skus, setSkus] = useState<ShopSku[] | undefined>(undefined);
   const [info, setInfo] = useState<CreditInfo | undefined>(undefined);
   const [buying, setBuying] = useState<string | undefined>(undefined);
+  // Set when a channel hands back a payable handle to show in a dialog
+  // instead of a URL to navigate to.
+  const [pendingCheckout, setPendingCheckout] = useState<
+    { session: CheckoutSession; name: string; price: string } | undefined
+  >(undefined);
+  // Bumped whenever an order settles so the history reloads.
+  const [historyToken, setHistoryToken] = useState(0);
   const paymentEnabled = useAppSelector((state) => state.siteConfig.basic.config.payment_enabled === true);
   const paymentProviders = useAppSelector((state) => state.siteConfig.basic.config.payment_providers ?? []);
   // Legacy deployments only report payment_enabled for Stripe; treat that as
@@ -94,6 +111,7 @@ const Shop = () => {
       { label: t("application:shop.storagePacks"), value: ShopPageTab.Storage },
       { label: t("application:shop.trafficPacks"), value: ShopPageTab.Traffic },
       { label: t("application:shop.redeem"), value: ShopPageTab.Redeem },
+      { label: t("shop.myOrders"), value: ShopPageTab.Orders },
     ],
     [],
   );
@@ -120,29 +138,54 @@ const Shop = () => {
           s.price / paymentCurrencyUnit,
         );
 
+  const formatAmount = (o: PaymentOrder) =>
+    paymentCurrencyMark
+      ? `${paymentCurrencyMark}${(o.amount / paymentCurrencyUnit).toFixed(2)}`
+      : new Intl.NumberFormat(undefined, { style: "currency", currency: o.currency.toUpperCase() }).format(
+          o.amount / paymentCurrencyUnit,
+        );
+
   const onCheckout = (s: ShopSku, provider: string) => {
     setBuying(s.id);
     dispatch(checkoutSku(s.id, provider))
       .then((res) => {
-        if (res.method === "POST" && res.params) {
-          // 易支付: submit.php expects an actual form POST (the protocol
-          // recommends POST over a GET redirect so the parameters are not
-          // intercepted en route).
-          const form = document.createElement("form");
-          form.method = "POST";
-          form.action = res.url;
-          Object.entries(res.params).forEach(([k, v]) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = k;
-            input.value = v;
-            form.appendChild(input);
-          });
-          document.body.appendChild(form);
-          form.submit();
+        if (res.payment) {
+          // 易支付: stay on the page and pay in a dialog that polls the order
+          // status — no redirect to the gateway cashier.
+          setPendingCheckout({ session: res, name: s.name, price: formatPrice(s) });
           return;
         }
         window.location.href = res.url;
+      })
+      .finally(() => setBuying(undefined));
+  };
+
+  // The dialog settled the order; refresh balances and report what was bought.
+  const onOrderPaid = (order: PaymentOrder) => {
+    enqueueSnackbar(t("shop.paymentSuccess", { name: order.sku_name }), { variant: "success" });
+    loadInfo();
+    dispatch(getShopSkus()).then((res) => setSkus(res));
+    setHistoryToken((n) => n + 1);
+  };
+
+  // Resume an unpaid order from the history: the server re-asks the gateway
+  // for a handle against the SAME order, so this continues that payment
+  // rather than starting a new one.
+  const onResumeOrder = (order: PaymentOrder) => {
+    setBuying(order.id);
+    dispatch(resumePaymentOrder(order.id))
+      .then((res) => {
+        if (res.payment) {
+          setPendingCheckout({ session: res, name: order.sku_name, price: formatAmount(order) });
+          return;
+        }
+        if (res.url) {
+          window.location.href = res.url;
+        }
+      })
+      .catch(() => {
+        enqueueSnackbar(t("shop.resumeFailed"), { variant: "warning" });
+        setHistoryToken((n) => n + 1);
       })
       .finally(() => setBuying(undefined));
   };
@@ -183,15 +226,18 @@ const Shop = () => {
             <RedeemCodeInput onRedeemed={loadInfo} />
           </Paper>
         )}
-        {tab !== ShopPageTab.Redeem && skus === undefined && (
+        {tab === ShopPageTab.Orders && (
+          <OrderHistory onResume={onResumeOrder} refreshToken={historyToken} />
+        )}
+        {tab !== ShopPageTab.Redeem && tab !== ShopPageTab.Orders && skus === undefined && (
           <Grid2 container sx={{ pt: 10, justifyContent: "center" }}>
             <FacebookCircularProgress />
           </Grid2>
         )}
-        {tab !== ShopPageTab.Redeem && skus !== undefined && filtered.length === 0 && (
+        {tab !== ShopPageTab.Redeem && tab !== ShopPageTab.Orders && skus !== undefined && filtered.length === 0 && (
           <Nothing primary={t("shop.noProducts")} secondary={t("shop.noProductsDescription")} />
         )}
-        {tab !== ShopPageTab.Redeem && skus !== undefined && filtered.length > 0 && (
+        {tab !== ShopPageTab.Redeem && tab !== ShopPageTab.Orders && skus !== undefined && filtered.length > 0 && (
           <Grid2 container spacing={2} sx={{ pt: 2 }}>
             {filtered.map((s) => (
               <Grid2 key={s.id} size={{ xs: 12, sm: 6, md: 4 }}>
@@ -251,6 +297,15 @@ const Shop = () => {
           </Grid2>
         )}
       </Container>
+      {pendingCheckout && (
+        <CheckoutDialog
+          session={pendingCheckout.session}
+          skuName={pendingCheckout.name}
+          price={pendingCheckout.price}
+          onPaid={onOrderPaid}
+          onClose={() => setPendingCheckout(undefined)}
+        />
+      )}
     </PageContainer>
   );
 };

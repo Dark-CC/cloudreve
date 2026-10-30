@@ -222,6 +222,13 @@ export const router = createBrowserRouter([
                 },
               },
               {
+                path: "payment-orders",
+                async lazy() {
+                  let { PaymentOrderList } = await import("../component/Admin/AdminBundle.tsx");
+                  return { Component: PaymentOrderList };
+                },
+              },
+              {
                 path: "abuse",
                 async lazy() {
                   let { AbuseReportList } = await import("../component/Admin/AdminBundle.tsx");

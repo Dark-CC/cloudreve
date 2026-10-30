@@ -39,6 +39,12 @@ type PaymentOrder struct {
 	Currency string `json:"currency,omitempty"`
 	// Status holds the value of the "status" field.
 	Status paymentorder.Status `json:"status,omitempty"`
+	// Manual holds the value of the "manual" field.
+	Manual bool `json:"manual,omitempty"`
+	// ManualBy holds the value of the "manual_by" field.
+	ManualBy *int `json:"manual_by,omitempty"`
+	// ManualReason holds the value of the "manual_reason" field.
+	ManualReason *string `json:"manual_reason,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges        PaymentOrderEdges `json:"edges"`
@@ -87,9 +93,11 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case paymentorder.FieldID, paymentorder.FieldUserID, paymentorder.FieldSkuID, paymentorder.FieldAmount:
+		case paymentorder.FieldManual:
+			values[i] = new(sql.NullBool)
+		case paymentorder.FieldID, paymentorder.FieldUserID, paymentorder.FieldSkuID, paymentorder.FieldAmount, paymentorder.FieldManualBy:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldProvider, paymentorder.FieldSessionID, paymentorder.FieldCurrency, paymentorder.FieldStatus:
+		case paymentorder.FieldProvider, paymentorder.FieldSessionID, paymentorder.FieldCurrency, paymentorder.FieldStatus, paymentorder.FieldManualReason:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -175,6 +183,26 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				po.Status = paymentorder.Status(value.String)
 			}
+		case paymentorder.FieldManual:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field manual", values[i])
+			} else if value.Valid {
+				po.Manual = value.Bool
+			}
+		case paymentorder.FieldManualBy:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field manual_by", values[i])
+			} else if value.Valid {
+				po.ManualBy = new(int)
+				*po.ManualBy = int(value.Int64)
+			}
+		case paymentorder.FieldManualReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field manual_reason", values[i])
+			} else if value.Valid {
+				po.ManualReason = new(string)
+				*po.ManualReason = value.String
+			}
 		default:
 			po.selectValues.Set(columns[i], values[i])
 		}
@@ -252,6 +280,19 @@ func (po *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", po.Status))
+	builder.WriteString(", ")
+	builder.WriteString("manual=")
+	builder.WriteString(fmt.Sprintf("%v", po.Manual))
+	builder.WriteString(", ")
+	if v := po.ManualBy; v != nil {
+		builder.WriteString("manual_by=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := po.ManualReason; v != nil {
+		builder.WriteString("manual_reason=")
+		builder.WriteString(*v)
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

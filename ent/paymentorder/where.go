@@ -100,6 +100,21 @@ func Currency(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCurrency, v))
 }
 
+// Manual applies equality check predicate on the "manual" field. It's identical to ManualEQ.
+func Manual(v bool) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManual, v))
+}
+
+// ManualBy applies equality check predicate on the "manual_by" field. It's identical to ManualByEQ.
+func ManualBy(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManualBy, v))
+}
+
+// ManualReason applies equality check predicate on the "manual_reason" field. It's identical to ManualReasonEQ.
+func ManualReason(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManualReason, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCreatedAt, v))
@@ -533,6 +548,141 @@ func StatusIn(vs ...Status) predicate.PaymentOrder {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// ManualEQ applies the EQ predicate on the "manual" field.
+func ManualEQ(v bool) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManual, v))
+}
+
+// ManualNEQ applies the NEQ predicate on the "manual" field.
+func ManualNEQ(v bool) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldManual, v))
+}
+
+// ManualByEQ applies the EQ predicate on the "manual_by" field.
+func ManualByEQ(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManualBy, v))
+}
+
+// ManualByNEQ applies the NEQ predicate on the "manual_by" field.
+func ManualByNEQ(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldManualBy, v))
+}
+
+// ManualByIn applies the In predicate on the "manual_by" field.
+func ManualByIn(vs ...int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldManualBy, vs...))
+}
+
+// ManualByNotIn applies the NotIn predicate on the "manual_by" field.
+func ManualByNotIn(vs ...int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldManualBy, vs...))
+}
+
+// ManualByGT applies the GT predicate on the "manual_by" field.
+func ManualByGT(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldManualBy, v))
+}
+
+// ManualByGTE applies the GTE predicate on the "manual_by" field.
+func ManualByGTE(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldManualBy, v))
+}
+
+// ManualByLT applies the LT predicate on the "manual_by" field.
+func ManualByLT(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldManualBy, v))
+}
+
+// ManualByLTE applies the LTE predicate on the "manual_by" field.
+func ManualByLTE(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldManualBy, v))
+}
+
+// ManualByIsNil applies the IsNil predicate on the "manual_by" field.
+func ManualByIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldManualBy))
+}
+
+// ManualByNotNil applies the NotNil predicate on the "manual_by" field.
+func ManualByNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldManualBy))
+}
+
+// ManualReasonEQ applies the EQ predicate on the "manual_reason" field.
+func ManualReasonEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldManualReason, v))
+}
+
+// ManualReasonNEQ applies the NEQ predicate on the "manual_reason" field.
+func ManualReasonNEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldManualReason, v))
+}
+
+// ManualReasonIn applies the In predicate on the "manual_reason" field.
+func ManualReasonIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldManualReason, vs...))
+}
+
+// ManualReasonNotIn applies the NotIn predicate on the "manual_reason" field.
+func ManualReasonNotIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldManualReason, vs...))
+}
+
+// ManualReasonGT applies the GT predicate on the "manual_reason" field.
+func ManualReasonGT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldManualReason, v))
+}
+
+// ManualReasonGTE applies the GTE predicate on the "manual_reason" field.
+func ManualReasonGTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldManualReason, v))
+}
+
+// ManualReasonLT applies the LT predicate on the "manual_reason" field.
+func ManualReasonLT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldManualReason, v))
+}
+
+// ManualReasonLTE applies the LTE predicate on the "manual_reason" field.
+func ManualReasonLTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldManualReason, v))
+}
+
+// ManualReasonContains applies the Contains predicate on the "manual_reason" field.
+func ManualReasonContains(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContains(FieldManualReason, v))
+}
+
+// ManualReasonHasPrefix applies the HasPrefix predicate on the "manual_reason" field.
+func ManualReasonHasPrefix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasPrefix(FieldManualReason, v))
+}
+
+// ManualReasonHasSuffix applies the HasSuffix predicate on the "manual_reason" field.
+func ManualReasonHasSuffix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldManualReason, v))
+}
+
+// ManualReasonIsNil applies the IsNil predicate on the "manual_reason" field.
+func ManualReasonIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldManualReason))
+}
+
+// ManualReasonNotNil applies the NotNil predicate on the "manual_reason" field.
+func ManualReasonNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldManualReason))
+}
+
+// ManualReasonEqualFold applies the EqualFold predicate on the "manual_reason" field.
+func ManualReasonEqualFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEqualFold(FieldManualReason, v))
+}
+
+// ManualReasonContainsFold applies the ContainsFold predicate on the "manual_reason" field.
+func ManualReasonContainsFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContainsFold(FieldManualReason, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

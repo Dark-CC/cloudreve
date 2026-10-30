@@ -491,6 +491,10 @@ func init() {
 	paymentorderDescCurrency := paymentorderFields[5].Descriptor()
 	// paymentorder.DefaultCurrency holds the default value on creation for the currency field.
 	paymentorder.DefaultCurrency = paymentorderDescCurrency.Default.(string)
+	// paymentorderDescManual is the schema descriptor for manual field.
+	paymentorderDescManual := paymentorderFields[7].Descriptor()
+	// paymentorder.DefaultManual holds the default value on creation for the manual field.
+	paymentorder.DefaultManual = paymentorderDescManual.Default.(bool)
 	settingMixin := schema.Setting{}.Mixin()
 	settingMixinHooks0 := settingMixin[0].Hooks()
 	setting.Hooks[0] = settingMixinHooks0[0]

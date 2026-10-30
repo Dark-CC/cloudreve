@@ -140,6 +140,48 @@ func (poc *PaymentOrderCreate) SetNillableStatus(pa *paymentorder.Status) *Payme
 	return poc
 }
 
+// SetManual sets the "manual" field.
+func (poc *PaymentOrderCreate) SetManual(b bool) *PaymentOrderCreate {
+	poc.mutation.SetManual(b)
+	return poc
+}
+
+// SetNillableManual sets the "manual" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableManual(b *bool) *PaymentOrderCreate {
+	if b != nil {
+		poc.SetManual(*b)
+	}
+	return poc
+}
+
+// SetManualBy sets the "manual_by" field.
+func (poc *PaymentOrderCreate) SetManualBy(i int) *PaymentOrderCreate {
+	poc.mutation.SetManualBy(i)
+	return poc
+}
+
+// SetNillableManualBy sets the "manual_by" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableManualBy(i *int) *PaymentOrderCreate {
+	if i != nil {
+		poc.SetManualBy(*i)
+	}
+	return poc
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (poc *PaymentOrderCreate) SetManualReason(s string) *PaymentOrderCreate {
+	poc.mutation.SetManualReason(s)
+	return poc
+}
+
+// SetNillableManualReason sets the "manual_reason" field if the given value is not nil.
+func (poc *PaymentOrderCreate) SetNillableManualReason(s *string) *PaymentOrderCreate {
+	if s != nil {
+		poc.SetManualReason(*s)
+	}
+	return poc
+}
+
 // SetUser sets the "user" edge to the User entity.
 func (poc *PaymentOrderCreate) SetUser(u *User) *PaymentOrderCreate {
 	return poc.SetUserID(u.ID)
@@ -213,6 +255,10 @@ func (poc *PaymentOrderCreate) defaults() error {
 		v := paymentorder.DefaultStatus
 		poc.mutation.SetStatus(v)
 	}
+	if _, ok := poc.mutation.Manual(); !ok {
+		v := paymentorder.DefaultManual
+		poc.mutation.SetManual(v)
+	}
 	return nil
 }
 
@@ -246,6 +292,9 @@ func (poc *PaymentOrderCreate) check() error {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
+	}
+	if _, ok := poc.mutation.Manual(); !ok {
+		return &ValidationError{Name: "manual", err: errors.New(`ent: missing required field "PaymentOrder.manual"`)}
 	}
 	if _, ok := poc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "PaymentOrder.user"`)}
@@ -318,6 +367,18 @@ func (poc *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec
 	if value, ok := poc.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := poc.mutation.Manual(); ok {
+		_spec.SetField(paymentorder.FieldManual, field.TypeBool, value)
+		_node.Manual = value
+	}
+	if value, ok := poc.mutation.ManualBy(); ok {
+		_spec.SetField(paymentorder.FieldManualBy, field.TypeInt, value)
+		_node.ManualBy = &value
+	}
+	if value, ok := poc.mutation.ManualReason(); ok {
+		_spec.SetField(paymentorder.FieldManualReason, field.TypeString, value)
+		_node.ManualReason = &value
 	}
 	if nodes := poc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -531,6 +592,60 @@ func (u *PaymentOrderUpsert) UpdateStatus() *PaymentOrderUpsert {
 	return u
 }
 
+// SetManual sets the "manual" field.
+func (u *PaymentOrderUpsert) SetManual(v bool) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldManual, v)
+	return u
+}
+
+// UpdateManual sets the "manual" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateManual() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldManual)
+	return u
+}
+
+// SetManualBy sets the "manual_by" field.
+func (u *PaymentOrderUpsert) SetManualBy(v int) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldManualBy, v)
+	return u
+}
+
+// UpdateManualBy sets the "manual_by" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateManualBy() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldManualBy)
+	return u
+}
+
+// AddManualBy adds v to the "manual_by" field.
+func (u *PaymentOrderUpsert) AddManualBy(v int) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldManualBy, v)
+	return u
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (u *PaymentOrderUpsert) ClearManualBy() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldManualBy)
+	return u
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (u *PaymentOrderUpsert) SetManualReason(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldManualReason, v)
+	return u
+}
+
+// UpdateManualReason sets the "manual_reason" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateManualReason() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldManualReason)
+	return u
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (u *PaymentOrderUpsert) ClearManualReason() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldManualReason)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -720,6 +835,69 @@ func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUp
 func (u *PaymentOrderUpsertOne) UpdateStatus() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetManual sets the "manual" field.
+func (u *PaymentOrderUpsertOne) SetManual(v bool) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManual(v)
+	})
+}
+
+// UpdateManual sets the "manual" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateManual() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManual()
+	})
+}
+
+// SetManualBy sets the "manual_by" field.
+func (u *PaymentOrderUpsertOne) SetManualBy(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManualBy(v)
+	})
+}
+
+// AddManualBy adds v to the "manual_by" field.
+func (u *PaymentOrderUpsertOne) AddManualBy(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddManualBy(v)
+	})
+}
+
+// UpdateManualBy sets the "manual_by" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateManualBy() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManualBy()
+	})
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (u *PaymentOrderUpsertOne) ClearManualBy() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearManualBy()
+	})
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (u *PaymentOrderUpsertOne) SetManualReason(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManualReason(v)
+	})
+}
+
+// UpdateManualReason sets the "manual_reason" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateManualReason() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManualReason()
+	})
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (u *PaymentOrderUpsertOne) ClearManualReason() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearManualReason()
 	})
 }
 
@@ -1083,6 +1261,69 @@ func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderU
 func (u *PaymentOrderUpsertBulk) UpdateStatus() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetManual sets the "manual" field.
+func (u *PaymentOrderUpsertBulk) SetManual(v bool) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManual(v)
+	})
+}
+
+// UpdateManual sets the "manual" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateManual() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManual()
+	})
+}
+
+// SetManualBy sets the "manual_by" field.
+func (u *PaymentOrderUpsertBulk) SetManualBy(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManualBy(v)
+	})
+}
+
+// AddManualBy adds v to the "manual_by" field.
+func (u *PaymentOrderUpsertBulk) AddManualBy(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddManualBy(v)
+	})
+}
+
+// UpdateManualBy sets the "manual_by" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateManualBy() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManualBy()
+	})
+}
+
+// ClearManualBy clears the value of the "manual_by" field.
+func (u *PaymentOrderUpsertBulk) ClearManualBy() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearManualBy()
+	})
+}
+
+// SetManualReason sets the "manual_reason" field.
+func (u *PaymentOrderUpsertBulk) SetManualReason(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetManualReason(v)
+	})
+}
+
+// UpdateManualReason sets the "manual_reason" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateManualReason() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateManualReason()
+	})
+}
+
+// ClearManualReason clears the value of the "manual_reason" field.
+func (u *PaymentOrderUpsertBulk) ClearManualReason() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearManualReason()
 	})
 }
 

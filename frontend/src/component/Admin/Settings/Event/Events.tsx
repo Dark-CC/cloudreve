@@ -120,6 +120,7 @@ export const eventCategories = {
       AuditLogType.group_changed,
       AuditLogType.membership_unsubscribe,
       AuditLogType.redeem_gift_code,
+      AuditLogType.payment_manual_reconcile,
     ],
   },
   email: {

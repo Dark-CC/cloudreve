@@ -345,7 +345,11 @@ type PaymentSettings struct {
 	Currency       string
 	CurrencyMark   string
 	CurrencyUnit   int
-	Easypay        EasypaySettings
+	// OrderTTLMinutes is how long an unpaid cash order stays payable. After
+	// it lapses the order is expired and can no longer be resumed; a payment
+	// that lands later still settles (see FulfillPaymentOrder).
+	OrderTTLMinutes int
+	Easypay         EasypaySettings
 }
 
 // EasypaySettings is the 易支付 (aggregation-payment) channel configuration.
@@ -1073,13 +1077,14 @@ func (s *settingProvider) Payment(ctx context.Context) *PaymentSettings {
 		currency = s.getString(ctx, "payment_stripe_currency", "usd")
 	}
 	return &PaymentSettings{
-		Enabled:        s.getBoolean(ctx, "payment_stripe_enabled", false),
-		SecretKey:      s.getString(ctx, "payment_stripe_secret_key", ""),
-		WebhookSecret:  s.getString(ctx, "payment_stripe_webhook_secret", ""),
-		PublishableKey: s.getString(ctx, "payment_stripe_publishable_key", ""),
-		Currency:       currency,
-		CurrencyMark:   s.getString(ctx, "payment_currency_mark", "$"),
-		CurrencyUnit:   int(s.getFloat64(ctx, "payment_currency_unit", 100)),
+		Enabled:         s.getBoolean(ctx, "payment_stripe_enabled", false),
+		SecretKey:       s.getString(ctx, "payment_stripe_secret_key", ""),
+		WebhookSecret:   s.getString(ctx, "payment_stripe_webhook_secret", ""),
+		PublishableKey:  s.getString(ctx, "payment_stripe_publishable_key", ""),
+		Currency:        currency,
+		CurrencyMark:    s.getString(ctx, "payment_currency_mark", "$"),
+		CurrencyUnit:    int(s.getFloat64(ctx, "payment_currency_unit", 100)),
+		OrderTTLMinutes: int(s.getFloat64(ctx, "payment_order_ttl_minutes", 30)),
 		Easypay: EasypaySettings{
 			Enabled:    s.getBoolean(ctx, "payment_easypay_enabled", false),
 			GatewayURL: strings.TrimSpace(s.getString(ctx, "payment_easypay_gateway", "")),
