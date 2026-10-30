@@ -324,6 +324,11 @@ const Settings = () => {
                     "payment_stripe_publishable_key",
                     "payment_stripe_secret_key",
                     "payment_stripe_webhook_secret",
+                    "payment_easypay_enabled",
+                    "payment_easypay_gateway",
+                    "payment_easypay_pid",
+                    "payment_easypay_key",
+                    "payment_easypay_type",
                   ]}
                 >
                   <VAS />

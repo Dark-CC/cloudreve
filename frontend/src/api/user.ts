@@ -379,6 +379,11 @@ export interface ShopSku {
 export interface CheckoutSession {
   order_id: string;
   url: string;
+  /** Channel the order was created on: "stripe" or "easypay". */
+  provider?: string;
+  /** "POST" when the browser must form-POST `params` to `url` (易支付). */
+  method?: string;
+  params?: Record<string, string>;
 }
 
 export interface PaymentOrder {

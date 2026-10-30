@@ -61,6 +61,8 @@ export interface SiteConfig {
   desktop_app_promotion?: boolean;
   shop_nav?: boolean;
   payment_enabled?: boolean;
+  /** Cash channels the site can actually offer: "stripe" and/or "easypay". */
+  payment_providers?: string[];
   payment_currency?: string;
   payment_currency_mark?: string;
   payment_currency_unit?: number;

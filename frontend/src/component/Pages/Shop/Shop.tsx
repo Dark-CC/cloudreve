@@ -33,6 +33,10 @@ const Shop = () => {
   const [info, setInfo] = useState<CreditInfo | undefined>(undefined);
   const [buying, setBuying] = useState<string | undefined>(undefined);
   const paymentEnabled = useAppSelector((state) => state.siteConfig.basic.config.payment_enabled === true);
+  const paymentProviders = useAppSelector((state) => state.siteConfig.basic.config.payment_providers ?? []);
+  // Legacy deployments only report payment_enabled for Stripe; treat that as
+  // a stripe-only channel list so the button keeps appearing.
+  const cashProviders = paymentProviders.length > 0 ? paymentProviders : paymentEnabled ? ["stripe"] : [];
   const paymentCurrency = useAppSelector((state) => state.siteConfig.basic.config.payment_currency ?? "usd");
   const paymentCurrencyMark = useAppSelector(
     (state) => state.siteConfig.basic.config.payment_currency_mark,
@@ -116,10 +120,28 @@ const Shop = () => {
           s.price / paymentCurrencyUnit,
         );
 
-  const onCheckout = (s: ShopSku) => {
+  const onCheckout = (s: ShopSku, provider: string) => {
     setBuying(s.id);
-    dispatch(checkoutSku(s.id))
+    dispatch(checkoutSku(s.id, provider))
       .then((res) => {
+        if (res.method === "POST" && res.params) {
+          // 易支付: submit.php expects an actual form POST (the protocol
+          // recommends POST over a GET redirect so the parameters are not
+          // intercepted en route).
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = res.url;
+          Object.entries(res.params).forEach(([k, v]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = k;
+            input.value = v;
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+          return;
+        }
         window.location.href = res.url;
       })
       .finally(() => setBuying(undefined));
@@ -206,10 +228,21 @@ const Shop = () => {
                     >
                       {s.points != null ? t("shop.buyWithPoints", { points: s.points }) : t("shop.pointsUnavailable")}
                     </Button>
-                    {paymentEnabled && s.price > 0 && (
-                      <Button variant="outlined" disabled={buying === s.id} onClick={() => onCheckout(s)}>
-                        {t("shop.buyWithCard", { price: formatPrice(s) })}
-                      </Button>
+                    {cashProviders.length > 0 && s.price > 0 && (
+                      <Stack spacing={1}>
+                        {cashProviders.map((provider) => (
+                          <Button
+                            key={provider}
+                            variant="outlined"
+                            disabled={buying === s.id}
+                            onClick={() => onCheckout(s, provider)}
+                          >
+                            {t(provider === "easypay" ? "shop.buyWithEasypay" : "shop.buyWithCard", {
+                              price: formatPrice(s),
+                            })}
+                          </Button>
+                        ))}
+                      </Stack>
                     )}
                   </Stack>
                 </Paper>

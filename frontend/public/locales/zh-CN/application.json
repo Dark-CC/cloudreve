@@ -1246,6 +1246,7 @@
     "pointsUnavailable": "不支持积分购买",
     "noProductsDescription": "当站点管理员添加会员或套餐后，商品会显示在这里。",
     "buyWithCard": "支付 {{price}}",
+    "buyWithEasypay": "支付 {{price}}",
     "paymentSuccess": "\"{{name}}\" 已生效",
     "paymentPending": "支付处理中，商品稍后到账"
   },

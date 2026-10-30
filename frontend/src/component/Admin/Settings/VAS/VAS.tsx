@@ -38,6 +38,7 @@ const VAS = () => {
   const [providerAnchor, setProviderAnchor] = useState<HTMLElement | null>(null);
 
   const stripeEnabled = isTrueVal(values.payment_stripe_enabled ?? "0");
+  const easypayEnabled = isTrueVal(values.payment_easypay_enabled ?? "0");
 
   return (
     <Box component={"form"} ref={formRef}>
@@ -215,6 +216,75 @@ const VAS = () => {
                   </SettingForm>
                 </Stack>
               )}
+
+              {easypayEnabled && (
+                <Stack
+                  spacing={2}
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%" }}>
+                    <Chip size="small" label={t("settings.easypayProvider")} />
+                    <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                      {t("settings.paymentEasypayEnabledDes")}
+                    </Typography>
+                    <Switch
+                      size="small"
+                      checked={easypayEnabled}
+                      onChange={(e) => setSettings({ payment_easypay_enabled: e.target.checked ? "1" : "0" })}
+                    />
+                  </Stack>
+                  <SettingForm title={t("settings.paymentEasypayGateway")} lgWidth={5}>
+                    <FormControl fullWidth>
+                      <DenseFilledTextField
+                        value={values.payment_easypay_gateway ?? ""}
+                        placeholder="https://pay.example.com"
+                        onChange={(e) => setSettings({ payment_easypay_gateway: e.target.value.trim() })}
+                      />
+                      <NoMarginHelperText>{t("settings.paymentEasypayGatewayDes")}</NoMarginHelperText>
+                    </FormControl>
+                  </SettingForm>
+                  <SettingForm title={t("settings.paymentEasypayPid")} lgWidth={5}>
+                    <FormControl fullWidth>
+                      <DenseFilledTextField
+                        value={values.payment_easypay_pid ?? ""}
+                        onChange={(e) => setSettings({ payment_easypay_pid: e.target.value.trim() })}
+                      />
+                      <NoMarginHelperText>{t("settings.paymentEasypayPidDes")}</NoMarginHelperText>
+                    </FormControl>
+                  </SettingForm>
+                  <SettingForm title={t("settings.paymentEasypayKey")} lgWidth={5}>
+                    <FormControl fullWidth>
+                      <DenseFilledTextField
+                        type="password"
+                        value={values.payment_easypay_key ?? ""}
+                        placeholder={t("settings.secretKeepHint")}
+                        onChange={(e) => setSettings({ payment_easypay_key: e.target.value })}
+                      />
+                      <NoMarginHelperText>
+                        {t("settings.paymentEasypayKeyDes", {
+                          notify: `${window.location.origin}/api/v4/callback/easypay/notify`,
+                          ret: `${window.location.origin}/api/v4/callback/easypay/return`,
+                        })}
+                      </NoMarginHelperText>
+                    </FormControl>
+                  </SettingForm>
+                  <SettingForm title={t("settings.paymentEasypayType")} lgWidth={5}>
+                    <FormControl fullWidth>
+                      <DenseFilledTextField
+                        value={values.payment_easypay_type ?? ""}
+                        placeholder="alipay"
+                        onChange={(e) => setSettings({ payment_easypay_type: e.target.value.trim() })}
+                      />
+                      <NoMarginHelperText>{t("settings.paymentEasypayTypeDes")}</NoMarginHelperText>
+                    </FormControl>
+                  </SettingForm>
+                </Stack>
+              )}
             </SettingForm>
           </SettingSectionContent>
         </SettingSection>
@@ -319,8 +389,17 @@ const VAS = () => {
         >
           {t("settings.stripeProvider")}
         </MenuItem>
-        {/* WeChat Pay / Alipay / custom channels: backend support pending,
-            hidden from the picker until implemented. */}
+        <MenuItem
+          disabled={easypayEnabled}
+          onClick={() => {
+            setSettings({ payment_easypay_enabled: "1" });
+            setProviderAnchor(null);
+          }}
+        >
+          {t("settings.easypayProvider")}
+        </MenuItem>
+        {/* WeChat Pay / Alipay direct / custom channels: backend support
+            pending, hidden from the picker until implemented. */}
       </Menu>
     </Box>
   );
