@@ -346,7 +346,7 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 
 ---
 
-## 七点五、构建机器切换与磁盘事件（重要记录）
+## 八、构建机器切换与磁盘事件（重要记录）
 
 ### 为什么从 InstaBox 切到 Baixiong
 
@@ -394,13 +394,16 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 | 代码改动 | ✅ 已 commit 并推送，远端 tip = `fb6b29c0` |
 | Go 全量构建 + 单测 | ✅ `go build ./...` 通过；`go test ./pkg/filemanager/... ./inventory/...` 全绿；y139 驱动内共 21 个单测（新增 11 个覆盖续期/节流/并发/失败上报/多策略隔离/写回格式） |
 | 前端 `tsc --noEmit` | ✅ 191 条与 baseline 完全一致（零新增类型错误） |
-| 前端打包 | ✅ 已在 InstaBox 完成（`yarn build` → `Done in 75.13s`，`build/index.html` 4172 字节） |
-| Go 二进制 | ⏳ 未重新产出（上次 r6 的二进制不含本批 VAS 改动） |
-| r7 镜像 | ❌ **未产出**（源码树被并行任务重置 + 磁盘写满，见「七点五」） |
-| 15212 部署 + 浏览器验收（VAS 容量单位/单价小数） | ❌ 未完成 |
-| 移动云盘「续期成功」路径实机验证 | ❌ 未完成（见 6.7：不破坏 token 就无法构造续期窗口，已由单测覆盖） |
+| 前端打包 | ✅ 已在 InstaBox `/data/workspace/crB` 完成（`yarn install` 44s + `yarn build` 90s；`build/index.html`、`build/assets`、`build/version.json` 齐全） |
+| 静态资产包 | ✅ 按 `statics.go` 要求打成 `assets/build/...` 结构（703 条目，14,876,961 字节，含 `version.json`） |
+| Go 二进制 | ✅ 已产出（116,279,649 字节，`go:embed` 内含新资产包；`strings` 可查 `credential-notices`、`folder_direct_link`） |
+| r7 镜像 | ✅ **`cloudreve-fork:fix-1030-r7d`**（605MB，基于 `vas-1030-r3`，仅换二进制 + 资产包） |
+| 15212 部署 + 浏览器验收（VAS 容量单位/单价小数） | ✅ 已部署并实测通过（见「九、r7 部署与真实浏览器验收」；因 15212 被并行任务占用，验收实例跑在 **15214**） |
+| 移动云盘「续期成功」路径实机验证 | ❌ **未完成**（见 6.7：网盘侧已作废当前 token，直调续期返回 `4006`，不破坏 token 无法构造续期窗口；已由 11 个单测覆盖） |
 | 多策略隔离 / 失败上报 | ✅ 实机验证通过（见 6.7） |
-| 上一轮七项界面修复（目录直链开关、凭据框、中转控件隐藏、缩略图去重、Endpoint 移除、Deselect 字号） | ✅ 均已实机验证并部署（r4/r5/r6 阶段，见一、二、五节） |
+| 上一轮七项界面修复（目录直链开关、凭据框、中转控件隐藏、缩略图去重、Endpoint 移除、Deselect 字号） | ✅ 全部经真实浏览器复核通过（见「十、七项回归复核」） |
+| 测试数据清理 | ✅ 测试 SKU 3/4 已删（剩原有 id=2「测试」）；测试策略 5 `cr-test-y139-b` 已软删（`deleted_at` 已置）；根目录无 `cr-test-*` 文件 |
+| 两机磁盘清理 | ✅ 已执行并记录释放量（见「十一、磁盘清理汇总」），未使用 `docker image prune -af` |
 
 ### 构建机器实测对比（本轮）
 
@@ -413,7 +416,101 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 
 ---
 
-## 八、回滚方式
+## 九、r7 部署与真实浏览器验收
+
+### 9.1 构建与部署
+
+| 项 | 值 |
+|---|---|
+| 交付镜像 | **`cloudreve-fork:fix-1030-r7d`**（605MB） |
+| 基座镜像 | `cloudreve-fork:vas-1030-r3`（仅替换 `/cloudreve/cloudreve` 与静态资产包，不引入其他任务改动） |
+| Go 二进制 | 116,279,649 字节，`CGO_ENABLED=0` 静态，`go:embed` 内含新资产包 |
+| 资产包 | `assets/build/...` 703 条目 / 14,876,961 字节（含 `version.json`） |
+| 验收实例 | 容器 `cr-r7-verify`，镜像 `fix-1030-r7d`，端口 **15214**，数据目录 `/data/cr-r7-test`（从 `/data/cloudreve-fork-test` 复制） |
+| 公网地址 | https://15214-agqw5litn4acpbo7b5axu3ycku.instabox.tech |
+
+**为什么是 15214 而不是 15212**：验收期间 15212 被并行任务占用（容器 `cloudreve-fork-test` 正在跑 `cloudreve-fork:admin-r7`，数据目录 `/data/cloudreve-fork-test`）。按事先约束「不得干扰他人容器与数据」，本次验收用**独立端口 + 独立数据副本**进行。15212 上的正式切换留给收尾时由用户确认时机。
+
+启动自检：站点 `/` 200、`/admin` 200、`site/ping` 返回版本 `4.23.7`。残留一条非阻断告警「Static resource version mismatch [Current 4.0.0-next, Desired: 4.23.7]」，为本 fork 既有现象（前端包版本号与后端版本号不同步），不影响功能。
+
+### 9.2 VAS 弹窗验收（真实浏览器 + 真实保存）
+
+用 Playwright + `/usr/bin/chromium` 走真实登录（`/session` 两步式：先邮箱 Next、再密码）后进入 `/admin/settings?tab=vas`。
+
+**「添加容量包」弹窗 DOM 断言：**
+
+| 断言 | 结果 |
+|---|---|
+| 弹窗标题 | ✅「编辑容量包」 |
+| 容量大小输入框 | ✅ 存在（`type` 数值、`min=0`、`step=any`） |
+| **容量单位下拉** | ✅ **存在**，选项恰为 `GB` / `TB` 两项 |
+| 单位帮助文案 | ✅「选择容量大小与单位（GB/TB，按 1024 进制换算）。」 |
+| **单价 (元)** | ✅ `min=0.01`、`step=0.01` |
+| 单价帮助文案 | ✅「现金单价，单位元，最小 0.01。」 |
+
+**真实填写 + 保存 + 后端落库双向核对：**
+
+| 填写 | 列表回显 | 后端 `amount` | 换算校验 |
+|---|---|---|---|
+| 容量 `1` + 单位 `GB` | `cr-test-1tb\t1.0 GB\t30 天\t1` | `1073741824` | = 1024³ ✅ |
+| 容量 `1` + 单位 `TB` | `cr-test-1tbunit\t1.0 TB\t30 天\t1` | `1099511627776` | = **1024⁴，正好 1 TB** ✅ |
+
+单价填 `0.01` 保存后 `price = 1`（1 分 = 0.01 元），**小数未被截断为 0** ✅。列表价格列显示 `1` 是该列以最小货币单位（分）展示，非显示 bug。
+
+### 9.3 同类弹窗排查（浏览器实测）
+
+`/admin/settings?tab=vas` 页面按钮清单实测为：`添加支付提供商`、`添加容量包`、`添加可购用户组`、`添加流量包`、`添加流媒体流量包`、`生成礼品码`、`保存`、`撤销更改`。
+
+其中「容量包」已按上表验证；「礼品码」（`GiftCodes.tsx`）的 GB/TB 下拉改动与容量包共用同一组 `capacityToBytes`/`bytesToCapacity` 工具函数与 locale key，代码路径一致（见第七节 7.4 的 15 行弹窗排查表）。本轮未逐个弹窗做浏览器写入（VAS 弹窗共用同一 `SkuTable` 组件，容量包已验证其共用逻辑）。
+
+---
+
+## 十、七项回归复核（r7 镜像 + 真实浏览器）
+
+| # | 项 | 验收方式 | 结果 |
+|---|---|---|---|
+| 1 | `/admin/group/1`「允许目录直链」可编辑、可持久化 | 浏览器找到开关（`.MuiFormControlLabel` 含「允许目录直链」，`disabled=false`）→ 点关 → 保存 → **刷新后仍为关** → 点开 → 保存 → 刷新后为开 | ✅ 通过（双向持久化） |
+| 2 | `/admin/policy/4` 有 Authorization / App Key 编辑框 | 语句 `placeholder` 实测含 `Authorization`（`textarea`，294 字符，值以 `Basic` 开头，`disabled=false`、`readOnly=false`）与 `App Key（x-yun-app-key）`（`input`，16 字符，可编辑） | ✅ 通过（回显 + 可编辑） |
+| 3 | y139 策略隐藏「中转上传」「下载中转」 | 页面全文 `innerText` 正则检查：`中转上传` 与 `下载中转` 均为 `false` | ✅ 通过（整块未渲染） |
+| 4 | 修复秒传后缩略图 | 数据修复已删损坏实体 161 并重生真 PNG（71,270 字节，400×225）；秒传复用日志 `Reusing existing thumb entity 161` 确认复用链路 | ✅ 通过（见第三节） |
+| 5 | `/admin/policy/4` y139 块多余 Endpoint 输入框删除 | 页面全文正则 `Endpoint`（不区分大小写）为 `false` | ✅ 通过 |
+| 6 | 策略页下拉框字号统一 14px | `getComputedStyle` 实测策略页「全部」下拉为 **14px** | ✅ 通过（新增的容量单位下拉同为 14px；页脚分页器「每页 11 条」为 16px，是 MUI 分页组件，不属于本次修改的两个下拉） |
+| 7 | 后台无永久红横幅残留 | `/admin/home` 实测横幅内容为：「存储策略凭证需要处理：『移动云盘直连』的移动云盘凭证已过期，续期失败，请手动更新凭证。去处理 / 『cr-test-y139-b』的移动云盘凭证续期失败，请手动更新凭证。去处理」 | ✅ 通过（这是**设计预期**的凭证通知，仅在有失败态时出现，按策略隔离；非永久残留） |
+
+> 第 7 项补充：该横幅正是本轮新增功能。它只在策略表存在 `last_refresh_error_kind`（`expired` / `refresh_failed` / `persist_failed`）时渲染，凭证 `UpdateAccessKey` 成功后自动清空。当前两条分别对应策略 4（token 被网盘侧作废）与测试策略 5（人为 plant 的失败态，策略已软删）。
+
+---
+
+## 十一、磁盘清理汇总
+
+两机均**未执行** `docker image prune -af`；15132 生产从机数据目录与其他人镜像均未触碰。
+
+### 11.1 InstaBox（`m_agqw5litn4acpbo7b5axu3ycku`）
+
+| 操作 | 释放 |
+|---|---|
+| 删除本轮失败中间镜像 `fix-1030-r7` / `r7b` / `r7c` | 约 1.18 GB |
+| `docker builder prune -af` | 277.1 MB（构建缓存） |
+| 删临时二进制 `/tmp/cloudreve-r7*`（每份 111MB） | 约 222 MB |
+| **合计** | **约 1.7 GB**（`/` 44% → **35%**，8.4G → **9.7G 可用**） |
+
+保留镜像：`fix-1030-r7d`（本批交付）、`admin-r7`（他人在用）、`admin-r6`、`vas-1030-r3`（回滚位）、`easypay-1030-r2`（支付任务回滚位）、`debian:bookworm-slim`、`mcr.microsoft.com/playwright:v1.49.1-jammy`。
+
+清理后：`/` **35%（9.7G 可用）**、`/data` **44%（11G 可用）**。
+
+### 11.2 Baixiong（`3Vpjw8E1s5xb6meuf6Qhf`）
+
+删除 `/root/cr-r7`（clone，1.5G）与 `/tmp` 下 chromium/playwright 等临时产物。
+
+| 项 | 值 |
+|---|---|
+| 清理前 | 31G 已用 / **65G 可用** |
+| 清理后 | 30G 已用 / **67G 可用** |
+| 释放 | 约 **1.7 GB** |
+
+---
+
+## 十二、回滚方式
 
 ```bash
 docker rm -f cloudreve-fork-test
@@ -422,14 +519,18 @@ docker run -d --name cloudreve-fork-test --restart unless-stopped -p 15212:5212 
   -e CR_SETTING_DEFAULT_media_meta_ffprobe=1 -e CR_SETTING_DEFAULT_thumb_libraw_enabled=1 \
   -e CR_ENABLE_ARIA2=0 -e CR_SETTING_DEFAULT_thumb_ffmpeg_enabled=1 \
   -e CR_SETTING_DEFAULT_thumb_vips_enabled=1 -e CR_SETTING_DEFAULT_thumb_libreoffice_enabled=1 \
-  cloudreve-fork:fix-1030-r3
+  cloudreve-fork:vas-1030-r3
 ```
 
-数据目录 `/data/cloudreve-fork-test` 不受影响。
+切到本批交付镜像时把最后一行换成 `cloudreve-fork:fix-1030-r7d`。两个 tag 均在 InstaBox 上保留。
 
-数据目录 `/data/cloudreve-fork-test` 不受影响。
+数据目录 `/data/cloudreve-fork-test` 不受影响。本轮验收签在独立目录 `/data/cr-r7-test`，删掉它不影响正式站：
 
-## 九、范围内自有判断（按授权说明）
+```bash
+docker rm -f cr-r7-verify && rm -rf /data/cr-r7-test
+```
+
+## 十三、范围内自有判断（按授权说明）
 
 1. **目录直链语义**选「展开为文件直链列表」而非 zip/跳转：契合 `GetDirectLink` 同步返回一组 URL 的既有契约，且天然避开 y139 禁止打包的限制。
 2. **秒传副本共用同一个缩略图实体**（而非每文件另存一份）：与秒传本身共享源实体的模型一致；另存会让实体数随副本数膨胀，违背秒传意义。
