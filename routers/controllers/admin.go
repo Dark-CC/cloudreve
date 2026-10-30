@@ -271,6 +271,18 @@ func AdminUpdateUser(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// AdminAdjustUserCredit 调整指定用户的积分，调用方须持有 admin 写权限。
+// 变更通过 VasClient.CreditAdjust 完成，因此会在积分流水里留下一条
+// type=adjust 的记录（含金额与说明），可追溯谁在何时改了多少。
+func AdminAdjustUserCredit(c *gin.Context) {
+	service := ParametersFromContext[*admin.AdjustCreditService](c, admin.AdjustCreditParamCtx{})
+	res, err := service.Adjust(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 func AdminCreateUser(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertUserService](c, admin.UpsertUserParamCtx{})
 	res, err := service.Create(c)

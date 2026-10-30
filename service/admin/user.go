@@ -2,11 +2,13 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -488,4 +490,61 @@ func (s *BatchUserUpdateService) Update(c *gin.Context) error {
 	}
 
 	return ae.Aggregate()
+}
+
+type (
+	// AdjustCreditService moves a user's points balance by a signed delta and
+	// records the change in the points ledger, so every manual adjustment is
+	// attributable in the same place purchases and gift codes appear.
+	AdjustCreditService struct {
+		ID     int    `uri:"id" binding:"required"`
+		Delta  int64  `json:"delta"`
+		Reason string `json:"reason" binding:"omitempty,max=200"`
+	}
+	AdjustCreditParamCtx struct{}
+)
+
+// Adjust applies the signed delta. A user who is an administrator can only be
+// adjusted by another full administrator, matching the guard used for group
+// changes: silently topping up an admin account would bypass that boundary.
+func (s *AdjustCreditService) Adjust(c *gin.Context) (*GetUserResponse, error) {
+	dep := dependency.FromContext(c)
+	userClient := dep.UserClient()
+
+	// Delta is validated here rather than by a binding tag: FromUriJSON runs the
+	// same validator against the URI stage, where delta is still zero and any
+	// non-zero rule on it would reject every request before the body is read.
+	if s.Delta == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Delta cannot be zero", nil)
+	}
+
+	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
+	target, err := userClient.GetByID(ctx, s.ID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
+	}
+
+	if inventory.EffectiveGroup(target) != nil &&
+		groupIsAdminCapable(inventory.EffectiveGroup(target).Permissions) &&
+		!actorIsFullAdmin(c) {
+		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "Cannot adjust an administrator's points", nil)
+	}
+
+	des := s.Reason
+	if des == "" {
+		des = "adjusted by administrator"
+	}
+
+	if err := dep.VasClient().CreditAdjust(ctx, s.ID, s.Delta, credittxn.TypeAdjust, "", des); err != nil {
+		if errors.Is(err, inventory.ErrInsufficientPoints) {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Adjustment would make the balance negative", err)
+		}
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to adjust points", err)
+	}
+
+	subject := activity.Extra(map[string]any{"user_id": s.ID})
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserChanged, subject)
+
+	service := &SingleUserService{ID: s.ID}
+	return service.Get(c)
 }

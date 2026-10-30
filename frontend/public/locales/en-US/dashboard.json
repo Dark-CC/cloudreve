@@ -1607,7 +1607,16 @@
     "noInvitationCodes": "No invitation codes yet.",
     "loadMore": "Load more",
     "additionalGroups": "Additional groups",
-    "additionalGroupsDes": "Extra group memberships on top of the primary group. Permissions, quotas and storage policies are unioned across all groups."
+    "additionalGroupsDes": "Extra group memberships on top of the primary group. Permissions, quotas and storage policies are unioned across all groups.",
+    "adjustPoints": "Adjust points",
+    "creditsDes": "Points balance; use Adjust to change it — every adjustment is recorded in the points ledger.",
+    "currentCredits": "Current points: {{credits}}",
+    "creditDelta": "Amount",
+    "creditDeltaDes": "Positive adds, negative deducts.",
+    "creditReason": "Reason",
+    "creditReasonDes": "Stored in the points ledger for auditing.",
+    "creditDeltaInvalid": "Enter a non-zero whole number",
+    "creditAdjusted": "Points adjusted"
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",
@@ -2013,7 +2022,13 @@
     "appForum": "User forum URL",
     "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid.",
     "subAddressChars": "Sub-address characters",
-    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>."
+    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>.",
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ]
   },
   "pro": {
     "title": "Pro edition exclusive features",
@@ -2113,5 +2128,39 @@
     "reasonHint": "Required; recorded in the audit log",
     "reconcileSuccess": "Order settled and the item granted",
     "alreadyPaid": "This order is already paid — nothing was granted again"
+  },
+  "fileManager": {
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit."
+  },
+  "modals": {
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead."
+  },
+  "shop": {
+    "myOrders": "My orders",
+    "nextPage": "Next",
+    "noOrders": "No orders yet",
+    "noOrdersDescription": "Purchases you make will show up here",
+    "orderAmount": "Amount",
+    "orderCreatedAt": "Created",
+    "orderExpiresIn": "{{minutes}} min left",
+    "orderItem": "Item",
+    "orderNo": "Order",
+    "orderPaidAt": "Paid",
+    "orderStatus": "Status",
+    "orderStatusExpired": "Expired",
+    "orderStatusPaid": "Paid",
+    "orderStatusPending": "Unpaid",
+    "payNow": "Pay now",
+    "paymentCheckAgain": "Check again",
+    "paymentDialogTitle": "Scan to pay",
+    "paymentNoQrcode": "This channel returned no QR code — open the cashier page to pay",
+    "paymentOpenCashier": "Open cashier",
+    "paymentOrderNo": "Order: {{order}}",
+    "paymentScanHint": "Scan the QR code with your phone to complete the payment",
+    "paymentStatusExpired": "Order expired",
+    "paymentStatusPaid": "Paid",
+    "paymentStatusWaiting": "Waiting for payment",
+    "prevPage": "Previous",
+    "resumeFailed": "This order can no longer be paid — please place a new one"
   }
 }

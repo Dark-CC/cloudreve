@@ -1413,6 +1413,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.FromJSON[adminsvc.UpsertUserService](adminsvc.UpsertUserParamCtx{}),
 						controllers.AdminUpdateUser,
 					)
+					// 调整用户积分（写入积分流水）
+					user.PUT(":id/credit",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromUriJSON[adminsvc.AdjustCreditService](adminsvc.AdjustCreditParamCtx{}),
+						controllers.AdminAdjustUserCredit,
+					)
 					// 创建用户
 					user.PUT("",
 						middleware.RequiredScopes(types.ScopeAdminWrite),

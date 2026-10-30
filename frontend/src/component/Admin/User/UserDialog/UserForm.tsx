@@ -28,6 +28,7 @@ import Delete from "../../../Icons/Delete";
 import SettingForm from "../../../Pages/Setting/SettingForm";
 import { CapacityBar } from "../../../Pages/Setting/StorageSetting";
 import RelocateDialog from "../../Entity/RelocateDialog";
+import AdjustCreditDialog from "./AdjustCreditDialog";
 import GroupSelectionInput from "../../Common/GroupSelectionInput";
 import { NoMarginHelperText } from "../../Settings/Settings";
 import { UserDialogContext } from "./UserDialog";
@@ -41,6 +42,7 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
   const navigate = useNavigate();
   const { formRef, values, setUser } = useContext(UserDialogContext);
   const [relocateOpen, setRelocateOpen] = useState(false);
+  const [creditOpen, setCreditOpen] = useState(false);
 
   const removeAvatar = useCallback(() => {
     setUser((prev) => ({ ...prev, avatar: undefined }));
@@ -206,6 +208,15 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
               srcUserID={values.id}
               srcUserName={values.email}
             />
+            <AdjustCreditDialog
+              open={creditOpen}
+              onClose={() => setCreditOpen(false)}
+              user={values}
+              onAdjusted={(credits) => {
+                setUser((prev) => ({ ...prev, credits }));
+                reload();
+              }}
+            />
           </Box>
         </Stack>
         <Divider orientation="vertical" flexItem />
@@ -268,17 +279,26 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
               <NoMarginHelperText>{t("user.additionalGroupsDes")}</NoMarginHelperText>
             </SettingForm>
             <SettingForm title={t("application:vas.points")} noContainer lgWidth={6}>
-              <DenseFilledTextField
-                slotProps={{
-                  htmlInput: {
-                    type: "number",
-                    min: 0,
-                    readOnly: true,
-                  },
-                }}
-                fullWidth
-                value={0}
-              />
+              <Stack direction="row" spacing={1} alignItems="flex-start">
+                <DenseFilledTextField
+                  slotProps={{
+                    htmlInput: {
+                      type: "number",
+                      readOnly: true,
+                    },
+                  }}
+                  fullWidth
+                  value={values.credits ?? 0}
+                />
+                <SecondaryButton
+                  variant="contained"
+                  onClick={() => setCreditOpen(true)}
+                  disabled={!values.id}
+                >
+                  {t("user.adjustPoints")}
+                </SecondaryButton>
+              </Stack>
+              <NoMarginHelperText>{t("user.creditsDes")}</NoMarginHelperText>
             </SettingForm>
             <SettingForm title={t("user.password")} noContainer lgWidth={6}>
               <DenseFilledTextField

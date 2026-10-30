@@ -129,7 +129,12 @@
     "aboutFork": "Community-Fork",
     "aboutForkDes": "Diese Instanz läuft mit einem von der Community gepflegten Cloudreve-Fork mit Fokus auf den Windows-Desktop-Client und die Explorer-Integration. Fehler gefunden oder eine Idee? Meldungen und Beiträge jeder Art sind willkommen.",
     "reportIssue": "Problem melden",
-    "roadmap": "Roadmap"
+    "roadmap": "Roadmap",
+    "credentialExpired": "The 139 Drive credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
+    "credentialNoticeTitle": "Storage policy credentials need attention",
+    "credentialPersistFailed": "The 139 Drive credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
+    "credentialRefreshFailed": "The 139 Drive credential of \"{{name}}\" could not be renewed. Please update it manually.",
+    "goToPolicy": "Fix it"
   },
   "queue": {
     "queueName_io_intense": "IO-Intensiv",
@@ -1323,7 +1328,16 @@
     "downloadRelayLockedY139": "China Mobile Cloud policies always download by direct link and cannot be proxied by Cloudreve.",
     "uploadRelayLockedY139": "China Mobile Cloud policies always upload directly and cannot be relayed (locked).",
     "unknownPolicyType": "Unknown type",
-    "unknownPolicyTypeHint": "This policy is type \"{{type}}\", which this build has no driver for (it was created by another Cloudreve build or its driver was removed). It cannot be edited here; delete it if unneeded."
+    "unknownPolicyTypeHint": "This policy is type \"{{type}}\", which this build has no driver for (it was created by another Cloudreve build or its driver was removed). It cannot be edited here; delete it if unneeded.",
+    "y139AppKey": "App Key (x-yun-app-key)",
+    "y139AppKeyDes": "Value of the x-yun-app-key header required by the cloud drive API.",
+    "y139Authorization": "Authorization",
+    "y139AuthorizationDes": "The full login credential line from the cloud drive web client, including the Basic prefix. It grants the same access as your account; keep it secret.",
+    "y139CredentialDes": "Both credentials together grant full access to the drive account; editing them takes effect immediately, no restart needed.",
+    "y139Help": "Because traffic never passes through this site, zip archives and batch downloads are unavailable on this policy — download files individually.",
+    "y139Risk": "This policy is direct-only: uploads and downloads are made by the browser straight to the cloud drive, and this site never relays a byte.",
+    "y139Root": "Root directory FileID",
+    "y139RootDes": "The FileID used as the user-facing root folder inside the cloud drive. Leave empty or set to root to expose the whole drive."
   },
   "node": {
     "slave": "Slave",
@@ -1620,7 +1634,16 @@
     "noInvitationCodes": "Noch keine Einladungscodes.",
     "loadMore": "Mehr laden",
     "additionalGroups": "Zusätzliche Gruppen",
-    "additionalGroupsDes": "Zusätzliche Gruppenmitgliedschaften neben der primären Gruppe. Berechtigungen, Quotas und Speicherrichtlinien werden vereinigt."
+    "additionalGroupsDes": "Zusätzliche Gruppenmitgliedschaften neben der primären Gruppe. Berechtigungen, Quotas und Speicherrichtlinien werden vereinigt.",
+    "adjustPoints": "Adjust points",
+    "creditsDes": "Points balance; use Adjust to change it — every adjustment is recorded in the points ledger.",
+    "currentCredits": "Current points: {{credits}}",
+    "creditDelta": "Amount",
+    "creditDeltaDes": "Positive adds, negative deducts.",
+    "creditReason": "Reason",
+    "creditReasonDes": "Stored in the points ledger for auditing.",
+    "creditDeltaInvalid": "Enter a non-zero whole number",
+    "creditAdjusted": "Points adjusted"
   },
   "file": {
     "deleteXFiles": "{{num}} Dateien löschen",
@@ -2027,7 +2050,13 @@
     "trafficSizeDes": "Bytes Direktlink-Traffic, die beim Kauf gutgeschrieben werden; Pakete sind permanent.",
     "subAddressChars": "Sub-Adressen-Zeichen",
     "subAddressCharsDes": "Zeichen, die als Sub-Adressen-Trenner im lokalen Teil der E-Mail gelten (z. B. <code>+-.</code>).",
-    "paymentId": "Zahlungs-ID"
+    "paymentId": "Zahlungs-ID",
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ]
   },
   "abuseReport": {
     "deleteXAbuseReports": "{{num}} Missbrauchsmeldungen löschen",
@@ -2127,5 +2156,39 @@
     "reasonHint": "Required; recorded in the audit log",
     "reconcileSuccess": "Order settled and the item granted",
     "alreadyPaid": "This order is already paid — nothing was granted again"
+  },
+  "fileManager": {
+    "browserBatchDownloadSizeExceededDescription": "Total size {{size}} exceeds the 4GB browser-side archiving limit."
+  },
+  "modals": {
+    "folderDirectLinkNotAllowed": "Folder direct links are disabled for your group; select the files inside instead."
+  },
+  "shop": {
+    "myOrders": "My orders",
+    "nextPage": "Next",
+    "noOrders": "No orders yet",
+    "noOrdersDescription": "Purchases you make will show up here",
+    "orderAmount": "Amount",
+    "orderCreatedAt": "Created",
+    "orderExpiresIn": "{{minutes}} min left",
+    "orderItem": "Item",
+    "orderNo": "Order",
+    "orderPaidAt": "Paid",
+    "orderStatus": "Status",
+    "orderStatusExpired": "Expired",
+    "orderStatusPaid": "Paid",
+    "orderStatusPending": "Unpaid",
+    "payNow": "Pay now",
+    "paymentCheckAgain": "Check again",
+    "paymentDialogTitle": "Scan to pay",
+    "paymentNoQrcode": "This channel returned no QR code — open the cashier page to pay",
+    "paymentOpenCashier": "Open cashier",
+    "paymentOrderNo": "Order: {{order}}",
+    "paymentScanHint": "Scan the QR code with your phone to complete the payment",
+    "paymentStatusExpired": "Order expired",
+    "paymentStatusPaid": "Paid",
+    "paymentStatusWaiting": "Waiting for payment",
+    "prevPage": "Previous",
+    "resumeFailed": "This order can no longer be paid — please place a new one"
   }
 }

@@ -169,7 +169,7 @@ const ReconcileDialog = ({
         {force && <Alert severity="warning">{t("paymentOrders.forceHint")}</Alert>}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("cancel")}</Button>
+        <Button onClick={onClose}>{t("common:cancel")}</Button>
         <Button
           onClick={submit}
           variant="contained"
@@ -225,7 +225,7 @@ const DetailDialog = ({ order, onClose }: { order?: AdminPaymentOrder; onClose: 
         {order.manual_reason && row(t("paymentOrders.reason"), order.manual_reason)}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("close")}</Button>
+        <Button onClick={onClose}>{t("common:close")}</Button>
       </DialogActions>
     </Dialog>
   );
