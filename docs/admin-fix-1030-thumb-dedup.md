@@ -586,3 +586,128 @@ sudo docker run -d --name cloudreve-fork-test --restart unless-stopped \
 2. **秒传副本共用同一个缩略图实体**（而非每文件另存一份）：与秒传本身共享源实体的模型一致；另存会让实体数随副本数膨胀，违背秒传意义。
 3. **`directLinkBudget` 语义**：`sourceBatch <= 0 || requested > sourceBatch` 时返回 `requested`（service 层已拒绝超限请求），避免二次报错。
 4. **已损坏的测试文件只做一次性数据修复**，不写进迁移或启动逻辑。
+
+---
+
+## 十四、15220 独立验收实例（最后一轮，含 Endpoint 删除与合并后复核）
+
+### 14.1 为什么又起一台 15220
+
+15212 是正式切好的站（`fix-1030-r7d`），本轮末尾还有两件事要落地：
+1. 删掉 y139 向导里多余的 Endpoint 输入框（提交 `ff631cc5`）；
+2. 把 `origin/baixiong` 合进分支（`fb80422d`，4 个冲突文件）。
+
+两者都不能直接动 15212，因此在同机（`centos-stream-server`）另起独立实例 15220 验证，
+数据目录 `/data/cr-test-15220`、独立 SQLite 库、systemd 服务 `cloudreve-test-15220`。
+
+### 14.2 一个必须记住的坑：部署机源码停留在旧提交
+
+首次验收「Endpoint 已经删掉」却**仍然能在界面上找到 Endpoint 文案**。查下来是
+`/data/cr-src`（构建机上的源码目录）停在旧提交 `ab36455`，里面还有 `y139EndpointDes`。
+本地分支早已是 `ff631cc5`（`y139EndpointDes` 计数 0）。
+
+结论：**每次部署前核对部署机源码提交**（`git -C <src> rev-parse HEAD` + 关键字符串计数），
+否则会出现「改了却没生效 / 删了却还在显示」的假象，白白浪费一轮排查。
+
+### 14.3 前端重建与资产包结构
+
+- `rm -rf node_modules build && yarn install --frozen-lockfile` → 15.33s，768 包；
+- `yarn build` 首次 **OOM**（`Ineffective mark-compacts near heap limit`），
+  加 `NODE_OPTIONS=--max-old-space-size=3584` 后 45.03s 成功（机器 5GB，默认 2GB 堆不够）；
+- 资产包必须打成 **`assets/build/...`** 结构：
+  ```bash
+  mkdir -p /tmp/stage/assets && cp -a frontend/build /tmp/stage/assets/build
+  cd /tmp/stage && zip -qr <out>.zip assets
+  ```
+  直接 zip `frontend/build` 顶层（不含 `assets/` 前缀）会让服务启动报
+  `Missing version identifier file` + `Static file "index.html" does not exist`，站点 `root=404`。
+  依据：`application/statics/statics.go` 里 `fs.Sub(statics, "assets/build")`。
+
+### 14.4 后端编译与部署
+
+```bash
+CGO_ENABLED=0 go build -buildvcs=false -ldflags="-s -w" -o /data/cr-build/cloudreve.new .
+# 81,592,480 字节，静态二进制
+```
+覆盖时若 `cp` 有 alias 会交互确认导致静默失败，用 `\cp -f` 或 `sudo cp -f`。
+
+### 14.5 登录态与密码
+
+换库重启后旧密码哈希失效（`40080 CodeInvalidPassword`）。Cloudreve 无 reset-password CLI，
+直接按 `salt(hex32) + ":" + sha256hex(password+salt)` 重算写进 `users` 表即可。
+验收实例账号：`admin@cr15220.local` / `CrTest15220x`（id=1，Admin 组）。
+
+### 14.6 浏览器验收：RUN15 全绿
+
+结果是 **`TOTAL 15 PASS 15 FAIL 0`**。覆盖项：
+
+| # | 断言 | 结果 |
+|---|---|---|
+| 1 | admin 登录 | ✅ `{"code":0,"group":"Admin"}` |
+| 2 | admin 在 Admin 组 | ✅ |
+| 3 | 策略页可达 | ✅ `/admin/policy` |
+| 4 | provider 选择对话框打开 | ✅ |
+| 5 | y139 provider 选项存在 | ✅ |
+| 6 | y139 向导表单已渲染 | ✅ |
+| 7 | 向导内无 `Endpoint` 文案 | ✅ |
+| 8 | 向导内无 endpoint 输入节点 | ✅（字段仅 Authorization / App Key / Root directory FileID） |
+| 9 | Authorization 字段存在 | ✅ |
+| 10 | App Key 字段存在 | ✅ |
+| 11 | 根目录字段存在 | ✅ |
+| 12 | **编辑页**无 `Endpoint` 文案 | ✅ |
+| 13 | 编辑页无「中转上传」 | ✅ |
+| 14 | 编辑页无「下载中转」 | ✅ |
+| 15 | 编辑页 Authorization 可编辑 | ✅（`TEXTAREA` placeholder=Authorization，值 `Basic …`；App Key 同时存在） |
+
+### 14.7 写验收脚本时踩到的三个坑（供后来者省时间）
+
+1. **策略列表接口是 `POST /api/v4/admin/policy`，不是 GET**（GET 直接 `404 page not found`）。
+   见 `routers/router.go` 的 `admin.Group("policy")` 段：`POST("")` 列列表、`GET(":id")` 取详情。
+2. **`Authorization` 头要带 access token，不是登录返回的那个 token 本体**：
+   前端 `session/index.ts` 的 `getAccessToken()` 返回 `user.token.access_token`。
+   传错会得到 `{"code":401,"msg":"Login required"}`。
+3. **断言不要用宽正则 `Endpoint`**：「Content audit endpoint / Maximum entity size sent to the audit endpoint」
+   是内容审计的正常设置项，会让断言假失败。要排除 `audit` 之后再判。
+   同理，「Authorization 是否存在」不能只看 `innerText`——它是输入框的 value，不在文本里，
+   要遍历 `input, textarea` 的 `placeholder` / `value` 才是真判据。
+
+### 14.8 目录直链开关在本分支的落点（复核）
+
+| 层 | 位置 |
+|---|---|
+| 数据 | `settings.folder_direct_link`（`application/migrator/model/group.go`） |
+| 用户响应 | `service/user/response.go` 的 `FolderDirectLink` |
+| 文件管理器 | `pkg/filemanager/manager/entity.go`（目录在此展开为文件直链） |
+| 前端开关 | `UploadDownloadSection.tsx` 的 `onFolderDirectLinkChange` / Switch |
+| 前端入口 | `useActionDisplayOpt.ts`、`redux/thunks/file.ts` 依据该开关决定是否给文件夹出直链 |
+
+### 14.9 本机清理
+
+15220 机器（`centos-stream-server`）：删掉 `/tmp/cr-cold-build`、`/tmp/stage`、
+多余的旧回滚二进制与中间二进制、验收用的 `verify*.js` / `vy.js`。
+保留：当前二进制、一份回滚二进制 `cloudreve.rollback-20261031-030521`、
+DB 备份 `data/db-backup-20261031-030521.db`、截图目录，以及 Playwright `node_modules`（复跑验收要用）。
+清理后 `/` 使用 31G / 925G（4%），服务 `active`，`root=200`。
+
+## 十五、分支与 PR 状态
+
+- 分支 `tds/conv-01a18c62-6f46-733c-abd1-c026f5f80fa8`，工作树 tip `ff631cc5`，已推送；
+- 已把 `origin/baixiong` 合进分支，合并提交 `fb80422d`，**4 个冲突文件全部手工解决**：
+  - `GiftCodes.tsx` / `SkuTable.tsx` / `util/index.ts` / 两份 `dashboard.json`；
+  - 一律采用基线的通用实现 `ByteSizeInput` + `util/price.ts`，丢弃本分支重复的
+    `CapacityUnit` / `capacityToBytes` / GB-TB 下拉实现（避免两套并行）；
+  - 本分支净增只留 `slotProps={{ htmlInput: { min: 1, step: 1 } }}` 与单价自由小数。
+- 合并后校验：`yarn install --frozen-lockfile` ✅、`npx tsc --noEmit` 117 条（基线 119，零新增）✅、
+  `go build ./...` ✅、`go test ./pkg/filemanager/... ./inventory/...` ✅。
+- **按指示未执行 `git push`（PR 准备阶段）**；PR 描述已在本轮回答中给出。
+
+### 仍未完成 / 仍遗留
+
+1. **移动云盘「续期成功」路径未能实机跑通**：网盘侧已返回
+   `4006 The token does not exist or has expired.`，当前 token 作废；
+   在不破坏用户真实 token 的前提下无法构造续期成功的窗口。
+   该路径由 **11 个单元测试**覆盖（`pkg/filemanager/driver/y139/`，共 21 个用例），
+   但没有真实网盘的「续期成功」现场证据。
+2. **InstaBox 公共端口记录 15214 删不掉**：API 只提供列表与创建，
+   `DELETE /v1/machines/{id}/ports/{id}` 及变体一律 404。主机侧 15214 已无监听，无实际暴露面。
+3. **本批不发布版本**：没有建 tag、没有跑 release workflow。
