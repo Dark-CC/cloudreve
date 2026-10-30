@@ -1007,7 +1007,6 @@
     "y139AppKey": "App Key (x-yun-app-key)",
     "y139AppKeyDes": "Value of the x-yun-app-key header required by the cloud drive API.",
     "y139CredentialDes": "Both credentials together grant full access to the drive account; editing them takes effect immediately, no restart needed.",
-    "y139EndpointDes": "The cloud drive object storage endpoint is discovered automatically and normally needs no value.",
     "y139Risk": "This policy is direct-only: uploads and downloads are made by the browser straight to the cloud drive, and this site never relays a byte.",
     "y139Help": "Because traffic never passes through this site, zip archives and batch downloads are unavailable on this policy — download files individually.",
     "chunkSizeDesY139": "The cloud drive signs at most 100 part URLs per request and its own client uses 100MB parts below 30GB, so 100MB is the recommended chunk size.",
