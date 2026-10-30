@@ -171,14 +171,14 @@ func TestEasypayParseNotify(t *testing.T) {
 
 func TestParseAndFormatMoney(t *testing.T) {
 	cases := map[string]int64{
-		"1.00":    100,
-		"0.01":    1,
-		"12.5":    1250,
-		"99.99":   9999,
-		"100":     10000,
-		"0":       0,
-		"1.005":   100, // third decimal truncates, matching the gateway's 2-dp cap
-		" 2.00 ":  200,
+		"1.00":   100,
+		"0.01":   1,
+		"12.5":   1250,
+		"99.99":  9999,
+		"100":    10000,
+		"0":      0,
+		"1.005":  100, // third decimal truncates, matching the gateway's 2-dp cap
+		" 2.00 ": 200,
 	}
 	for in, want := range cases {
 		got, err := ParseMoneyCents(in)
