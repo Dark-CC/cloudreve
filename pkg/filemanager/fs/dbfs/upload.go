@@ -418,6 +418,37 @@ func (f *DBFS) CompleteUpload(ctx context.Context, session *fs.UploadSession) (f
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to start transaction", err)
 	}
 
+	// The storage side may report that it already holds this exact content, in
+	// which case it never transferred any bytes for this upload (the 139 cloud
+	// drive answers /file/create with `exist` / `rapidUpload`). The placeholder
+	// entity created by PrepareUpload then points at a blank blob and must not
+	// be upgraded into the file's real content: an already stored entity with
+	// the same content takes its place instead. PrepareUpload does the same
+	// when it spots such an entity up front; this is the path for content that
+	// only became deduplicable between preparing and completing the upload.
+	if session.StorageSideDeduplicated {
+		linked, err := f.fileClient.FindEntityByHash(ctx, session.Props.Hash, session.Props.Size,
+			owner.ID, false)
+		if err != nil && !ent.IsNotFound(err) {
+			_ = inventory.Rollback(tx)
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to query dedup entity", err)
+		}
+
+		switch {
+		case err == nil && linked.ID != session.EntityID:
+			if err := fc.RelinkPlaceholder(ctx, filePrivate.Model, session.EntityID, linked); err != nil {
+				_ = inventory.Rollback(tx)
+				return nil, serializer.NewError(serializer.CodeDBError, "Failed to link existing entity", err)
+			}
+		case err != nil:
+			// No local entity holds this content, so the placeholder is the only
+			// record of it: keep it rather than losing the file. The drive still
+			// has the bytes, so the file stays downloadable through the drive.
+			f.l.Warning("Storage deduplicated %q but no local entity matches, keeping the placeholder: %s",
+				filePrivate.Uri(false).String(), err)
+		}
+	}
+
 	err = fc.UpgradePlaceholder(ctx, filePrivate.Model, session.Props.LastModified, session.EntityID, entityType)
 	if err != nil {
 		_ = inventory.Rollback(tx)

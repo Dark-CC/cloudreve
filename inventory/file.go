@@ -214,6 +214,10 @@ type FileClient interface {
 	CreateFile(ctx context.Context, root *ent.File, args *CreateFileParameters) (*ent.File, *ent.Entity, StorageDiff, error)
 	// UpgradePlaceholder upgrades a placeholder entity to a real version entity
 	UpgradePlaceholder(ctx context.Context, file *ent.File, modifiedAt *time.Time, entityId int, entityType types.EntityType) error
+	// RelinkPlaceholder replaces a placeholder entity of file with an already
+	// stored entity holding identical content: the placeholder is dropped and
+	// the stored entity becomes the file's primary version.
+	RelinkPlaceholder(ctx context.Context, file *ent.File, placeholderId int, linked *ent.Entity) error
 	// RemoveMetadata removes metadata from a file
 	RemoveMetadata(ctx context.Context, file *ent.File, keys ...string) error
 	// CreateEntity creates an entity with given parameters, returns created Entity, and storage diff for owner.
@@ -952,6 +956,36 @@ func (f *fileClient) UpgradePlaceholder(ctx context.Context, file *ent.File, mod
 
 func (f *fileClient) SetPrimaryEntity(ctx context.Context, file *ent.File, entity *ent.Entity) error {
 	return f.client.File.UpdateOne(file).SetPrimaryEntity(entity.ID).SetSize(entity.Size).Exec(ctx)
+}
+
+// RelinkPlaceholder swaps a file's placeholder entity for an existing entity
+// with identical content. The caller runs inside a transaction; the placeholder
+// is unlinked (which schedules its blob for recycling via the storage diff),
+// the stored entity gains a reference and becomes the file's primary version.
+func (f *fileClient) RelinkPlaceholder(ctx context.Context, file *ent.File, placeholderId int,
+	linked *ent.Entity) error {
+	if linked.ID == placeholderId {
+		return nil
+	}
+
+	placeholder, err := f.client.Entity.Get(ctx, placeholderId)
+	if err != nil {
+		return fmt.Errorf("failed to get placeholder entity: %w", err)
+	}
+
+	if err := f.client.Entity.UpdateOne(placeholder).RemoveFile(file).AddReferenceCount(-1).Exec(ctx); err != nil {
+		return fmt.Errorf("failed to unlink placeholder entity: %w", err)
+	}
+
+	if err := f.client.Entity.UpdateOne(linked).AddFile(file).AddReferenceCount(1).Exec(ctx); err != nil {
+		return fmt.Errorf("failed to link existing entity: %w", err)
+	}
+
+	if err := f.client.File.UpdateOne(file).SetPrimaryEntity(linked.ID).SetSize(linked.Size).Exec(ctx); err != nil {
+		return fmt.Errorf("failed to set file primary entity: %w", err)
+	}
+
+	return nil
 }
 
 func (f *fileClient) CreateFile(ctx context.Context, root *ent.File, args *CreateFileParameters) (*ent.File, *ent.Entity, StorageDiff, error) {

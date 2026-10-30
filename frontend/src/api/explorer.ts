@@ -615,6 +615,10 @@ export interface UploadCredential {
   encrypt_metadata?: EncryptMetadata;
   // File was materialized from an existing identical entity — no bytes to send
   rapid_uploaded?: boolean;
+  // The storage already holds this content on its own side, so the backend
+  // signed no part URL at all. There is nothing to transfer, but the upload is
+  // only finished once the completion callback below is called.
+  no_parts_uploaded?: boolean;
 }
 
 export interface DeleteUploadSessionService {

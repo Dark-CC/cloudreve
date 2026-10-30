@@ -175,6 +175,18 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 			m.OnUploadFailed(ctx, uploadSession)
 			return nil, err
 		}
+
+		// A driver that reports the content as already stored hands out no part
+		// URLs: there is nothing to sign. Record it on the session so the
+		// completion step links the existing identical entity instead of
+		// promoting a placeholder that will never receive bytes. The storage
+		// can only deduplicate against a content hash, so an upload without one
+		// is never treated this way.
+		if credential.NoPartsUploaded && len(req.Props.Hash) > 0 {
+			uploadSession.StorageSideDeduplicated = true
+		} else {
+			credential.NoPartsUploaded = false
+		}
 	} else {
 		// For relayed upload, we don't need to create credential
 		uploadSession.ChunkSize = 0
