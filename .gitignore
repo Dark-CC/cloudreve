@@ -48,3 +48,5 @@ pkg/util/test/
 .desloppify/
 scorecard.png
 upstream-report.md
+__pycache__/
+*.pyc
