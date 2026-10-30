@@ -3,8 +3,9 @@
 本批次只做 15212 测试站验证与部署，**未发版**，`baixiong` 的 tag/Release 未动。
 
 - 测试站：https://15212-agqw5litn4acpbo7b5axu3ycku.instabox.tech
-- 部署镜像：`cloudreve-fork:fix-1030-r3`
-- 回滚镜像：`cloudreve-fork:fix-1030-1024`（旧容器已移除，按下面的回滚命令重建即可）
+- 部署镜像：`cloudreve-fork:fix-1030-r4`
+- 回滚镜像：`cloudreve-fork:fix-1030-r3`（按第七节的回滚命令重建即可，镜像仍在）
+- 更早的回滚镜像：`cloudreve-fork:fix-1030-1024`
 
 ## 一、四处修复
 
@@ -44,7 +45,6 @@
 **是 UI 收敛，不是把强制逻辑挪到前端**：后端「y139 恒不走中转」（`manager/upload.go`、`archive.go` 拒绝打包）保持原样。其它策略类型的渲染与行为完全不变。
 
 ### 4. 秒传后缩略图不显示
-
 **根因（15212 实测确认）**：不是「没提交缩略图任务」，而是**缩略图实体写盘撞「对象已存在」**。
 
 缩略图保存路径由 `ThumbEntitySuffix`（默认 `{blob_path}/{blob_name}._thumb`）按**源实体 source** 推导。秒传的两份文件共享同一个源实体 → 同一个缩略图路径。第一份上传已把 `..._thumb` 写到网盘；第二份生成缩略图时 `d.Put` 命中已存在对象 → 返回 `fs.ErrFileExisted` → 事务回滚、thumb 实体被 unlink → `disableThumb` 给该文件打上 `thumb:disabled`，于是**永远没有缩略图**。
@@ -139,11 +139,129 @@ PUT /api/v4/file/source  {"uris":["cloudreve://my/存储策略演示"]}
 | InstaBox `/data` | 84%（3.3G） | 83%（3.4G） | 同上 |
 | Baixiong `/` | 27%（26G 用） | 27% | `/tmp` 临时脚本与产物 |
 
-**保留**：`cloudreve-fork:fix-1030-r3`（当前部署）+ `cloudreve-fork:fix-1030-1024`（回滚）。未执行 `docker image prune -af`。Yarn/Go 缓存保留以加速后续构建。
+**保留**：`cloudreve-fork:fix-1030-r4`（当前部署）+ `cloudreve-fork:fix-1030-r3`、`cloudreve-fork:fix-1030-1024`（回滚）。未执行 `docker image prune -af`。Yarn/Go 缓存保留以加速后续构建。
+
+第二轮（r4）清盘：`docker builder prune` 释放 536.6MB；`/` 89%→87%（释放约 0.4G），`/data` 85%→84%（释放约 0.2G）；删除 r4 构建的临时二进制、前端 `build/` 目录、`/tmp` 脚本与 UI 验证 `node_modules`。
 
 测试文件 `cr-test-*`、`bxy-upload-a/b.mp4` 及 0 字节残留会话记录均已删除。
 
-## 五、回滚方式
+## 五、第二轮界面修正（同日追加，已部署 r4）
+
+### 5.1 `/admin/policy/4` 移除 Endpoint 字段
+
+上一轮加的 y139 专属区块里一并塞了一个 Endpoint 输入框（`BasicInfoSection.tsx`），本轮整块删除，只保留「根目录」与「访问凭证」。移动云盘的存储端点由后端依据凭据自动解析，编辑页无需也不应让用户填。
+
+注意保留项：「访问凭证」（Authorization / App Key）两框**未受影响**，仍可编辑；`policy.y139EndpointDes` 这个 i18n key 仍被新建向导 `Y139Wizard.tsx` 使用（首次配置时允许覆盖），因此保留不删。
+
+### 5.2 溢出策略 / 缩略图策略下拉框字号
+
+**先测后改**。在部署实例上用 `getComputedStyle` 实测 `/admin/policy/4` 上所有下拉与输入框：
+
+| 元素 | 修复前 | 修复后 |
+|---|---|---|
+| 普通文本输入框（`MuiOutlinedInput-input`） | 14px | 14px |
+| 溢出存储策略「无」 | **16px** | 14px |
+| 缩略图存储策略「与文件相同」 | **16px** | 14px |
+| 其它 outlined 下拉（如「已启用」） | 16px | 14px |
+| `MuiSelect-filled` 下拉（如「MB」「允许」） | 14px | 14px |
+
+**根因**：`DenseFilledTextField` 显式设了 `fontSize: theme.typography.body2.fontSize`，而 `DenseSelect` 的 `& .MuiOutlinedInput-input` 规则只设了 padding、**没有设字号**，于是 outlined 变体的 select 退回 MUI 默认的 16px。
+
+**修法**：在 `frontend/src/component/Common/StyledComponents.tsx` 的 `DenseSelect` 里补上同一个 token：
+
+```ts
+"& .MuiOutlinedInput-input": {
+  ...
+  fontSize: theme.typography.body2.fontSize,
+}
+```
+
+影响面说明：`DenseSelect` 全局只有 outlined 分支受影响，filled 分支（原本就是 14px）不变；outlined 下拉本就应该与同表单输入框同字号，所以这是修正而不是破坏性改动。
+
+### 5.3 部署后验证（`fix-1030-r4`）
+
+浏览器打开 `/admin/policy/4`：
+
+- 页面文本中 **`Endpoint` 出现 0 次** —— 整块已移除
+- 「访问凭证」块存在，两个框 `disabled=false / readonly=false`（可编辑）
+- 「中转上传」「下载中转」均不渲染
+- 全部 10 个下拉与全部文本输入框的 computed `font-size` 统一为 **14px**
+
+---
+
+## 六、移动云盘凭证能否自动更新：**能，但目前只在进程内存里，不落库**
+
+结论先行：**驱动的 token 自动续期逻辑完全实现且被真实调用，续期成功；但续期结果只写进程内存，从不回写存储策略的 `access_key`。所以严格答案是「能自动续，但不能持久化」——重启后回到旧 token，再续一次。**
+
+### 6.1 链路实测
+
+| 环节 | 位置 | 状态 |
+|---|---|---|
+| 续期触发 | `y139/session.go:55` `personalCloudHost` → `refreshTokenLocked` | ✅ 已被真实调用 |
+| 续航条件 | token 第 4 段（过期毫秒）距现在 **≤ 15 天**（`refreshMargin`） | ✅ |
+| 续期接口 | `POST https://aas.caiyun.feixin.10086.cn:443/tellin/authTokenRefresh.do`，XML body，clienttype 656 | ✅ |
+| 新 token 生效 | 更新 `c.authorization` 内存字段，同进程后续请求即用新 token | ✅ |
+| 回写策略 | `refreshToken()`（持久化版）→ `SetTokenPersister` → `inventory.UpdateAccessKey` | ⚠️ **生产路径从不调用** |
+
+### 6.2 关键发现：持久化那条路是死代码
+
+`session.go` 里有两个入口：
+
+- `refreshTokenLocked()` —— 只更新内存，**不持久化**
+- `refreshToken()` —— `refreshAndCollect` + 回调 `save()` 写库 + 清 `StoragePolicyCacheKey`
+
+全仓 grep 的结果：
+
+```
+生产代码调用 .refreshToken( : 0 处  （仅 y139_test.go 里调用）
+生产代码调用 refreshTokenLocked(: 3 处，全部在 session.go 内部
+```
+
+也就是说 `pkg/filemanager/manager/fs.go:104` 精心接好的 `SetTokenPersister` 回调 **在生产中永远收到不到调用**。
+
+### 6.3 实测记录
+
+1. 读出策略 4 的 `access_key`，解码得 token 过期时间 `2026-11-28 10:35:56`，**剩余 28.95 天**（> 15 天，不触发续期）。
+2. 将该值第 4 段（过期毫秒）改为 `+10 天`，**token 本体字节完全不变**，写回 DB。
+3. 重启容器清掉进程内状态，再发一次真实 y139 列表请求 —— **请求成功**（说明续期跑了，否则 10 天内也会用旧 token 照常工作，但无法区分）。
+4. 复查 DB：`expires` **仍是 10 天**，未变成新 token。
+5. 日志里没有任何 `139 login token refreshed` 行（该行为 Debug 级，正常日志级别下不可见）。
+6. 已把策略 4 的 `access_key` 恢复成原始过期时间（`2026-11-28 10:35:56`，剩 28.62 天 = 原始 28.95 天减去流逝时间）。
+
+> 说明：测试全程未打印任何真实凭据；只修改了过期时间戳这一个数字，token 本体从未被替换或外泄。
+
+### 6.4 如果要做成真正自动更新，需要改什么
+
+**改动范围（一处，约 10 行）**：
+
+`pkg/filemanager/driver/y139/session.go` 的 `personalCloudHost` 中，把
+
+```go
+if err := c.refreshTokenLocked(ctx); err != nil {
+```
+
+改成先解锁再调持久化版本，或改用 `refreshAndCollect` + 自行 `save()`（注意：不能在持 `c.mu` 时调回调，回调会触碰 policy store 并可能重入本 client —— 代码注释已明确警告过这一点）。
+
+**风险**：
+
+1. **锁顺序**：`persistToken` 回调会走 `inventory` → DB → 清 KV，期间若另一协程正在建驱动/读策略，可能短暂阻塞。现有代码结构已用「锁内计算、锁外持久化」规避，改造时必须保持这个模式，否则死锁。
+2. **写放大**：每次驱动重建（每请求一次，无缓存）都会检查续期条件；因为不改过期时间戳就不会重复续，实际写入只在真正续期时发生一次，风险低。
+3. **并发续期**：多请求同时跨越阈值会各自续一次，最后一次写库覆盖前者。token 续期接口本身语义上允许这样，但建议加一个「同一进程内只续一次」的短窗去重。
+4. **失败降级**：续期接口挂了不能阻断业务——现有 `refreshTokenLocked` 失败即返回 `ErrAuthExpired` 让调用方报错；若改成持久化路径，写库失败只应记 Warning（现有 `refreshToken` 已这样处理）。
+
+**未改动**：本轮按要求只给结论，没有动这段代码，等确认后再改。
+
+### 6.5 续期前提与 token 寿命
+
+- **前提**：token 必须带过期段（`token` 按 `|` 拆分至少 4 段），且续期请求要用 **与获取时相同的客户端身份**（`clienttype 656` 即 PC 端）。实测当前策略里存的就是 `pc:` scheme（`Basic base64("pc:<账号>:<token>")`），即 PC 端 token，满足续期前提。
+- **若用 Web 端 token**：驱动里 `clientType()` 会根据 `policy.Settings.Region` 判断 `pc` / `web`，但续期请求固定写死 `refreshClientTyp = "656"`。Web 端 token 走这个续期端点是否被接受，**未实测**（不想拿真实账号冒险）；代码上无区分，这是潜在坑。
+- **寿命**：实测当前 token 剩余 **约 29 天**，即签发有效期约 30 天。因为续期阈值是 15 天，一个被正常访问的策略会在剩余 15 天时自动续到新的 ~30 天 —— 只要**续期结果被持久化**，理论上可以永久不过期。反之（现状），重启后回到 DB 里的旧 token，但那个旧 token 自己也会再续，直到它真正过期（因为 DB 里那个值不会随续期前进，**约 30 天后：DB 值已过期 → `remain < 0` → `ErrAuthExpired`，整个策略失效**）。
+
+就现状看，**现在这套自动续期对「不重启」的单进程是有效的，但对「重启」是无效的，且存在约 30 天后的必然失效窗口**。这是建议优先修的原因。
+
+---
+
+## 七、回滚方式
 
 ```bash
 docker rm -f cloudreve-fork-test
@@ -152,12 +270,14 @@ docker run -d --name cloudreve-fork-test --restart unless-stopped -p 15212:5212 
   -e CR_SETTING_DEFAULT_media_meta_ffprobe=1 -e CR_SETTING_DEFAULT_thumb_libraw_enabled=1 \
   -e CR_ENABLE_ARIA2=0 -e CR_SETTING_DEFAULT_thumb_ffmpeg_enabled=1 \
   -e CR_SETTING_DEFAULT_thumb_vips_enabled=1 -e CR_SETTING_DEFAULT_thumb_libreoffice_enabled=1 \
-  cloudreve-fork:fix-1030-1024
+  cloudreve-fork:fix-1030-r3
 ```
 
 数据目录 `/data/cloudreve-fork-test` 不受影响。
 
-## 六、范围内自有判断（按授权说明）
+数据目录 `/data/cloudreve-fork-test` 不受影响。
+
+## 八、范围内自有判断（按授权说明）
 
 1. **目录直链语义**选「展开为文件直链列表」而非 zip/跳转：契合 `GetDirectLink` 同步返回一组 URL 的既有契约，且天然避开 y139 禁止打包的限制。
 2. **秒传副本共用同一个缩略图实体**（而非每文件另存一份）：与秒传本身共享源实体的模型一致；另存会让实体数随副本数膨胀，违背秒传意义。
