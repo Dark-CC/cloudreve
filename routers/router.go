@@ -1115,6 +1115,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.AdminSummary,
 				)
 
+				// 列出凭证续期失败的存储策略（仪表盘横幅）。单独挂一条路径，
+				// 避免与 policy/:id 的动态段冲突。
+				admin.GET("credential-notices",
+					controllers.FromQuery[adminsvc.RefreshNoticeService](adminsvc.RefreshNoticeParamCtx{}),
+					controllers.AdminListRefreshNotices,
+				)
+
 				settings := admin.Group("settings", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					// Get settings

@@ -229,6 +229,52 @@ type (
 	GetStoragePolicyParamCtx struct{}
 )
 
+// RefreshNoticeService lists the storage policies whose automatically renewed
+// credential is currently failing, so the dashboard can warn the administrator.
+type (
+	RefreshNoticeService   struct{}
+	RefreshNoticeParamCtx  struct{}
+)
+
+// RefreshNotice is one failing policy as shown on the dashboard.
+type RefreshNotice struct {
+	PolicyID   int       `json:"policy_id"`
+	PolicyName string    `json:"policy_name"`
+	PolicyType string    `json:"policy_type"`
+	Kind       string    `json:"kind"`
+	Message    string    `json:"message"`
+	At         time.Time `json:"at"`
+}
+
+func (service *RefreshNoticeService) List(c *gin.Context) ([]RefreshNotice, error) {
+	dep := dependency.FromContext(c)
+	storagePolicyClient := dep.StoragePolicyClient()
+
+	ctx := context.WithValue(c, inventory.SkipStoragePolicyCache{}, true)
+	policies, err := storagePolicyClient.ListRefreshNotices(ctx, string(types.PolicyTypeY139))
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list credential notices", err)
+	}
+
+	notices := make([]RefreshNotice, 0, len(policies))
+	for _, p := range policies {
+		at := time.Time{}
+		if p.LastRefreshAt != nil {
+			at = *p.LastRefreshAt
+		}
+		notices = append(notices, RefreshNotice{
+			PolicyID:   p.ID,
+			PolicyName: p.Name,
+			PolicyType: p.Type,
+			Kind:       p.LastRefreshErrorKind,
+			Message:    p.LastRefreshError,
+			At:         at,
+		})
+	}
+
+	return notices, nil
+}
+
 const (
 	countEntityQuery = "countEntity"
 )

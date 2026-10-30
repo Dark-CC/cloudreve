@@ -69,6 +69,11 @@ type (
 		MaxWalkedFiles   int   `json:"max_walked_files,omitempty"`
 		TrashRetention   int   `json:"trash_retention,omitempty"`
 		RedirectedSource bool  `json:"redirected_source,omitempty"`
+		// FolderDirectLink lets members take a direct link on a folder: it
+		// expands into one direct link per file underneath it. Only
+		// meaningful together with RedirectedSource, and only when the
+		// group's source_batch limit is not 0.
+		FolderDirectLink bool `json:"folder_direct_link,omitempty"`
 		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
 		// Empty means no restriction.
 		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`

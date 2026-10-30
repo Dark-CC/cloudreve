@@ -60,6 +60,9 @@ const (
 	uploadURLTTL = 2 * time.Hour
 	// refreshMargin triggers a token refresh this long before it expires.
 	refreshMargin = 15 * 24 * time.Hour
+	// refreshCooldown keeps concurrent requests that cross the renewal window
+	// together from each refreshing and overwriting one another's token.
+	refreshCooldown = time.Minute
 	// partBatchSize is the maximum number of part URLs the create call signs.
 	partBatchSize = 100
 	// deleteBatchSize limits how many file IDs go into one trash call.
@@ -70,10 +73,22 @@ const (
 	redactedPrefixLen = 6
 )
 
+// Refresh failure kinds surfaced to the administrator dashboard.
+const (
+	// RefreshErrorKindRefreshFailed the drive refused the renewal request, or it
+	// could not be reached at all.
+	RefreshErrorKindRefreshFailed = "refresh_failed"
+	// RefreshErrorKindPersistFailed the token was renewed but could not be
+	// written back, so a restart falls back to the previous one.
+	RefreshErrorKindPersistFailed = "persist_failed"
+	// RefreshErrorKindExpired the credential expired and can no longer be
+	// renewed; a fresh Authorization header must be pasted.
+	RefreshErrorKindExpired = "expired"
+)
+
 var (
 	// ErrAuthExpired the pasted login state was rejected and could not be refreshed.
-	ErrAuthExpired = errors.New("login state expired, please paste a fresh Authorization header")
-	// ErrContentRejected the cloud drive's content audit blocked this object.
+	ErrAuthExpired     = errors.New("login state expired, please paste a fresh Authorization header") // ErrContentRejected the cloud drive's content audit blocked this object.
 	ErrContentRejected = errors.New("object was rejected by the cloud drive content audit")
 	// ErrFileNotFound the requested path does not exist.
 	ErrFileNotFound = errors.New("file not found")
@@ -108,7 +123,13 @@ type client struct {
 
 	// persistToken, when set, stores a refreshed login token back into the
 	// policy so a restart reuses it instead of the stale pasted value.
-	persistToken func(ctx context.Context, authorization string) error
+	persistToken   func(ctx context.Context, authorization string) error
+	hadBasicPrefix bool
+
+	// reportRefreshError, when set, tells the policy store that a renewal
+	// failed so the administrator sees it in the dashboard. kind is one of
+	// RefreshErrorKind*; an empty kind clears a previous notice.
+	reportRefreshError func(ctx context.Context, kind, message string) error
 
 	// appKey is the x-yun-app-key header the web client sends, copied from the
 	// browser by the administrator. It is not a secret of the drive account but
@@ -122,6 +143,11 @@ type client struct {
 	rootFileID    string
 	personalHost  string
 	resolved      bool
+
+	// refreshNotBefore throttles token renewal: once this client rotated the
+	// token, no further refresh happens before this instant. A rebuilt client
+	// starts at the zero value, which never blocks a legitimate refresh.
+	refreshNotBefore time.Time
 }
 
 // NewClient builds a client from an existing storage policy.
@@ -137,10 +163,7 @@ func NewClient(policy *ent.StoragePolicy, config conf.ConfigProvider, l logging.
 	}
 
 	// Users may paste the header verbatim or only its base64 payload.
-	auth := strings.TrimSpace(policy.AccessKey)
-	if idx := strings.Index(strings.ToLower(auth), "basic "); idx >= 0 {
-		auth = strings.TrimSpace(auth[idx+len("basic "):])
-	}
+	auth, hadPrefix := splitAuthorization(policy.AccessKey)
 
 	host := strings.TrimSuffix(strings.TrimSpace(policy.Server), "/")
 	if host == "" {
@@ -150,15 +173,40 @@ func NewClient(policy *ent.StoragePolicy, config conf.ConfigProvider, l logging.
 	appKey := strings.TrimSpace(policy.SecretKey)
 
 	return &client{
-		policy:        policy,
-		http:          request.NewClient(config, request.WithLogger(l)),
-		l:             l,
-		chunk:         chunkSize,
-		authorization: auth,
-		appKey:        appKey,
-		rootFileID:    root,
-		personalHost:  host,
+		policy:         policy,
+		http:           request.NewClient(config, request.WithLogger(l)),
+		l:              l,
+		chunk:          chunkSize,
+		authorization:  auth,
+		appKey:         appKey,
+		rootFileID:     root,
+		personalHost:   host,
+		hadBasicPrefix: hadPrefix,
 	}
+}
+
+// splitAuthorization separates the "Basic " scheme from the base64 payload a
+// user pasted, reporting whether the scheme was there. A renewed token is
+// written back in the same shape, so the edit form keeps showing a complete
+// header.
+func splitAuthorization(pasted string) (payload string, hadScheme bool) {
+	trimmed := strings.TrimSpace(pasted)
+	lower := strings.ToLower(trimmed)
+	if idx := strings.Index(lower, "basic "); idx >= 0 {
+		return strings.TrimSpace(trimmed[idx+len("basic "):]), true
+	}
+
+	return trimmed, false
+}
+
+// authorizationHeader renders the current login token in the shape it is stored
+// in, so a renewed credential lands in the policy exactly like a pasted one.
+func (c *client) authorizationHeader() string {
+	if c.hadBasicPrefix {
+		return "Basic " + c.authorization
+	}
+
+	return c.authorization
 }
 
 func (c *client) ChunkSize() int64 {
@@ -172,6 +220,16 @@ func SetTokenPersisterFn(d Client, fn func(ctx context.Context, authorization st
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		c.persistToken = fn
+	}
+}
+
+// SetRefreshErrorReporter installs the callback used to surface a failed
+// credential renewal to the administrator.
+func SetRefreshErrorReporterFn(d Client, fn func(ctx context.Context, kind, message string) error) {
+	if c, ok := d.(*client); ok {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.reportRefreshError = fn
 	}
 }
 

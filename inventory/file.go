@@ -206,6 +206,15 @@ type FileClient interface {
 	GetEntitiesByIDs(ctx context.Context, ids []int, page int) ([]*ent.Entity, int, error)
 	// GetEntityByID returns an entity by its ID.
 	GetEntityByID(ctx context.Context, id int) (*ent.Entity, error)
+	// GetThumbEntityBySource returns a live thumbnail entity whose blob sits
+	// at the given source path under the given storage policy, if one exists.
+	// Thumbnail blob paths are derived from their source entity, so files
+	// sharing a source entity (instant upload, several copies) share one
+	// thumbnail entity instead of each writing its own.
+	GetThumbEntityBySource(ctx context.Context, source string, policyID int) (*ent.Entity, error)
+	// LinkEntity links an already-stored entity to the given file and bumps
+	// its reference count, the way instant upload attaches a shared entity.
+	LinkEntity(ctx context.Context, entity *ent.Entity, file *ent.File) error
 	// Rename renames a file
 	Rename(ctx context.Context, original *ent.File, newName string) (*ent.File, error)
 	// SetParent sets parent of group of files
@@ -1342,6 +1351,36 @@ func (f *fileClient) GetEntitiesByIDs(ctx context.Context, ids []int, page int) 
 
 func (f *fileClient) GetEntityByID(ctx context.Context, id int) (*ent.Entity, error) {
 	return withEntityEagerLoading(ctx, f.client.Entity.Query().Where(entity.ID(id))).First(ctx)
+}
+
+func (f *fileClient) GetThumbEntityBySource(ctx context.Context, source string, policyID int) (*ent.Entity, error) {
+	if source == "" {
+		return nil, &ent.NotFoundError{}
+	}
+
+	pred := f.client.Entity.Query().
+		Where(
+			entity.Type(int(types.EntityTypeThumbnail)),
+			entity.Source(source),
+		)
+	if policyID != 0 {
+		pred = pred.Where(entity.StoragePolicyEntitiesEQ(policyID))
+	}
+
+	found, err := pred.Order(ent.Desc(entity.FieldID)).First(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return found, nil
+}
+
+func (f *fileClient) LinkEntity(ctx context.Context, e *ent.Entity, file *ent.File) error {
+	if err := f.client.Entity.UpdateOne(e).AddFile(file).AddReferenceCount(1).Exec(ctx); err != nil {
+		return fmt.Errorf("failed to link entity: %v", err)
+	}
+
+	return nil
 }
 
 func (f *fileClient) GetByID(ctx context.Context, ids int) (*ent.File, error) {

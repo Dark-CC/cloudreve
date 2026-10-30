@@ -39,6 +39,18 @@ func (StoragePolicy) Fields() []ent.Field {
 		field.JSON("settings", &types.PolicySetting{}).
 			Default(&types.PolicySetting{}).
 			Optional(),
+		// last_refresh_at / last_refresh_error* track the health of an
+		// automatically renewed credential (currently only 139 drive). They are
+		// per policy on purpose: drives are renewed independently of each other.
+		field.Time("last_refresh_at").
+			Optional().
+			Nillable(),
+		field.String("last_refresh_error").
+			Optional().
+			Default(""),
+		field.String("last_refresh_error_kind").
+			Optional().
+			Default(""),
 		field.Int("node_id").Optional(),
 	}
 }

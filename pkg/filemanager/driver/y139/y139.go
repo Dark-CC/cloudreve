@@ -261,6 +261,12 @@ func SetTokenPersister(d *Driver, fn func(ctx context.Context, authorization str
 	SetTokenPersisterFn(d.client, fn)
 }
 
+// SetRefreshErrorReporter installs the callback that surfaces a failed
+// credential renewal to the administrator.
+func SetRefreshErrorReporter(d *Driver, fn func(ctx context.Context, kind, message string) error) {
+	SetRefreshErrorReporterFn(d.client, fn)
+}
+
 // accountName returns the account extracted from the login token.
 func (handler *Driver) accountName(ctx context.Context) string {
 	if c, ok := handler.client.(*client); ok {

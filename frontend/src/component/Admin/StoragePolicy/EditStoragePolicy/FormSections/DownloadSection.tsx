@@ -122,25 +122,17 @@ const DownloadSection = () => {
             </Collapse>
           </FormControl>
         </SettingForm>
-        {values.type !== PolicyType.local && (
+        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>
               <FormControlLabel
                 control={
-                  <Switch
-                    checked={values.settings?.internal_proxy ?? false}
-                    onChange={onInternalProxyChange}
-                    disabled={values.type === PolicyType.y139}
-                  />
+                  <Switch checked={values.settings?.internal_proxy ?? false} onChange={onInternalProxyChange} />
                 }
                 label={t("policy.downloadRelay")}
               />
               <NoMarginHelperText>
-                {values.type === PolicyType.y139 ? (
-                  t("policy.downloadRelayLockedY139")
-                ) : (
-                  <Trans i18nKey="policy.downloadRelayDes" ns="dashboard" />
-                )}
+                <Trans i18nKey="policy.downloadRelayDes" ns="dashboard" />
               </NoMarginHelperText>
             </FormControl>
           </SettingForm>
@@ -158,7 +150,7 @@ const DownloadSection = () => {
             </FormControl>
           </SettingForm>
         )}
-        {values.type !== PolicyType.local && (
+        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
           <SettingForm lgWidth={5} title={t("policy.downloadTrafficDiagram")}>
             <TrafficDiagram
               variant="download"

@@ -32,6 +32,7 @@ type GroupOption struct {
 	Aria2Options     map[string]interface{} `json:"aria2_options,omitempty"` // 离线下载用户组配置
 	SourceBatchSize  int                    `json:"source_batch,omitempty"`
 	RedirectedSource bool                   `json:"redirected_source,omitempty"`
+	FolderDirectLink bool                   `json:"folder_direct_link,omitempty"`
 	Aria2BatchSize   int                    `json:"aria2_batch,omitempty"`
 	AdvanceDelete    bool                   `json:"advance_delete,omitempty"`
 	WebDAVProxy      bool                   `json:"webdav_proxy,omitempty"`

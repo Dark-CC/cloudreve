@@ -62,6 +62,16 @@ const UploadDownloadSection = () => {
     [setGroup],
   );
 
+  const onFolderDirectLinkChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        settings: { ...p.settings, folder_direct_link: e.target.checked ? true : undefined },
+      }));
+    },
+    [setGroup],
+  );
+
   const onDownloadSpeedLimitChange = useCallback(
     (e: number) => {
       setGroup((p: GroupEnt) => ({ ...p, speed_limit: e ? e : undefined }));
@@ -176,7 +186,12 @@ const UploadDownloadSection = () => {
                   <SettingForm lgWidth={5}>
                     <FormControl fullWidth>
                       <FormControlLabel
-                        control={<Switch checked={false} />}
+                        control={
+                          <Switch
+                            checked={values?.settings?.folder_direct_link ?? false}
+                            onChange={onFolderDirectLinkChange}
+                          />
+                        }
                         label={<Box sx={{ display: "flex", alignItems: "center" }}>{t("group.folderDirectLink")}</Box>}
                       />
                       <NoMarginHelperText>{t("group.folderDirectLinkDes")}</NoMarginHelperText>

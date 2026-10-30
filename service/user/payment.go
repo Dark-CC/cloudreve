@@ -325,7 +325,7 @@ func createEasypayCheckout(c *gin.Context, dep dependency.Dep, cfg *setting.Paym
 		NotifyURL:  fmt.Sprintf("%s/api/v4/callback/easypay/notify", siteURL),
 		ReturnURL:  fmt.Sprintf("%s/api/v4/callback/easypay/return", siteURL),
 		Name:       s.Name,
-		Money:      payment.FormatMoneyCents(order.Amount),
+		Money:      payment.FormatMoneyCents(payment.OrderCents(order.Amount, cfg.CurrencyUnit)),
 		Param:      orderHash,
 		ClientIP:   c.ClientIP(),
 	})
@@ -553,17 +553,11 @@ func easypayAmountMatches(order *ent.PaymentOrder, money string) error {
 // stored in the site currency's minor units, which for CNY is already cents;
 // Japanese-won-style zero-decimal currencies are multiplied by 100 so the
 // comparison stays honest. It refuses when the two cannot be reconciled.
+//
+// The arithmetic itself lives in pkg/payment.Money so the checkout and the
+// verification agree on one convention.
 func scaleToCents(amount int64, chargedCents int64) (int64, bool) {
-	if amount == chargedCents {
-		return amount, true
-	}
-	if amount*100 == chargedCents {
-		return amount * 100, true
-	}
-	if amount == chargedCents*100 {
-		return amount, true
-	}
-	return 0, false
+	return payment.ScaleToCents(amount, chargedCents)
 }
 
 func (service *StripeWebhookService) Create(c *gin.Context) (string, error) {

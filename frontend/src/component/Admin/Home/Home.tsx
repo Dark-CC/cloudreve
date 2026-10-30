@@ -37,6 +37,7 @@ import PeopleFilled from "../../Icons/PeopleFilled.tsx";
 import ShareFilled from "../../Icons/ShareFilled.tsx";
 import PageContainer from "../../Pages/PageContainer.tsx";
 import PageHeader from "../../Pages/PageHeader.tsx";
+import CredentialNotice from "./CredentialNotice.tsx";
 import SiteUrlWarning from "./SiteUrlWarning.tsx";
 import UpdateNotice from "./UpdateNotice.tsx";
 import CommentMultiple from "../../Icons/CommentMultiple.tsx";
@@ -90,6 +91,7 @@ const Home = () => {
       <Container maxWidth="xl">
         <PageHeader title={t("nav.summary")} />
         <UpdateNotice />
+        <CredentialNotice />
         <Grid container spacing={3}>
           <Grid alignContent={"stretch"} item xs={12} md={8} lg={9}>
             <StyledPaper>

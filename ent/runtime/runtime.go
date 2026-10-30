@@ -683,6 +683,14 @@ func init() {
 	storagepolicyDescSettings := storagepolicyFields[11].Descriptor()
 	// storagepolicy.DefaultSettings holds the default value on creation for the settings field.
 	storagepolicy.DefaultSettings = storagepolicyDescSettings.Default.(*types.PolicySetting)
+	// storagepolicyDescLastRefreshError is the schema descriptor for last_refresh_error field.
+	storagepolicyDescLastRefreshError := storagepolicyFields[13].Descriptor()
+	// storagepolicy.DefaultLastRefreshError holds the default value on creation for the last_refresh_error field.
+	storagepolicy.DefaultLastRefreshError = storagepolicyDescLastRefreshError.Default.(string)
+	// storagepolicyDescLastRefreshErrorKind is the schema descriptor for last_refresh_error_kind field.
+	storagepolicyDescLastRefreshErrorKind := storagepolicyFields[14].Descriptor()
+	// storagepolicy.DefaultLastRefreshErrorKind holds the default value on creation for the last_refresh_error_kind field.
+	storagepolicy.DefaultLastRefreshErrorKind = storagepolicyDescLastRefreshErrorKind.Default.(string)
 	taskMixin := schema.Task{}.Mixin()
 	taskMixinHooks0 := taskMixin[0].Hooks()
 	task.Hooks[0] = taskMixinHooks0[0]

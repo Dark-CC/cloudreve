@@ -34,6 +34,7 @@ export interface Group {
   name: string;
   permission?: string;
   direct_link_batch_size?: number;
+  folder_direct_link?: boolean;
   trash_retention?: number;
 }
 

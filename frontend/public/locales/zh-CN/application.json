@@ -636,6 +636,7 @@
     "listingFileError": "列取文件时出错：{{message}}",
     "generatingSourceLinks": "生成外链中...",
     "noFileCanGenerateSourceLink": "没有可以生成外链的文件",
+    "folderDirectLinkNotAllowed": "当前用户组未开启目录直链，请改为选择目录内的文件。",
     "sourceBatchSizeExceeded": "当前用户组最大可同时为 {{limit}} 个文件生成外链",
     "directLinkFolderModeTitle": "文件夹外链模式",
     "directLinkFolderModeDescription": "所选项目中包含文件夹，请选择直链生成方式",
