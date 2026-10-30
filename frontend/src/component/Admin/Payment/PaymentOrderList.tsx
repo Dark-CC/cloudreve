@@ -1,6 +1,7 @@
 import { SyncProblem } from "@mui/icons-material";
 import {
   Alert,
+  Badge,
   Box,
   Button,
   Chip,
@@ -21,6 +22,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { bindPopover, bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
 import dayjs from "dayjs";
 import { enqueueSnackbar } from "notistack";
 import { useCallback, useEffect, useState } from "react";
@@ -29,11 +31,14 @@ import { adminGetPaymentOrder, adminListPaymentOrders, adminReconcilePaymentOrde
 import { AdminPaymentOrder } from "../../../api/user";
 import { useAppDispatch } from "../../../redux/hooks";
 import { DefaultCloseAction } from "../../Common/Snackbar/snackbar";
-import { DenseSelect, NoWrapTableCell, SecondaryButton, StyledTableContainerPaper } from "../../Common/StyledComponents";
-import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu";
+import { NoWrapTableCell, SecondaryButton, StyledTableContainerPaper } from "../../Common/StyledComponents";
+import ArrowSync from "../../Icons/ArrowSync";
+import Filter from "../../Icons/Filter";
 import PageContainer from "../../Pages/PageContainer";
 import PageHeader from "../../Pages/PageHeader";
 import TablePagination from "../Common/TablePagination";
+import PaymentOrderFilterPopover, { PaymentOrderFilterValues } from "./PaymentOrderFilterPopover";
+import { getPaymentOrderStatusText, statusChipColor } from "./PaymentOrderStatus";
 
 /**
  * Column widths are pinned so the table keeps the same rhythm as /admin/task:
@@ -51,8 +56,12 @@ const COL = {
   actions: 120,
 } as const;
 
-const statusColor = (s: AdminPaymentOrder["status"]): "success" | "warning" | "default" =>
-  s === "paid" ? "success" : s === "pending" ? "warning" : "default";
+const emptyFilters: PaymentOrderFilterValues = {
+  status: "",
+  user: "",
+  createdAfter: "",
+  createdBefore: "",
+};
 
 /**
  * ReconcileDialog settles one order by hand. The admin must always give a
@@ -157,9 +166,7 @@ const ReconcileDialog = ({
           }
           label={t("paymentOrders.force")}
         />
-        {force && (
-          <Alert severity="warning">{t("paymentOrders.forceHint")}</Alert>
-        )}
+        {force && <Alert severity="warning">{t("paymentOrders.forceHint")}</Alert>}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t("cancel")}</Button>
@@ -198,7 +205,14 @@ const DetailDialog = ({ order, onClose }: { order?: AdminPaymentOrder; onClose: 
         {row(t("paymentOrders.item"), order.sku_name)}
         {row(t("paymentOrders.amount"), `${(order.amount / 100).toFixed(2)} ${order.currency.toUpperCase()}`)}
         {row(t("paymentOrders.provider"), order.provider)}
-        {row(t("paymentOrders.status"), <Chip size="small" label={order.status} color={statusColor(order.status)} />)}
+        {row(
+          t("paymentOrders.status"),
+          <Chip
+            size="small"
+            label={getPaymentOrderStatusText(order.status, t)}
+            color={statusChipColor(order.status)}
+          />,
+        )}
         {row(t("paymentOrders.createdAt"), dayjs.unix(order.created_at).format("YYYY-MM-DD HH:mm:ss"))}
         {row(
           t("paymentOrders.paidAt"),
@@ -220,14 +234,12 @@ const DetailDialog = ({ order, onClose }: { order?: AdminPaymentOrder; onClose: 
 const PaymentOrderList = () => {
   const { t } = useTranslation("dashboard");
   const dispatch = useAppDispatch();
+  const filterPopupState = usePopupState({ variant: "popover", popupId: "paymentOrderFilter" });
   const [orders, setOrders] = useState<AdminPaymentOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState("");
-  const [userId, setUserId] = useState("");
-  const [after, setAfter] = useState("");
-  const [before, setBefore] = useState("");
+  const [filters, setFilters] = useState<PaymentOrderFilterValues>(emptyFilters);
   const [loading, setLoading] = useState(false);
   const [reconcile, setReconcile] = useState<AdminPaymentOrder | undefined>();
   const [detail, setDetail] = useState<AdminPaymentOrder | undefined>();
@@ -238,10 +250,10 @@ const PaymentOrderList = () => {
       adminListPaymentOrders({
         page,
         page_size: pageSize,
-        status: status || undefined,
-        user_id: userId.trim() || undefined,
-        created_after: after || undefined,
-        created_before: before || undefined,
+        status: filters.status || undefined,
+        user_id: filters.user.trim() || undefined,
+        created_after: filters.createdAfter || undefined,
+        created_before: filters.createdBefore || undefined,
       }),
     )
       .then((res) => {
@@ -249,7 +261,7 @@ const PaymentOrderList = () => {
         setTotal(res.total ?? 0);
       })
       .finally(() => setLoading(false));
-  }, [dispatch, page, pageSize, status, userId, after, before]);
+  }, [dispatch, page, pageSize, filters]);
 
   useEffect(() => {
     load();
@@ -262,61 +274,42 @@ const PaymentOrderList = () => {
       .catch(() => setDetail(o));
   };
 
-  const applyFilter = () => {
+  const applyFilters = (values: PaymentOrderFilterValues) => {
+    setFilters(values);
     setPage(1);
-    load();
   };
+
+  const clearFilters = () => {
+    setFilters(emptyFilters);
+    setPage(1);
+  };
+
+  const hasActiveFilters = !!(filters.status || filters.user || filters.createdAfter || filters.createdBefore);
 
   return (
     <PageContainer>
       <Container maxWidth="xl">
-        <PageHeader title={t("dashboard:nav.paymentOrders")} loading={loading} onRefresh={load} />
-        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", rowGap: 1 }}>
-          <DenseSelect
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as string);
-              setPage(1);
-            }}
-            displayEmpty
-            size="small"
-          >
-            <SquareMenuItem value="">{t("paymentOrders.allStatus")}</SquareMenuItem>
-            <SquareMenuItem value="pending">{t("paymentOrders.statusPending")}</SquareMenuItem>
-            <SquareMenuItem value="paid">{t("paymentOrders.statusPaid")}</SquareMenuItem>
-            <SquareMenuItem value="expired">{t("paymentOrders.statusExpired")}</SquareMenuItem>
-          </DenseSelect>
-          <TextField
-            size="small"
-            label={t("paymentOrders.userId")}
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilter();
-            }}
-            sx={{ width: 170 }}
+        <PageHeader title={t("dashboard:nav.paymentOrders")} />
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <PaymentOrderFilterPopover
+            {...bindPopover(filterPopupState)}
+            status={filters.status}
+            user={filters.user}
+            createdAfter={filters.createdAfter}
+            createdBefore={filters.createdBefore}
+            setFilters={applyFilters}
+            clearFilters={clearFilters}
           />
-          <TextField
-            size="small"
-            type="date"
-            label={t("paymentOrders.createdAfter")}
-            value={after}
-            onChange={(e) => setAfter(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 170 }}
-          />
-          <TextField
-            size="small"
-            type="date"
-            label={t("paymentOrders.createdBefore")}
-            value={before}
-            onChange={(e) => setBefore(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 170 }}
-          />
-          <SecondaryButton variant="contained" onClick={applyFilter} disabled={loading}>
-            {t("paymentOrders.applyFilter")}
+
+          <SecondaryButton onClick={load} disabled={loading} variant="contained" startIcon={<ArrowSync />}>
+            {t("node.refresh")}
           </SecondaryButton>
+
+          <Badge color="primary" variant="dot" invisible={!hasActiveFilters}>
+            <SecondaryButton startIcon={<Filter />} variant="contained" {...bindTrigger(filterPopupState)}>
+              {t("user.filter")}
+            </SecondaryButton>
+          </Badge>
         </Stack>
         <TableContainer component={StyledTableContainerPaper} sx={{ mt: 2 }}>
           <Table size="small" stickyHeader sx={{ width: "100%", tableLayout: "fixed" }}>
@@ -351,7 +344,11 @@ const PaymentOrderList = () => {
                   <NoWrapTableCell>{o.provider}</NoWrapTableCell>
                   <NoWrapTableCell>
                     <Stack direction="row" spacing={0.5}>
-                      <Chip size="small" label={o.status} color={statusColor(o.status)} />
+                      <Chip
+                        size="small"
+                        label={getPaymentOrderStatusText(o.status, t)}
+                        color={statusChipColor(o.status)}
+                      />
                       {o.manual && <Chip size="small" variant="outlined" label={t("paymentOrders.manualYes")} />}
                     </Stack>
                   </NoWrapTableCell>
@@ -359,7 +356,13 @@ const PaymentOrderList = () => {
                   <NoWrapTableCell>{o.paid_at ? dayjs.unix(o.paid_at).format("MM-DD HH:mm") : "-"}</NoWrapTableCell>
                   <NoWrapTableCell align="right">
                     {o.status !== "paid" && (
-                      <Button size="small" startIcon={<SyncProblem />} onClick={() => setReconcile(o)} color="warning">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="warning"
+                        startIcon={<SyncProblem />}
+                        onClick={() => setReconcile(o)}
+                      >
                         {t("paymentOrders.reconcile")}
                       </Button>
                     )}

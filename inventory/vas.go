@@ -114,6 +114,11 @@ type (
 	ListPaymentOrdersOptions struct {
 		// UserID limits to one buyer; 0 means everyone.
 		UserID int
+		// UserEmail matches the buyer's email case-insensitively, as a
+		// substring, when no exact UserID filter applies. The console puts
+		// both in one search box, so this is the "typed an email" half of
+		// the same filter.
+		UserEmail string
 		// Status limits to pending/paid/expired; empty means any.
 		Status string
 		// CreatedAfter/CreatedBefore bound created_at; zero means unbounded.

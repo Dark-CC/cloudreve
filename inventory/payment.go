@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/paymentorder"
+	"github.com/cloudreve/Cloudreve/v4/ent/user"
 )
 
 var ErrPaymentOrderNotFound = errors.New("payment order not found")
@@ -91,6 +92,12 @@ func (c *vasClient) ListAllPaymentOrders(ctx context.Context, opts ListPaymentOr
 	q := c.client.PaymentOrder.Query().WithSku().WithUser()
 	if opts.UserID > 0 {
 		q = q.Where(paymentorder.UserID(opts.UserID))
+	}
+	if opts.UserEmail != "" {
+		// The console search box accepts either an ID or an email; an email
+		// is matched as a case-insensitive substring so a partial address
+		// still narrows the list.
+		q = q.Where(paymentorder.HasUserWith(user.EmailContainsFold(opts.UserEmail)))
 	}
 	if opts.Status != "" {
 		q = q.Where(paymentorder.StatusEQ(paymentorder.Status(opts.Status)))

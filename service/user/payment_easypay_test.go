@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -689,6 +690,35 @@ func TestAdminListPaymentOrdersFilters(t *testing.T) {
 	// Filter by user.
 	enc := mustHasher(t)
 	res, err = (&AdminPaymentOrderListService{UserID: hashid.EncodeUserID(enc, admin.ID)}).
+		List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, res.Total)
+
+	// The same box also accepts the buyer's email, which is the half an
+	// operator usually has to hand. A partial address narrows the list; the
+	// match is case-insensitive.
+	res, err = (&AdminPaymentOrderListService{UserID: u.Email}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+	require.Equal(t, u.Email, res.Orders[0].UserEmail)
+
+	res, err = (&AdminPaymentOrderListService{UserID: strings.ToUpper(u.Email)}).
+		List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+
+	res, err = (&AdminPaymentOrderListService{UserID: u.Email[:3]}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+
+	// A bare numeric ID is accepted too, so the operator can paste one.
+	res, err = (&AdminPaymentOrderListService{UserID: strconv.Itoa(u.ID)}).List(paymentTestCtx(t, dep, admin, nil))
+	require.NoError(t, err)
+	require.Equal(t, 1, res.Total)
+
+	// An unmatched search is an empty list, not an error: the operator may
+	// have typed an address that simply has no orders.
+	res, err = (&AdminPaymentOrderListService{UserID: "nobody@example.invalid"}).
 		List(paymentTestCtx(t, dep, admin, nil))
 	require.NoError(t, err)
 	require.Equal(t, 0, res.Total)

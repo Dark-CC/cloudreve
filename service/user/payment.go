@@ -962,12 +962,8 @@ func (service *AdminPaymentOrderListService) List(c *gin.Context) (*AdminPayment
 	}
 
 	opts := inventory.ListPaymentOrdersOptions{Page: page, PageSize: pageSize}
-	if service.UserID != "" {
-		uid, err := dep.HashIDEncoder().Decode(service.UserID, hashid.UserID)
-		if err != nil {
-			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid user id", err)
-		}
-		opts.UserID = uid
+	if q := strings.TrimSpace(service.UserID); q != "" {
+		resolveAdminUserFilter(dep, q, &opts)
 	}
 	switch service.Status {
 	case "", "pending", "paid", "expired":
@@ -999,6 +995,29 @@ func (service *AdminPaymentOrderListService) List(c *gin.Context) (*AdminPayment
 		res.Orders = append(res.Orders, adminOrderResponse(dep, cfg, o))
 	}
 	return res, nil
+}
+
+// resolveAdminUserFilter turns the console's single "user" search box into a
+// query filter. The box accepts either a user ID or an email address:
+//
+//   - something that decodes as a user hash ID (or a bare number) is matched
+//     on the buyer's ID, exactly;
+//   - anything else is treated as an email and matched as a
+//     case-insensitive substring, so a partial address still narrows the list.
+//
+// A query that is neither keeps the email interpretation: it filters to a
+// substring that will simply match nothing, which is the same outcome as
+// the user typing a nonexistent address and is friendlier than an error.
+func resolveAdminUserFilter(dep dependency.Dep, query string, opts *inventory.ListPaymentOrdersOptions) {
+	if id, err := dep.HashIDEncoder().Decode(query, hashid.UserID); err == nil {
+		opts.UserID = id
+		return
+	}
+	if id, err := strconv.Atoi(query); err == nil && id > 0 {
+		opts.UserID = id
+		return
+	}
+	opts.UserEmail = query
 }
 
 // parseAdminTime accepts a unix timestamp (seconds) or an RFC3339 date; an
