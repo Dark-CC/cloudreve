@@ -47,6 +47,12 @@ const (
 	FieldFileNameRule = "file_name_rule"
 	// FieldSettings holds the string denoting the settings field in the database.
 	FieldSettings = "settings"
+	// FieldLastRefreshAt holds the string denoting the last_refresh_at field in the database.
+	FieldLastRefreshAt = "last_refresh_at"
+	// FieldLastRefreshError holds the string denoting the last_refresh_error field in the database.
+	FieldLastRefreshError = "last_refresh_error"
+	// FieldLastRefreshErrorKind holds the string denoting the last_refresh_error_kind field in the database.
+	FieldLastRefreshErrorKind = "last_refresh_error_kind"
 	// FieldNodeID holds the string denoting the node_id field in the database.
 	FieldNodeID = "node_id"
 	// EdgeGroups holds the string denoting the groups edge name in mutations.
@@ -114,6 +120,9 @@ var Columns = []string{
 	FieldDirNameRule,
 	FieldFileNameRule,
 	FieldSettings,
+	FieldLastRefreshAt,
+	FieldLastRefreshError,
+	FieldLastRefreshErrorKind,
 	FieldNodeID,
 }
 
@@ -149,6 +158,10 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultSettings holds the default value on creation for the "settings" field.
 	DefaultSettings *types.PolicySetting
+	// DefaultLastRefreshError holds the default value on creation for the "last_refresh_error" field.
+	DefaultLastRefreshError string
+	// DefaultLastRefreshErrorKind holds the default value on creation for the "last_refresh_error_kind" field.
+	DefaultLastRefreshErrorKind string
 )
 
 // Status defines the type for the "status" enum field.
@@ -253,6 +266,21 @@ func ByDirNameRule(opts ...sql.OrderTermOption) OrderOption {
 // ByFileNameRule orders the results by the file_name_rule field.
 func ByFileNameRule(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFileNameRule, opts...).ToFunc()
+}
+
+// ByLastRefreshAt orders the results by the last_refresh_at field.
+func ByLastRefreshAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshAt, opts...).ToFunc()
+}
+
+// ByLastRefreshError orders the results by the last_refresh_error field.
+func ByLastRefreshError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshError, opts...).ToFunc()
+}
+
+// ByLastRefreshErrorKind orders the results by the last_refresh_error_kind field.
+func ByLastRefreshErrorKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshErrorKind, opts...).ToFunc()
 }
 
 // ByNodeID orders the results by the node_id field.

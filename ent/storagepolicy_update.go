@@ -280,6 +280,66 @@ func (spu *StoragePolicyUpdate) ClearSettings() *StoragePolicyUpdate {
 	return spu
 }
 
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (spu *StoragePolicyUpdate) SetLastRefreshAt(t time.Time) *StoragePolicyUpdate {
+	spu.mutation.SetLastRefreshAt(t)
+	return spu
+}
+
+// SetNillableLastRefreshAt sets the "last_refresh_at" field if the given value is not nil.
+func (spu *StoragePolicyUpdate) SetNillableLastRefreshAt(t *time.Time) *StoragePolicyUpdate {
+	if t != nil {
+		spu.SetLastRefreshAt(*t)
+	}
+	return spu
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (spu *StoragePolicyUpdate) ClearLastRefreshAt() *StoragePolicyUpdate {
+	spu.mutation.ClearLastRefreshAt()
+	return spu
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (spu *StoragePolicyUpdate) SetLastRefreshError(s string) *StoragePolicyUpdate {
+	spu.mutation.SetLastRefreshError(s)
+	return spu
+}
+
+// SetNillableLastRefreshError sets the "last_refresh_error" field if the given value is not nil.
+func (spu *StoragePolicyUpdate) SetNillableLastRefreshError(s *string) *StoragePolicyUpdate {
+	if s != nil {
+		spu.SetLastRefreshError(*s)
+	}
+	return spu
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (spu *StoragePolicyUpdate) ClearLastRefreshError() *StoragePolicyUpdate {
+	spu.mutation.ClearLastRefreshError()
+	return spu
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (spu *StoragePolicyUpdate) SetLastRefreshErrorKind(s string) *StoragePolicyUpdate {
+	spu.mutation.SetLastRefreshErrorKind(s)
+	return spu
+}
+
+// SetNillableLastRefreshErrorKind sets the "last_refresh_error_kind" field if the given value is not nil.
+func (spu *StoragePolicyUpdate) SetNillableLastRefreshErrorKind(s *string) *StoragePolicyUpdate {
+	if s != nil {
+		spu.SetLastRefreshErrorKind(*s)
+	}
+	return spu
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (spu *StoragePolicyUpdate) ClearLastRefreshErrorKind() *StoragePolicyUpdate {
+	spu.mutation.ClearLastRefreshErrorKind()
+	return spu
+}
+
 // SetNodeID sets the "node_id" field.
 func (spu *StoragePolicyUpdate) SetNodeID(i int) *StoragePolicyUpdate {
 	spu.mutation.SetNodeID(i)
@@ -598,6 +658,24 @@ func (spu *StoragePolicyUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if spu.mutation.SettingsCleared() {
 		_spec.ClearField(storagepolicy.FieldSettings, field.TypeJSON)
+	}
+	if value, ok := spu.mutation.LastRefreshAt(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshAt, field.TypeTime, value)
+	}
+	if spu.mutation.LastRefreshAtCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshAt, field.TypeTime)
+	}
+	if value, ok := spu.mutation.LastRefreshError(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshError, field.TypeString, value)
+	}
+	if spu.mutation.LastRefreshErrorCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshError, field.TypeString)
+	}
+	if value, ok := spu.mutation.LastRefreshErrorKind(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshErrorKind, field.TypeString, value)
+	}
+	if spu.mutation.LastRefreshErrorKindCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshErrorKind, field.TypeString)
 	}
 	if spu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1075,6 +1153,66 @@ func (spuo *StoragePolicyUpdateOne) ClearSettings() *StoragePolicyUpdateOne {
 	return spuo
 }
 
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (spuo *StoragePolicyUpdateOne) SetLastRefreshAt(t time.Time) *StoragePolicyUpdateOne {
+	spuo.mutation.SetLastRefreshAt(t)
+	return spuo
+}
+
+// SetNillableLastRefreshAt sets the "last_refresh_at" field if the given value is not nil.
+func (spuo *StoragePolicyUpdateOne) SetNillableLastRefreshAt(t *time.Time) *StoragePolicyUpdateOne {
+	if t != nil {
+		spuo.SetLastRefreshAt(*t)
+	}
+	return spuo
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (spuo *StoragePolicyUpdateOne) ClearLastRefreshAt() *StoragePolicyUpdateOne {
+	spuo.mutation.ClearLastRefreshAt()
+	return spuo
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (spuo *StoragePolicyUpdateOne) SetLastRefreshError(s string) *StoragePolicyUpdateOne {
+	spuo.mutation.SetLastRefreshError(s)
+	return spuo
+}
+
+// SetNillableLastRefreshError sets the "last_refresh_error" field if the given value is not nil.
+func (spuo *StoragePolicyUpdateOne) SetNillableLastRefreshError(s *string) *StoragePolicyUpdateOne {
+	if s != nil {
+		spuo.SetLastRefreshError(*s)
+	}
+	return spuo
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (spuo *StoragePolicyUpdateOne) ClearLastRefreshError() *StoragePolicyUpdateOne {
+	spuo.mutation.ClearLastRefreshError()
+	return spuo
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (spuo *StoragePolicyUpdateOne) SetLastRefreshErrorKind(s string) *StoragePolicyUpdateOne {
+	spuo.mutation.SetLastRefreshErrorKind(s)
+	return spuo
+}
+
+// SetNillableLastRefreshErrorKind sets the "last_refresh_error_kind" field if the given value is not nil.
+func (spuo *StoragePolicyUpdateOne) SetNillableLastRefreshErrorKind(s *string) *StoragePolicyUpdateOne {
+	if s != nil {
+		spuo.SetLastRefreshErrorKind(*s)
+	}
+	return spuo
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (spuo *StoragePolicyUpdateOne) ClearLastRefreshErrorKind() *StoragePolicyUpdateOne {
+	spuo.mutation.ClearLastRefreshErrorKind()
+	return spuo
+}
+
 // SetNodeID sets the "node_id" field.
 func (spuo *StoragePolicyUpdateOne) SetNodeID(i int) *StoragePolicyUpdateOne {
 	spuo.mutation.SetNodeID(i)
@@ -1423,6 +1561,24 @@ func (spuo *StoragePolicyUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	}
 	if spuo.mutation.SettingsCleared() {
 		_spec.ClearField(storagepolicy.FieldSettings, field.TypeJSON)
+	}
+	if value, ok := spuo.mutation.LastRefreshAt(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshAt, field.TypeTime, value)
+	}
+	if spuo.mutation.LastRefreshAtCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshAt, field.TypeTime)
+	}
+	if value, ok := spuo.mutation.LastRefreshError(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshError, field.TypeString, value)
+	}
+	if spuo.mutation.LastRefreshErrorCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshError, field.TypeString)
+	}
+	if value, ok := spuo.mutation.LastRefreshErrorKind(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshErrorKind, field.TypeString, value)
+	}
+	if spuo.mutation.LastRefreshErrorKindCleared() {
+		_spec.ClearField(storagepolicy.FieldLastRefreshErrorKind, field.TypeString)
 	}
 	if spuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{

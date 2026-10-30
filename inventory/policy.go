@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
@@ -49,6 +50,13 @@ type (
 		GetPolicyByID(ctx context.Context, id int) (*ent.StoragePolicy, error)
 		// UpdateAccessKey updates the access key of the storage policy. It also clear related cache in KV.
 		UpdateAccessKey(ctx context.Context, policy *ent.StoragePolicy, token string) error
+		// ReportRefreshError records that an automatic credential renewal failed,
+		// so the administrator dashboard can surface it. An empty kind marks the
+		// policy as healthy again and clears the notice.
+		ReportRefreshError(ctx context.Context, policyID int, kind, message string) error
+		// ListRefreshNotices returns the policies whose credential renewal is
+		// currently failing, newest first. \"\" is returned when all is well.
+		ListRefreshNotices(ctx context.Context, policyType string) ([]*ent.StoragePolicy, error)
 		// ListPolicyByType returns the storage policies by type.
 		ListPolicyByType(ctx context.Context, t types.PolicyType) ([]*ent.StoragePolicy, error)
 		// ListPolicies returns the storage policies with pagination.
@@ -304,7 +312,14 @@ func (c *storagePolicyClient) ListPolicyByType(ctx context.Context, t types.Poli
 }
 
 func (c *storagePolicyClient) UpdateAccessKey(ctx context.Context, policy *ent.StoragePolicy, token string) error {
-	_, err := c.client.StoragePolicy.UpdateOne(policy).SetAccessKey(token).Save(ctx)
+	// A successful renewal is also the moment the policy becomes healthy again,
+	// so the administrator's notice disappears on its own.
+	_, err := c.client.StoragePolicy.UpdateOne(policy).
+		SetAccessKey(token).
+		SetLastRefreshAt(time.Now()).
+		SetLastRefreshError("").
+		SetLastRefreshErrorKind("").
+		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("faield to update access key in DB: %w", err)
 	}
@@ -315,6 +330,45 @@ func (c *storagePolicyClient) UpdateAccessKey(ctx context.Context, policy *ent.S
 	}
 
 	return nil
+}
+
+// ReportRefreshError stores why the last automatic renewal of this policy's
+// credential failed. An empty kind clears the notice. The policy cache is
+// dropped either way so the dashboard and the edit page never read a stale
+// value back.
+func (c *storagePolicyClient) ReportRefreshError(ctx context.Context, policyID int, kind, message string) error {
+	upd := c.client.StoragePolicy.UpdateOneID(policyID)
+	if kind == "" {
+		upd = upd.SetLastRefreshError("").SetLastRefreshErrorKind("")
+	} else {
+		upd = upd.SetLastRefreshError(message).SetLastRefreshErrorKind(kind)
+	}
+
+	if _, err := upd.Save(ctx); err != nil {
+		return fmt.Errorf("failed to record the credential renewal status: %w", err)
+	}
+
+	if c.cache == nil {
+		return nil
+	}
+
+	return c.cache.Delete(StoragePolicyCacheKey, strconv.Itoa(policyID))
+}
+
+// ListRefreshNotices returns the policies whose credential renewal is failing.
+func (c *storagePolicyClient) ListRefreshNotices(ctx context.Context, policyType string) ([]*ent.StoragePolicy, error) {
+	query := c.client.StoragePolicy.Query().
+		Where(storagepolicy.LastRefreshErrorKindNEQ(""))
+	if policyType != "" {
+		query = query.Where(storagepolicy.TypeEQ(policyType))
+	}
+
+	policies, err := query.Order(ent.Desc(storagepolicy.FieldLastRefreshAt)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list policies with a renewal error: %w", err)
+	}
+
+	return policies, nil
 }
 
 func (c *storagePolicyClient) ListPolicies(ctx context.Context, args *ListPolicyParameters) (*ListPolicyResult, error) {

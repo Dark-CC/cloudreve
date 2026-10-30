@@ -38,6 +38,40 @@ export const sizeToString = (bytes: number) => {
   return (bytes / Math.pow(k, i)).toFixed(1) + " " + sizes[i];
 };
 
+// CapacityUnits are the units a size may be entered in. The multiplier follows
+// sizeToString (1024-based), so a value typed here round-trips through the byte
+// count that is stored and displayed elsewhere.
+export type CapacityUnit = "GB" | "TB";
+
+export const capacityUnitMultiplier: Record<CapacityUnit, number> = {
+  GB: 1024 ** 3,
+  TB: 1024 ** 4,
+};
+
+// capacityToBytes converts an amount typed in the given unit into the byte
+// count the API stores. Non-numeric or negative input yields 0.
+export const capacityToBytes = (amount: number, unit: CapacityUnit): number => {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+
+  return Math.round(amount * capacityUnitMultiplier[unit]);
+};
+
+// bytesToCapacity picks the largest unit that keeps the value at or above 1, so
+// an existing pack opens showing "1 TB" rather than "1024 GB".
+export const bytesToCapacity = (bytes: number): { amount: number; unit: CapacityUnit } => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return { amount: 0, unit: "GB" };
+  }
+
+  if (bytes >= capacityUnitMultiplier.TB) {
+    return { amount: bytes / capacityUnitMultiplier.TB, unit: "TB" };
+  }
+
+  return { amount: bytes / capacityUnitMultiplier.GB, unit: "GB" };
+};
+
 export type MutableRefList<T> = Array<RefCallback<T> | MutableRefObject<T> | undefined | null>;
 
 export function mergeRefs<T>(...refs: MutableRefList<T>): RefCallback<T> {

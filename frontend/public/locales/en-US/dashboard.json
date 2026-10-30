@@ -127,7 +127,12 @@
     "aboutFork": "Community fork",
     "aboutForkDes": "This instance runs a community-maintained fork of Cloudreve focused on the Windows desktop client and Explorer integration. Found a bug or have an idea? Reports and contributions of any kind are welcome.",
     "reportIssue": "Report an issue",
-    "roadmap": "Roadmap"
+    "roadmap": "Roadmap",
+    "credentialNoticeTitle": "Storage policy credentials need attention",
+    "credentialRefreshFailed": "The 139 Drive credential of \"{{name}}\" could not be renewed. Please update it manually.",
+    "credentialPersistFailed": "The 139 Drive credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
+    "credentialExpired": "The 139 Drive credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
+    "goToPolicy": "Fix it"
   },
   "queue": {
     "queueName_io_intense": "IO Intensive",
@@ -1913,7 +1918,7 @@
     "name": "Name",
     "price": "Price",
     "duration": "Duration",
-    "size": "Size",
+    "size": "Capacity",
     "actions": "Actions",
     "orCredits": " Or {{num}} credits",
     "highlight": "Highlight",
@@ -1933,14 +1938,14 @@
     "editTrafficPack": "Edit traffic pack",
     "addStreamTrafficPack": "Add stream traffic pack",
     "editStreamTrafficPack": "Edit stream traffic pack",
-    "trafficSize": "Traffic amount (bytes)",
-    "trafficSizeDes": "Bytes of direct-link traffic granted on purchase; packs are permanent.",
+    "trafficSize": "Traffic size",
+    "trafficSizeDes": "Direct-link traffic granted on purchase, with its unit (GB/TB, 1024-based); packs are permanent.",
     "productNameDes": "Product display name",
-    "packSizeDes": "Size of storage pack",
+    "packSizeDes": "Capacity with its unit (GB/TB, 1024-based).",
     "durationDay": "Duration (day)",
     "durationDayDes": "Valid duration of each storage pack.",
     "priceYuan": "Price (Yuan)",
-    "packPriceDes": "Price of storage pack.",
+    "packPriceDes": "Cash price in yuan, minimum 0.01.",
     "priceCredits": "Price (Credits)",
     "priceCreditsDes": "The price when using credits to buy, fill in 0 means you can't use credits to buy.",
     "editMembership": "Edit membership",
@@ -1995,7 +2000,8 @@
     "appForum": "User forum URL",
     "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid.",
     "subAddressChars": "Sub-address characters",
-    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>."
+    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>.",
+    "capacityUnit": "Unit"
   },
   "pro": {
     "title": "Pro edition exclusive features",

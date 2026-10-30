@@ -213,6 +213,48 @@ func (spc *StoragePolicyCreate) SetSettings(ts *types.PolicySetting) *StoragePol
 	return spc
 }
 
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (spc *StoragePolicyCreate) SetLastRefreshAt(t time.Time) *StoragePolicyCreate {
+	spc.mutation.SetLastRefreshAt(t)
+	return spc
+}
+
+// SetNillableLastRefreshAt sets the "last_refresh_at" field if the given value is not nil.
+func (spc *StoragePolicyCreate) SetNillableLastRefreshAt(t *time.Time) *StoragePolicyCreate {
+	if t != nil {
+		spc.SetLastRefreshAt(*t)
+	}
+	return spc
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (spc *StoragePolicyCreate) SetLastRefreshError(s string) *StoragePolicyCreate {
+	spc.mutation.SetLastRefreshError(s)
+	return spc
+}
+
+// SetNillableLastRefreshError sets the "last_refresh_error" field if the given value is not nil.
+func (spc *StoragePolicyCreate) SetNillableLastRefreshError(s *string) *StoragePolicyCreate {
+	if s != nil {
+		spc.SetLastRefreshError(*s)
+	}
+	return spc
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (spc *StoragePolicyCreate) SetLastRefreshErrorKind(s string) *StoragePolicyCreate {
+	spc.mutation.SetLastRefreshErrorKind(s)
+	return spc
+}
+
+// SetNillableLastRefreshErrorKind sets the "last_refresh_error_kind" field if the given value is not nil.
+func (spc *StoragePolicyCreate) SetNillableLastRefreshErrorKind(s *string) *StoragePolicyCreate {
+	if s != nil {
+		spc.SetLastRefreshErrorKind(*s)
+	}
+	return spc
+}
+
 // SetNodeID sets the "node_id" field.
 func (spc *StoragePolicyCreate) SetNodeID(i int) *StoragePolicyCreate {
 	spc.mutation.SetNodeID(i)
@@ -351,6 +393,14 @@ func (spc *StoragePolicyCreate) defaults() error {
 		v := storagepolicy.DefaultSettings
 		spc.mutation.SetSettings(v)
 	}
+	if _, ok := spc.mutation.LastRefreshError(); !ok {
+		v := storagepolicy.DefaultLastRefreshError
+		spc.mutation.SetLastRefreshError(v)
+	}
+	if _, ok := spc.mutation.LastRefreshErrorKind(); !ok {
+		v := storagepolicy.DefaultLastRefreshErrorKind
+		spc.mutation.SetLastRefreshErrorKind(v)
+	}
 	return nil
 }
 
@@ -469,6 +519,18 @@ func (spc *StoragePolicyCreate) createSpec() (*StoragePolicy, *sqlgraph.CreateSp
 	if value, ok := spc.mutation.Settings(); ok {
 		_spec.SetField(storagepolicy.FieldSettings, field.TypeJSON, value)
 		_node.Settings = value
+	}
+	if value, ok := spc.mutation.LastRefreshAt(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshAt, field.TypeTime, value)
+		_node.LastRefreshAt = &value
+	}
+	if value, ok := spc.mutation.LastRefreshError(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshError, field.TypeString, value)
+		_node.LastRefreshError = value
+	}
+	if value, ok := spc.mutation.LastRefreshErrorKind(); ok {
+		_spec.SetField(storagepolicy.FieldLastRefreshErrorKind, field.TypeString, value)
+		_node.LastRefreshErrorKind = value
 	}
 	if nodes := spc.mutation.GroupsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -837,6 +899,60 @@ func (u *StoragePolicyUpsert) ClearSettings() *StoragePolicyUpsert {
 	return u
 }
 
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (u *StoragePolicyUpsert) SetLastRefreshAt(v time.Time) *StoragePolicyUpsert {
+	u.Set(storagepolicy.FieldLastRefreshAt, v)
+	return u
+}
+
+// UpdateLastRefreshAt sets the "last_refresh_at" field to the value that was provided on create.
+func (u *StoragePolicyUpsert) UpdateLastRefreshAt() *StoragePolicyUpsert {
+	u.SetExcluded(storagepolicy.FieldLastRefreshAt)
+	return u
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (u *StoragePolicyUpsert) ClearLastRefreshAt() *StoragePolicyUpsert {
+	u.SetNull(storagepolicy.FieldLastRefreshAt)
+	return u
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (u *StoragePolicyUpsert) SetLastRefreshError(v string) *StoragePolicyUpsert {
+	u.Set(storagepolicy.FieldLastRefreshError, v)
+	return u
+}
+
+// UpdateLastRefreshError sets the "last_refresh_error" field to the value that was provided on create.
+func (u *StoragePolicyUpsert) UpdateLastRefreshError() *StoragePolicyUpsert {
+	u.SetExcluded(storagepolicy.FieldLastRefreshError)
+	return u
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (u *StoragePolicyUpsert) ClearLastRefreshError() *StoragePolicyUpsert {
+	u.SetNull(storagepolicy.FieldLastRefreshError)
+	return u
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsert) SetLastRefreshErrorKind(v string) *StoragePolicyUpsert {
+	u.Set(storagepolicy.FieldLastRefreshErrorKind, v)
+	return u
+}
+
+// UpdateLastRefreshErrorKind sets the "last_refresh_error_kind" field to the value that was provided on create.
+func (u *StoragePolicyUpsert) UpdateLastRefreshErrorKind() *StoragePolicyUpsert {
+	u.SetExcluded(storagepolicy.FieldLastRefreshErrorKind)
+	return u
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsert) ClearLastRefreshErrorKind() *StoragePolicyUpsert {
+	u.SetNull(storagepolicy.FieldLastRefreshErrorKind)
+	return u
+}
+
 // SetNodeID sets the "node_id" field.
 func (u *StoragePolicyUpsert) SetNodeID(v int) *StoragePolicyUpsert {
 	u.Set(storagepolicy.FieldNodeID, v)
@@ -1170,6 +1286,69 @@ func (u *StoragePolicyUpsertOne) UpdateSettings() *StoragePolicyUpsertOne {
 func (u *StoragePolicyUpsertOne) ClearSettings() *StoragePolicyUpsertOne {
 	return u.Update(func(s *StoragePolicyUpsert) {
 		s.ClearSettings()
+	})
+}
+
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (u *StoragePolicyUpsertOne) SetLastRefreshAt(v time.Time) *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshAt(v)
+	})
+}
+
+// UpdateLastRefreshAt sets the "last_refresh_at" field to the value that was provided on create.
+func (u *StoragePolicyUpsertOne) UpdateLastRefreshAt() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshAt()
+	})
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (u *StoragePolicyUpsertOne) ClearLastRefreshAt() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshAt()
+	})
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (u *StoragePolicyUpsertOne) SetLastRefreshError(v string) *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshError(v)
+	})
+}
+
+// UpdateLastRefreshError sets the "last_refresh_error" field to the value that was provided on create.
+func (u *StoragePolicyUpsertOne) UpdateLastRefreshError() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshError()
+	})
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (u *StoragePolicyUpsertOne) ClearLastRefreshError() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshError()
+	})
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsertOne) SetLastRefreshErrorKind(v string) *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshErrorKind(v)
+	})
+}
+
+// UpdateLastRefreshErrorKind sets the "last_refresh_error_kind" field to the value that was provided on create.
+func (u *StoragePolicyUpsertOne) UpdateLastRefreshErrorKind() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshErrorKind()
+	})
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsertOne) ClearLastRefreshErrorKind() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshErrorKind()
 	})
 }
 
@@ -1680,6 +1859,69 @@ func (u *StoragePolicyUpsertBulk) UpdateSettings() *StoragePolicyUpsertBulk {
 func (u *StoragePolicyUpsertBulk) ClearSettings() *StoragePolicyUpsertBulk {
 	return u.Update(func(s *StoragePolicyUpsert) {
 		s.ClearSettings()
+	})
+}
+
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (u *StoragePolicyUpsertBulk) SetLastRefreshAt(v time.Time) *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshAt(v)
+	})
+}
+
+// UpdateLastRefreshAt sets the "last_refresh_at" field to the value that was provided on create.
+func (u *StoragePolicyUpsertBulk) UpdateLastRefreshAt() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshAt()
+	})
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (u *StoragePolicyUpsertBulk) ClearLastRefreshAt() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshAt()
+	})
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (u *StoragePolicyUpsertBulk) SetLastRefreshError(v string) *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshError(v)
+	})
+}
+
+// UpdateLastRefreshError sets the "last_refresh_error" field to the value that was provided on create.
+func (u *StoragePolicyUpsertBulk) UpdateLastRefreshError() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshError()
+	})
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (u *StoragePolicyUpsertBulk) ClearLastRefreshError() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshError()
+	})
+}
+
+// SetLastRefreshErrorKind sets the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsertBulk) SetLastRefreshErrorKind(v string) *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetLastRefreshErrorKind(v)
+	})
+}
+
+// UpdateLastRefreshErrorKind sets the "last_refresh_error_kind" field to the value that was provided on create.
+func (u *StoragePolicyUpsertBulk) UpdateLastRefreshErrorKind() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateLastRefreshErrorKind()
+	})
+}
+
+// ClearLastRefreshErrorKind clears the value of the "last_refresh_error_kind" field.
+func (u *StoragePolicyUpsertBulk) ClearLastRefreshErrorKind() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.ClearLastRefreshErrorKind()
 	})
 }
 

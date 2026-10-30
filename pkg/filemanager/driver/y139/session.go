@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -46,14 +47,33 @@ func (c *client) personalCloudHost(ctx context.Context) (string, error) {
 	c.mu.Unlock()
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if c.resolved {
-		return c.personalHost, nil
+		host := c.personalHost
+		c.mu.Unlock()
+		return host, nil
 	}
 
+	// Renew while locked, but hand the result to the policy store only after
+	// releasing c.mu: the persisting callback goes through the policy client,
+	// which may rebuild this driver and re-enter the very same lock.
+	before := c.authorization
 	if err := c.refreshTokenLocked(ctx); err != nil {
+		reporter := c.reportRefreshError
+		c.mu.Unlock()
+		if reporter != nil {
+			kind, msg := classifyRefreshError(err)
+			c.report(ctx, kind, msg)
+		}
 		return "", err
+	}
+
+	// The value handed to the store keeps the shape the administrator pasted,
+	// while the comparison above stays on the raw payload.
+	auth := c.authorizationHeader()
+	save := c.persistToken
+	rotated := c.authorization != before
+	if rotated {
+		c.refreshNotBefore = time.Now().Add(refreshCooldown)
 	}
 
 	host, err := c.queryRoutePolicyLocked(ctx)
@@ -64,16 +84,34 @@ func (c *client) personalCloudHost(ctx context.Context) (string, error) {
 			c.l.Warning("Failed to query the 139 route policy, keeping the configured host %q: %s",
 				c.personalHost, err)
 			c.resolved = true
-			return c.personalHost, nil
+			resolvedHost := c.personalHost
+			c.mu.Unlock()
+			if rotated {
+				c.persist(ctx, save, auth)
+			}
+			return resolvedHost, nil
+		}
+		c.mu.Unlock()
+		if rotated {
+			c.persist(ctx, save, auth)
 		}
 		return "", err
 	}
 
 	c.personalHost = strings.TrimSuffix(host, "/")
 	c.resolved = true
-	c.l.Debug("139 personal drive host resolved to %q.", c.personalHost)
+	resolvedHost := c.personalHost
+	c.mu.Unlock()
 
-	return c.personalHost, nil
+	// A renewed credential is written back before this request returns, so the
+	// value that made it into the policy is the one this process is using.
+	if rotated {
+		c.persist(ctx, save, auth)
+	}
+
+	c.l.Debug("139 personal drive host resolved to %q.", resolvedHost)
+
+	return resolvedHost, nil
 }
 
 // routePolicyRequest asks the drive which host serves the personal cloud.
@@ -131,22 +169,81 @@ type refreshTokenResponse struct {
 // callback touches the policy store which may re-enter this client.
 func (c *client) refreshToken(ctx context.Context) error {
 	save, auth, rotated, err := c.refreshAndCollect(ctx)
-	if err == nil && rotated && save != nil {
-		if saveErr := save(ctx, auth); saveErr != nil {
-			c.l.Warning("Refreshed the 139 login token but failed to save it back to the policy: %s", saveErr)
-		}
+	if err != nil {
+		return err
 	}
-	return err
+
+	if rotated {
+		c.persist(ctx, save, auth)
+	}
+
+	return nil
+}
+
+// persist hands the renewed credential to the policy store. A failure is
+// logged and swallowed on purpose: the drive is still usable with the token in
+// memory until the process restarts, and a bookkeeping error must not fail the
+// user's request. The failure is still reported so the administrator can act
+// before a restart throws the renewed token away.
+func (c *client) persist(ctx context.Context, save func(context.Context, string) error, auth string) {
+	if save == nil {
+		return
+	}
+
+	if err := save(ctx, auth); err != nil {
+		c.l.Warning("Refreshed the 139 login token but failed to save it back to the policy: %s", err)
+		c.report(ctx, RefreshErrorKindPersistFailed, fmt.Sprintf(
+			"the renewed credential could not be saved: %s", err))
+	}
+}
+
+// report tells the policy store about a renewal problem. Failures of the report
+// itself are only logged: surfacing an error must never break the request it is
+// describing.
+func (c *client) report(ctx context.Context, kind, message string) {
+	if c.reportRefreshError == nil {
+		return
+	}
+
+	if err := c.reportRefreshError(ctx, kind, message); err != nil {
+		c.l.Warning("Failed to record the 139 credential renewal status: %s", err)
+	}
+}
+
+// classifyRefreshError maps a renewal error to the kind shown to the
+// administrator.
+func classifyRefreshError(err error) (string, string) {
+	if err == nil {
+		return "", ""
+	}
+
+	if errors.Is(err, ErrAuthExpired) {
+		return RefreshErrorKindExpired, "the login token expired and could not be renewed, paste a fresh Authorization header"
+	}
+
+	return RefreshErrorKindRefreshFailed, fmt.Sprintf("renewing the login token failed: %s", err)
 }
 
 // refreshAndCollect runs the refresh under the lock and reports what happened.
+// The throttle (refreshNotBefore) keeps concurrent requests that cross the
+// renewal window together from each calling the endpoint and overwriting one
+// another's result; only the caller that actually rotated the token is told to
+// persist it.
 func (c *client) refreshAndCollect(ctx context.Context) (func(context.Context, string) error, string, bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	before := c.authorization
-	err := c.refreshTokenLocked(ctx)
-	return c.persistToken, c.authorization, c.authorization != before, err
+	if err := c.refreshTokenLocked(ctx); err != nil {
+		return c.persistToken, c.authorization, false, err
+	}
+
+	rotated := c.authorization != before
+	if rotated {
+		c.refreshNotBefore = time.Now().Add(refreshCooldown)
+	}
+
+	return c.persistToken, c.authorizationHeader(), rotated, nil
 }
 
 // refreshTokenLocked implements the refresh; the caller must hold c.mu.
@@ -181,6 +278,13 @@ func (c *client) refreshTokenLocked(ctx context.Context) error {
 
 	remain := time.Until(time.UnixMilli(expiryMs))
 	if remain > refreshMargin {
+		return nil
+	}
+
+	// Another request already renewed the token a moment ago. The drive issues
+	// tokens valid for about a month, so skipping a refresh inside the cooldown
+	// is always safe and avoids a burst of competing refresh calls.
+	if !c.refreshNotBefore.IsZero() && time.Now().Before(c.refreshNotBefore) {
 		return nil
 	}
 

@@ -25,7 +25,12 @@ import { useTranslation } from "react-i18next";
 import { adminDeleteSku, adminListSkus, adminUpsertSku, getGroupList } from "../../../../api/api.ts";
 import { GroupEnt, Sku } from "../../../../api/dashboard.ts";
 import { useAppDispatch } from "../../../../redux/hooks.ts";
-import { sizeToString } from "../../../../util/index.ts";
+import {
+  bytesToCapacity,
+  CapacityUnit,
+  capacityToBytes,
+  sizeToString,
+} from "../../../../util/index.ts";
 import {
   DenseFilledTextField,
   NoWrapCell,
@@ -48,8 +53,11 @@ export interface SkuTableProps {
 interface SkuForm {
   id: number;
   name: string;
+  // Capacity is edited in a unit the operator picks; it is stored as bytes.
   amount: number;
+  amountUnit: CapacityUnit;
   durationDays: number;
+  // Price is edited in yuan; it is stored in the smallest currency unit.
   price: number;
   allowPoints: boolean;
   points: number;
@@ -64,6 +72,7 @@ const emptyForm = (type: string): SkuForm => ({
   id: 0,
   name: "",
   amount: 0,
+  amountUnit: "GB",
   durationDays: type === "group" ? 30 : type === "storage" ? 365 : 0,
   price: 0,
   allowPoints: false,
@@ -104,12 +113,15 @@ const SkuTable = ({ type }: SkuTableProps) => {
       setForm(emptyForm(type));
       return;
     }
+    const capacity = bytesToCapacity(type === "group" ? 0 : s.amount);
     setForm({
       id: s.id,
       name: s.name,
-      amount: s.amount,
+      amount: type === "group" ? s.amount : capacity.amount,
+      amountUnit: capacity.unit,
       durationDays: Math.round((s.duration ?? 0) / DAY_SECONDS),
-      price: s.price ?? 0,
+      // Price is stored in the smallest currency unit; the form works in yuan.
+      price: (s.price ?? 0) / 100,
       allowPoints: s.points != null,
       points: s.points ?? 0,
       label: s.label ?? "",
@@ -130,10 +142,11 @@ const SkuTable = ({ type }: SkuTableProps) => {
         id: form.id,
         name: form.name,
         type,
-        amount: form.amount,
+        amount: type === "group" ? form.amount : capacityToBytes(form.amount, form.amountUnit),
         // Traffic packs are permanent; duration is not applicable.
         duration: isTraffic ? 0 : Math.max(0, form.durationDays) * DAY_SECONDS,
-        price: Math.max(0, form.price),
+        // Round to the smallest currency unit so 0.01 yuan is stored as 1 fen.
+        price: Math.max(0, Math.round(form.price * 100)),
         points: form.allowPoints ? Math.max(1, form.points) : undefined,
         label: form.label || undefined,
         des: form.des || undefined,
@@ -276,12 +289,26 @@ const SkuTable = ({ type }: SkuTableProps) => {
                 </SettingForm>
               ) : (
                 <SettingForm title={isTraffic ? t("vas.trafficSize") : t("vas.size")}>
-                  <DenseFilledTextField
-                    fullWidth
-                    type="number"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
-                  />
+                  <Stack direction="row" spacing={1}>
+                    <DenseFilledTextField
+                      fullWidth
+                      type="number"
+                      value={form.amount}
+                      slotProps={{ htmlInput: { min: 0, step: "any" } }}
+                      onChange={(e) => setForm({ ...form, amount: Number(e.target.value) || 0 })}
+                    />
+                    <FormControl size="small" sx={{ minWidth: 96 }}>
+                      <InputLabel>{t("vas.capacityUnit")}</InputLabel>
+                      <Select
+                        value={form.amountUnit}
+                        label={t("vas.capacityUnit")}
+                        onChange={(e) => setForm({ ...form, amountUnit: e.target.value as CapacityUnit })}
+                      >
+                        <MenuItem value="GB">GB</MenuItem>
+                        <MenuItem value="TB">TB</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Stack>
                   <NoMarginHelperText>{isTraffic ? t("vas.trafficSizeDes") : t("vas.packSizeDes")}</NoMarginHelperText>
                 </SettingForm>
               )}
@@ -305,7 +332,8 @@ const SkuTable = ({ type }: SkuTableProps) => {
                   fullWidth
                   type="number"
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: parseInt(e.target.value) || 0 })}
+                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) || 0 })}
                 />
                 <NoMarginHelperText>{t("vas.packPriceDes")}</NoMarginHelperText>
               </SettingForm>

@@ -50,6 +50,12 @@ type StoragePolicy struct {
 	FileNameRule string `json:"file_name_rule,omitempty"`
 	// Settings holds the value of the "settings" field.
 	Settings *types.PolicySetting `json:"settings,omitempty"`
+	// LastRefreshAt holds the value of the "last_refresh_at" field.
+	LastRefreshAt *time.Time `json:"last_refresh_at,omitempty"`
+	// LastRefreshError holds the value of the "last_refresh_error" field.
+	LastRefreshError string `json:"last_refresh_error,omitempty"`
+	// LastRefreshErrorKind holds the value of the "last_refresh_error_kind" field.
+	LastRefreshErrorKind string `json:"last_refresh_error_kind,omitempty"`
 	// NodeID holds the value of the "node_id" field.
 	NodeID int `json:"node_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -135,9 +141,9 @@ func (*StoragePolicy) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case storagepolicy.FieldID, storagepolicy.FieldMaxSize, storagepolicy.FieldNodeID:
 			values[i] = new(sql.NullInt64)
-		case storagepolicy.FieldName, storagepolicy.FieldType, storagepolicy.FieldStatus, storagepolicy.FieldServer, storagepolicy.FieldBucketName, storagepolicy.FieldAccessKey, storagepolicy.FieldSecretKey, storagepolicy.FieldDirNameRule, storagepolicy.FieldFileNameRule:
+		case storagepolicy.FieldName, storagepolicy.FieldType, storagepolicy.FieldStatus, storagepolicy.FieldServer, storagepolicy.FieldBucketName, storagepolicy.FieldAccessKey, storagepolicy.FieldSecretKey, storagepolicy.FieldDirNameRule, storagepolicy.FieldFileNameRule, storagepolicy.FieldLastRefreshError, storagepolicy.FieldLastRefreshErrorKind:
 			values[i] = new(sql.NullString)
-		case storagepolicy.FieldCreatedAt, storagepolicy.FieldUpdatedAt, storagepolicy.FieldDeletedAt:
+		case storagepolicy.FieldCreatedAt, storagepolicy.FieldUpdatedAt, storagepolicy.FieldDeletedAt, storagepolicy.FieldLastRefreshAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -253,6 +259,25 @@ func (sp *StoragePolicy) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field settings: %w", err)
 				}
 			}
+		case storagepolicy.FieldLastRefreshAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_refresh_at", values[i])
+			} else if value.Valid {
+				sp.LastRefreshAt = new(time.Time)
+				*sp.LastRefreshAt = value.Time
+			}
+		case storagepolicy.FieldLastRefreshError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_refresh_error", values[i])
+			} else if value.Valid {
+				sp.LastRefreshError = value.String
+			}
+		case storagepolicy.FieldLastRefreshErrorKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_refresh_error_kind", values[i])
+			} else if value.Valid {
+				sp.LastRefreshErrorKind = value.String
+			}
 		case storagepolicy.FieldNodeID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field node_id", values[i])
@@ -366,6 +391,17 @@ func (sp *StoragePolicy) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("settings=")
 	builder.WriteString(fmt.Sprintf("%v", sp.Settings))
+	builder.WriteString(", ")
+	if v := sp.LastRefreshAt; v != nil {
+		builder.WriteString("last_refresh_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("last_refresh_error=")
+	builder.WriteString(sp.LastRefreshError)
+	builder.WriteString(", ")
+	builder.WriteString("last_refresh_error_kind=")
+	builder.WriteString(sp.LastRefreshErrorKind)
 	builder.WriteString(", ")
 	builder.WriteString("node_id=")
 	builder.WriteString(fmt.Sprintf("%v", sp.NodeID))

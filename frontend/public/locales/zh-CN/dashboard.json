@@ -127,7 +127,12 @@
     "aboutFork": "社区分支",
     "aboutForkDes": "本站点运行的是 Cloudreve 的社区维护分支，专注于 Windows 桌面客户端与资源管理器集成。发现 Bug 或有好的想法？欢迎提交反馈或任何形式的贡献。",
     "reportIssue": "报告问题",
-    "roadmap": "路线图"
+    "roadmap": "路线图",
+    "credentialNoticeTitle": "存储策略凭证需要处理",
+    "credentialRefreshFailed": "「{{name}}」的移动云盘凭证续期失败，请手动更新凭证。",
+    "credentialPersistFailed": "「{{name}}」的移动云盘凭证已续期但未能保存，重启后会回退，请检查数据库。",
+    "credentialExpired": "「{{name}}」的移动云盘凭证已过期，续期失败，请手动更新凭证。",
+    "goToPolicy": "去处理"
   },
   "queue": {
     "queueName_io_intense": "IO 密集型",
@@ -1913,7 +1918,7 @@
     "name": "名称",
     "price": "单价",
     "duration": "时长",
-    "size": "大小",
+    "size": "容量大小",
     "actions": "操作",
     "orCredits": " 或 {{num}} 积分",
     "highlight": "突出展示",
@@ -1933,14 +1938,14 @@
     "editTrafficPack": "编辑流量包",
     "addStreamTrafficPack": "添加流媒体流量包",
     "editStreamTrafficPack": "编辑流媒体流量包",
-    "trafficSize": "流量大小（字节）",
-    "trafficSizeDes": "购买后增加的直链流量字节数；流量包永久有效。",
+    "trafficSize": "流量大小",
+    "trafficSizeDes": "购买后增加的直链流量，选择数值与单位（GB/TB，按 1024 进制换算）；流量包永久有效。",
     "productNameDes": "商品展示名称。",
-    "packSizeDes": "容量包的大小。",
+    "packSizeDes": "选择容量大小与单位（GB/TB，按 1024 进制换算）。",
     "durationDay": "有效期 (天)",
     "durationDayDes": "每个容量包的有效期。",
     "priceYuan": "单价 (元)",
-    "packPriceDes": "容量包的单价。",
+    "packPriceDes": "现金单价，单位元，最小 0.01。",
     "priceCredits": "单价 (积分)",
     "priceCreditsDes": "使用积分购买时的价格，填写为 0 表示不能使用积分购买。",
     "editMembership": "编辑可购用户组",
@@ -1995,7 +2000,8 @@
     "appForum": "用户论坛 URL",
     "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。",
     "subAddressChars": "子地址字符",
-    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。"
+    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。",
+    "capacityUnit": "容量单位"
   },
   "pro": {
     "title": "Pro 版本专属功能",

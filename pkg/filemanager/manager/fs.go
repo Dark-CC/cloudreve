@@ -105,6 +105,14 @@ func (m *manager) GetStorageDriver(ctx context.Context, policy *ent.StoragePolic
 			return m.policyClient.UpdateAccessKey(ctx, policy, authorization)
 		})
 
+		// A failed renewal is not silent: it lands on the policy itself so the
+		// administrator dashboard can show it. Only this policy's row is touched,
+		// so several 139 drives renew independently.
+		policyID := policy.ID
+		y139.SetRefreshErrorReporter(d, func(ctx context.Context, kind, message string) error {
+			return m.policyClient.ReportRefreshError(ctx, policyID, kind, message)
+		})
+
 		return d, nil
 	default:
 		return nil, ErrUnknownPolicyType

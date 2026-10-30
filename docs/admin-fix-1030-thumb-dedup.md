@@ -189,79 +189,164 @@ PUT /api/v4/file/source  {"uris":["cloudreve://my/存储策略演示"]}
 
 ---
 
-## 六、移动云盘凭证能否自动更新：**能，但目前只在进程内存里，不落库**
+## 六、移动云盘凭证自动续期：已接通持久化 + 失败可见（本轮完成）
 
-结论先行：**驱动的 token 自动续期逻辑完全实现且被真实调用，续期成功；但续期结果只写进程内存，从不回写存储策略的 `access_key`。所以严格答案是「能自动续，但不能持久化」——重启后回到旧 token，再续一次。**
+上一版结论是「能自动续，但只在内存里」。本轮把这条链路**完整接通**并实测，目标形态是：**站长首次手动填一次凭据，之后程序自动续期并写回策略；续期失败时站长在后台首页看到提示。**
 
-### 6.1 链路实测
+### 6.1 改了什么
 
-| 环节 | 位置 | 状态 |
-|---|---|---|
-| 续期触发 | `y139/session.go:55` `personalCloudHost` → `refreshTokenLocked` | ✅ 已被真实调用 |
-| 续航条件 | token 第 4 段（过期毫秒）距现在 **≤ 15 天**（`refreshMargin`） | ✅ |
-| 续期接口 | `POST https://aas.caiyun.feixin.10086.cn:443/tellin/authTokenRefresh.do`，XML body，clienttype 656 | ✅ |
-| 新 token 生效 | 更新 `c.authorization` 内存字段，同进程后续请求即用新 token | ✅ |
-| 回写策略 | `refreshToken()`（持久化版）→ `SetTokenPersister` → `inventory.UpdateAccessKey` | ⚠️ **生产路径从不调用** |
+| 文件 | 改动 |
+|---|---|
+| `pkg/filemanager/driver/y139/session.go` | `personalCloudHost` 改为**锁内续期、锁外持久化**：拿到 `save` 回调后先释放 `c.mu` 再写库，避免回调经 policy store 重建驱动时重入同一把锁。三条返回路径（正常 / pinned server 降级 / 路由查询失败）都覆盖。新增 `persist()`、`report()`、`classifyRefreshError()`。 |
+| `pkg/filemanager/driver/y139/client.go` | client 新增 `refreshNotBefore`（续期节流）、`persistToken`/`reportRefreshError` 回调、`hadBasicPrefix`、`authorizationHeader()`；新增 `splitAuthorization()`；新增三种失败类型常量。 |
+| `pkg/filemanager/driver/y139/y139.go` | 新增 `SetRefreshErrorReporter()`，与既有 `SetTokenPersister()` 同风格。 |
+| `pkg/filemanager/manager/fs.go` | 建驱动时同时装持久化与上报两个回调，按 `policy.ID` 绑定。 |
+| `ent/schema/policy.go` + 生成代码 | 策略表新增 `last_refresh_at`、`last_refresh_error`、`last_refresh_error_kind`。 |
+| `inventory/policy.go` | `UpdateAccessKey` 成功即清错误标记；新增 `ReportRefreshError`、`ListRefreshNotices`。 |
+| `service/admin/policy.go`、`routers/*` | 新增 `GET /api/v4/admin/credential-notices`。 |
+| `frontend/.../Home/CredentialNotice.tsx` | 后台首页横幅，列出续期失败的策略并给「去处理」链接。 |
 
-### 6.2 关键发现：持久化那条路是死代码
+### 6.2 四条要求逐条对照
 
-`session.go` 里有两个入口：
+| 要求 | 实现 |
+|---|---|
+| 手动填一次，之后自动续期 | 手动输入框保留；续期成功写回 `access_key`，重启后直接用新值。 |
+| 续期结果回显到输入框 | 编辑页 `service/admin/policy.go:241` 的 `Get` 本就带 `SkipStoragePolicyCache`，读库中最新值，**无需改动**；写回后打开即看到续期后的凭据。 |
+| 续期失败让站长看见 | 三种情形分列 `expired` / `refresh_failed` / `persist_failed`，写入该策略行并由首页横幅展示；**续期成功即清空标记**，横幅自动消失，不常驻。 |
+| 多凭证各自独立 | 见 6.4。 |
 
-- `refreshTokenLocked()` —— 只更新内存，**不持久化**
-- `refreshToken()` —— `refreshAndCollect` + 回调 `save()` 写库 + 清 `StoragePolicyCacheKey`
+### 6.3 并发与降级处理
 
-全仓 grep 的结果：
+- **节流**：`refreshCooldown = 1 分钟`。检查位置放在 `remain < 0` 判断**之前**——否则并发第二个请求在 `resolved` 尚未置位时会再续一次（单测 `TestConcurrentRenewalPersistsOnce` 抓到了这一点）。
+- **写库失败不阻断业务**：内存里已是新 token，本进程仍可用；写库失败只记 Warning 并上报 `persist_failed`，让站长在重启前处理。
+- **上报失败也不阻断**：`report()` 自身出错只记日志。
 
-```
-生产代码调用 .refreshToken( : 0 处  （仅 y139_test.go 里调用）
-生产代码调用 refreshTokenLocked(: 3 处，全部在 session.go 内部
-```
+### 6.4 多策略隔离：本来就是隔离的，已加测试固定
 
-也就是说 `pkg/filemanager/manager/fs.go:104` 精心接好的 `SetTokenPersister` 回调 **在生产中永远收到不到调用**。
+排查结论：**没有全局单例、没有全局锁、没有共享变量**。
 
-### 6.3 实测记录
+- `GetStorageDriver` 每次调用 `y139.New(...)` 新建 client，驱动不做实例缓存；
+- `resolved`、`refreshNotBefore`、`authorization` 都是 **client 实例字段**；
+- 缓存 key 是 `storage_policy_<id>`，`UpdateAccessKey` 只删对应策略的 key；
+- 本轮新增的两个回调也都按 `policy.ID` 绑定。
 
-1. 读出策略 4 的 `access_key`，解码得 token 过期时间 `2026-11-28 10:35:56`，**剩余 28.95 天**（> 15 天，不触发续期）。
-2. 将该值第 4 段（过期毫秒）改为 `+10 天`，**token 本体字节完全不变**，写回 DB。
-3. 重启容器清掉进程内状态，再发一次真实 y139 列表请求 —— **请求成功**（说明续期跑了，否则 10 天内也会用旧 token 照常工作，但无法区分）。
-4. 复查 DB：`expires` **仍是 10 天**，未变成新 token。
-5. 日志里没有任何 `139 login token refreshed` 行（该行为 Debug 级，正常日志级别下不可见）。
-6. 已把策略 4 的 `access_key` 恢复成原始过期时间（`2026-11-28 10:35:56`，剩 28.62 天 = 原始 28.95 天减去流逝时间）。
+新增 `TestPoliciesRenewIndependently`：两个策略各建各的 client，A 续期后断言 **B 的续期次数为 0、写库次数为 0**，B 随后自己请求时仍能独立续期（各自节流互不影响）。
 
-> 说明：测试全程未打印任何真实凭据；只修改了过期时间戳这一个数字，token 本体从未被替换或外泄。
+### 6.5 单测
 
-### 6.4 如果要做成真正自动更新，需要改什么
+`pkg/filemanager/driver/y139/y139_test.go` 新增 7 个，全部通过：
 
-**改动范围（一处，约 10 行）**：
+- `TestPersonalCloudHostPersistsRenewedToken` — 续期结果写回
+- `TestPersonalCloudHostDoesNotPersistFreshToken` — 未续期不写库
+- `TestConcurrentRenewalPersistsOnce` — 并发只续一次、只写一次
+- `TestRenewalFailureDoesNotBreakRequest` — 续期失败不影响请求返回语义
+- `TestPersistFailureDoesNotFailRequest` — 写库失败不失败请求
+- `TestPoliciesRenewIndependently` — 多策略隔离
+- `TestRenewedTokenKeepsHeaderShape` — 写回格式与粘贴格式一致（见 6.6）
+- 另加 `TestExpiredCredentialIsReported`、`TestPersistFailureIsReported` — 两类失败各自上报正确 kind
 
-`pkg/filemanager/driver/y139/session.go` 的 `personalCloudHost` 中，把
+### 6.6 实测中发现并修掉的一个真实缺陷
 
-```go
-if err := c.refreshTokenLocked(ctx); err != nil {
-```
+写回时 `c.authorization` 是**纯 base64**（`NewClient` 已剥掉 `Basic ` 前缀），若直接写库，策略里会变成 `Basic ` 前缀缺失的值。虽然 `NewClient` 兼容两种形式、运行不受影响，但**编辑页的授权框会显示一个不完整的 header**，站长再手动保存时容易出错。
 
-改成先解锁再调持久化版本，或改用 `refreshAndCollect` + 自行 `save()`（注意：不能在持 `c.mu` 时调回调，回调会触碰 policy store 并可能重入本 client —— 代码注释已明确警告过这一点）。
+修法：新增 `splitAuthorization()` / `authorizationHeader()`，按管理员当初粘贴的形状写回。`TestRenewedTokenKeepsHeaderShape` 固定该约定（带前缀的仍带回前缀，裸 payload 的仍写裸 payload）。
 
-**风险**：
+### 6.7 15212 实测记录（真实网盘）
 
-1. **锁顺序**：`persistToken` 回调会走 `inventory` → DB → 清 KV，期间若另一协程正在建驱动/读策略，可能短暂阻塞。现有代码结构已用「锁内计算、锁外持久化」规避，改造时必须保持这个模式，否则死锁。
-2. **写放大**：每次驱动重建（每请求一次，无缓存）都会检查续期条件；因为不改过期时间戳就不会重复续，实际写入只在真正续期时发生一次，风险低。
-3. **并发续期**：多请求同时跨越阈值会各自续一次，最后一次写库覆盖前者。token 续期接口本身语义上允许这样，但建议加一个「同一进程内只续一次」的短窗去重。
-4. **失败降级**：续期接口挂了不能阻断业务——现有 `refreshTokenLocked` 失败即返回 `ErrAuthExpired` 让调用方报错；若改成持久化路径，写库失败只应记 Warning（现有 `refreshToken` 已这样处理）。
+用一个不依赖 HTTP 层的验证程序，直接按 `GetStorageDriver` 的方式建驱动、调 `List`，对**同一库里的两个 y139 策略**各跑一次：
 
-**未改动**：本轮按要求只给结论，没有动这段代码，等确认后再改。
+| 观测项 | 结果 |
+|---|---|
+| 自动迁移加三列 | ✅ 老库启动后 `storage_policies` 多出 `last_refresh_*`，原有 4 行数据完好 |
+| 策略 A 续期失败 | ✅ 该行写入 `last_refresh_error_kind='expired'` + 时间戳 |
+| 策略 B 是否被 A 影响 | ✅ **未受影响**（A、B 各自一行、各自 kind，互不覆盖） |
+| 通知接口 | ✅ `GET /api/v4/admin/credential-notices` 返回两条，含策略名与 kind |
 
-### 6.5 续期前提与 token 寿命
+**未能实测「续期成功」这一条**，原因如实说明：实验用「把过期时间戳改成 +10 天」的方式构造续期窗口，但网盘侧校验 token 时过期段是签名的一部分，改了就整串失效，续期接口直接回 `4006 The token does not exist or has expired`。不做破坏性替换就无法在真实账号上制造「进入窗口但 token 仍被网盘认可」的状态。因此成功路径由单测覆盖（`countingFake` 模拟网盘返回新 token，断言写库且格式正确），失败路径与隔离由实机覆盖。
 
-- **前提**：token 必须带过期段（`token` 按 `|` 拆分至少 4 段），且续期请求要用 **与获取时相同的客户端身份**（`clienttype 656` 即 PC 端）。实测当前策略里存的就是 `pc:` scheme（`Basic base64("pc:<账号>:<token>")`），即 PC 端 token，满足续期前提。
-- **若用 Web 端 token**：驱动里 `clientType()` 会根据 `policy.Settings.Region` 判断 `pc` / `web`，但续期请求固定写死 `refreshClientTyp = "656"`。Web 端 token 走这个续期端点是否被接受，**未实测**（不想拿真实账号冒险）；代码上无区分，这是潜在坑。
-- **寿命**：实测当前 token 剩余 **约 29 天**，即签发有效期约 30 天。因为续期阈值是 15 天，一个被正常访问的策略会在剩余 15 天时自动续到新的 ~30 天 —— 只要**续期结果被持久化**，理论上可以永久不过期。反之（现状），重启后回到 DB 里的旧 token，但那个旧 token 自己也会再续，直到它真正过期（因为 DB 里那个值不会随续期前进，**约 30 天后：DB 值已过期 → `remain < 0` → `ErrAuthExpired`，整个策略失效**）。
+> 测试全程未打印任何真实凭据，凭据在文档中一律 `<redacted>`。
 
-就现状看，**现在这套自动续期对「不重启」的单进程是有效的，但对「重启」是无效的，且存在约 30 天后的必然失效窗口**。这是建议优先修的原因。
+### 6.8 给站长的操作要点
+
+- 续期**依赖网盘侧仍认可当前 token**。若站长在网页端退出登录、改密码，或 token 已被服务端作废，续期会失败，横幅会提示 `expired`，此时**必须重新登录移动云盘、粘贴新的 Authorization**。
+- 控制台编辑页的授权框始终显示库中当前值（含最近一次续期结果），可直接覆盖粘贴。
+- 续期阈值 15 天、token 寿命约 30 天：正常访问的策略会在剩余约 15 天时自动续期，写回后不会出现「重启回退」。
 
 ---
 
-## 七、回滚方式
+## 七、VAS 套餐容量单位与单价小数（同日并入）
+
+### 7.1 先核清数据模型的单位约定
+
+| 字段 | 实际单位 | 依据 |
+|---|---|---|
+| `skus.amount` | **字节**（存储包/流量包）；`group` 类型下是**目标用户组 id** | `ent/schema/sku.go` 注释原文 `amount = bytes`；列表页 `sizeToString(s.amount)` 直接按字节渲染 |
+| `skus.price` | **最小货币单位（分）** | `ent/schema/sku.go` 注释 `price is the cash price in the smallest currency unit`；`pkg/payment/stripe.go:23` `Amount 是订单金额，单位为该货币的最小单位`，`UnitAmount: stripe.Int64(p.Amount)` 原样传入 |
+| `skus.duration` | 秒（0 = 永久） | schema 注释 |
+| 展示换算 | `sizeToString()` 用 **1024 进制**，输出单位标签 GB/TB | `frontend/src/util/index.ts:33` |
+
+**所以「容量没有单位可选」的真实情况**：输入框填的数字被**直接当字节**存。站长想填 1GB，填了 `1`，结果存成 **1 字节**——库里现存的那条测试数据（`amount=1`）正是这么来的，页面显示 `1.0 B`。这不是「少了个标签」，是**量级差 10⁹ 的错存**。
+
+**单价**：模型本来就是分，`0.01 元 = 1 分` 完全合法；卡住的是前端 `parseInt(e.target.value) || 0`——小数被截断，填 `0.01` 得 `0`（不可售）。
+
+### 7.2 换算关系与兼容方式
+
+- **换算基数 1024**，与既有展示函数 `sizeToString` 完全一致：`1 GB = 1073741824` 字节，`1 TB = 1099511627776` 字节。不用 1000 进制，否则同一条数据在录入页和列表页会显示成两个数。
+- **不改写任何已有数据**：`amount` 列语义不变（仍是字节），没有迁移、没有列变更。老套餐（包括那条 `amount=1`）打开编辑时显示 `1 字节` 对应的值（`bytesToCapacity` 计算得约 `9.3e-10 GB`），列表页显示 `1.0 B`——**读法完全没变，只是本地展示单位变了**，不会被误读。
+- **打开编辑时的单位选择**：`bytesToCapacity()` 选「能保持 ≥1 的最大单位」，所以 1 TB 的套餐打开显示 `1 / TB` 而不是 `1024 / GB`；小于 1 GB 的值（历史脏数据）显示为小数 GB。
+- **保存**：`capacityToBytes()` 用 `Math.round` 取整回字节，避免浮点尾差。
+
+### 7.3 改了什么
+
+| 文件 | 改动 |
+|---|---|
+| `frontend/src/util/index.ts` | 新增 `CapacityUnit`、`capacityUnitMultiplier`、`capacityToBytes()`、`bytesToCapacity()`。 |
+| `frontend/src/component/Admin/Settings/VAS/SkuTable.tsx` | 表单加 `amountUnit`（仅 UI 态，库内仍存字节）；容量输入旁加 GB/TB 下拉；`openEdit` 字节→单位、分→元；`onSave` 单位→字节、元→分（`Math.round(price*100)`）。单价输入放开为 `min=0.01 step=0.01` 并改 `Number()` 解析。 |
+| `frontend/src/component/Admin/Settings/VAS/GiftCodes.tsx` | 兑换码 `storage`/`traffic`/`stream_traffic` 类型同样加 GB/TB 下拉；`points` 类型保持整数不变。 |
+| `frontend/public/locales/{zh-CN,en-US}/dashboard.json` | 新增 `vas.capacityUnit`；`vas.size`→「容量大小」、`vas.trafficSize` 去掉「（字节）」；两条说明文案改为写明 GB/TB 与 1024 进制；`packPriceDes` 写明「元，最小 0.01」。 |
+
+**后端未改**：`service/admin/vas.go:121` 只校验 `s.Price < 0`，分值为 1（0.01 元）本来就通过；`binding:"required,min=1"` 属于兑换码的 `Amount`（积分/字节数），`0.01` 元走到的是 `price` 字段，不受影响。
+
+### 7.4 金额链路核对（结论：本来是对的，无需改）
+
+`skus.price`（分）→ `service/user/payment.go:94` `CreatePaymentOrder(..., s.Price, ...)` → `:104` `Amount: s.Price` → `pkg/payment/stripe.go:87` `UnitAmount: stripe.Int64(p.Amount)`。
+
+Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分」直接对齐，中间没有任何 `/100` 或 `*100`。所以把前端改成「按元输入、存库前 ×100」，金额链路自动正确：填 `0.01` → 存 `1` → Stripe 收到 `1` 分。**不存在「输入框能填 0.01 但下单金额算错」的情况**。
+
+> 易支付（Epay）相关代码不在本分支上，那批是独立合并的；本分支能核对的只有 Stripe 这条，其换算已如上确认。易支付那条链路的 `price → 元` 换算需在那批的代码上单独核，本报告不代其下结论。
+
+### 7.5 同类弹窗逐项排查（`/admin/settings?tab=vas`）
+
+| 位置 | 数值字段 | 现状 | 是否问题 | 处理 |
+|---|---|---|---|---|
+| 存储包 新增/编辑 | 容量 `amount` | 裸数字，直存字节 | **是**（用户点名） | 加 GB/TB 下拉 + 换算 |
+| 存储包 | 单价 `price` | `parseInt`，最小 1 | **是**（用户点名） | 改 `Number`，`min 0.01 step 0.01`，元→分 |
+| 存储包 | 有效期 `durationDays` | `parseInt`，整数天 | 否（天无法有小数） | 保持 |
+| 存储包 | 积分 `points` | `parseInt`，`Math.max(1,...)` | 否（积分是整数） | 保持 |
+| 直链流量包 新增/编辑 | 流量 `amount` | 同存储包，裸字节 | **是**（同类，同一组件） | 同存储包，已一并修 |
+| 流媒体流量包 新增/编辑 | 流量 `amount` | 同上 | **是**（同类） | 已一并修 |
+| 用户组套餐 新增/编辑 | `amount` | 是**用户组下拉**，不涉及容量 | 否 | 保持 |
+| 用户组套餐 | 有效期、单价、积分 | 同上三行 | 单价**是** | 已一并修 |
+| 兑换码 生成弹窗 | `amount`（points 类型） | `parseInt` 整数积分 | 否 | 保持整数，另加 `min 1 step 1` 明确约束 |
+| 兑换码 生成弹窗 | `amount`（storage/traffic/stream_traffic） | 裸字节 | **是**（同类） | 加 GB/TB 下拉 + 换算 |
+| 兑换码 生成弹窗 | 有效期 `duration` | `parseInt` | 否 | 保持 |
+| 兑换码 生成弹窗 | 数量 `qty` | `parseInt`，`clamp(1,500)` | 否（有上下限且合理） | 保持 |
+| 兑换码 列表 | 面额列 | `sizeToString(gc.amount)` | 否（已按字节正确显示） | 保持 |
+| VAS 全局设置 | 分享积分比例 `share_score_rate` | 整数 0–100 | 否（百分比整数） | 保持 |
+| VAS 全局设置 | 货币单位 `payment_currency_unit` | 整数 ≥1 | 否（汇率整数倍） | 保持 |
+
+范围外的相邻数值输入（`Email` 的 SMTP 端口/保活秒数、`Event` 的审计日志保留天数、`Media` 的缩略图宽高与质量、`Queue` 的并发数与重试）：语义均为整数或已有合理 `min/step`，**不属于 VAS 套餐，未改**。
+
+### 7.6 兼容性补充说明（重要）
+
+`amount` 存字节这一点**没有变**，所以：
+
+- 从旧版本升级到本版本，已有套餐**不需要迁移**，打开即用；
+- 但**在旧版本里被错存成小数字节的历史数据**（例如想填 1GB 却存成 `1`）不会自动修正——那需要站长手工重填。本次未对那条测试数据做任何改写，只在测试实例里另建数据做验证。
+
+---
+
+## 八、回滚方式
 
 ```bash
 docker rm -f cloudreve-fork-test
@@ -277,7 +362,7 @@ docker run -d --name cloudreve-fork-test --restart unless-stopped -p 15212:5212 
 
 数据目录 `/data/cloudreve-fork-test` 不受影响。
 
-## 八、范围内自有判断（按授权说明）
+## 九、范围内自有判断（按授权说明）
 
 1. **目录直链语义**选「展开为文件直链列表」而非 zip/跳转：契合 `GetDirectLink` 同步返回一组 URL 的既有契约，且天然避开 y139 禁止打包的限制。
 2. **秒传副本共用同一个缩略图实体**（而非每文件另存一份）：与秒传本身共享源实体的模型一致；另存会让实体数随副本数膨胀，违背秒传意义。

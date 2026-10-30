@@ -120,6 +120,21 @@ func FileNameRule(v string) predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.FieldEQ(FieldFileNameRule, v))
 }
 
+// LastRefreshAt applies equality check predicate on the "last_refresh_at" field. It's identical to LastRefreshAtEQ.
+func LastRefreshAt(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshAt, v))
+}
+
+// LastRefreshError applies equality check predicate on the "last_refresh_error" field. It's identical to LastRefreshErrorEQ.
+func LastRefreshError(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorKind applies equality check predicate on the "last_refresh_error_kind" field. It's identical to LastRefreshErrorKindEQ.
+func LastRefreshErrorKind(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshErrorKind, v))
+}
+
 // NodeID applies equality check predicate on the "node_id" field. It's identical to NodeIDEQ.
 func NodeID(v int) predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.FieldEQ(FieldNodeID, v))
@@ -933,6 +948,206 @@ func SettingsIsNil() predicate.StoragePolicy {
 // SettingsNotNil applies the NotNil predicate on the "settings" field.
 func SettingsNotNil() predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.FieldNotNull(FieldSettings))
+}
+
+// LastRefreshAtEQ applies the EQ predicate on the "last_refresh_at" field.
+func LastRefreshAtEQ(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtNEQ applies the NEQ predicate on the "last_refresh_at" field.
+func LastRefreshAtNEQ(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNEQ(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtIn applies the In predicate on the "last_refresh_at" field.
+func LastRefreshAtIn(vs ...time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIn(FieldLastRefreshAt, vs...))
+}
+
+// LastRefreshAtNotIn applies the NotIn predicate on the "last_refresh_at" field.
+func LastRefreshAtNotIn(vs ...time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotIn(FieldLastRefreshAt, vs...))
+}
+
+// LastRefreshAtGT applies the GT predicate on the "last_refresh_at" field.
+func LastRefreshAtGT(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGT(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtGTE applies the GTE predicate on the "last_refresh_at" field.
+func LastRefreshAtGTE(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGTE(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtLT applies the LT predicate on the "last_refresh_at" field.
+func LastRefreshAtLT(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLT(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtLTE applies the LTE predicate on the "last_refresh_at" field.
+func LastRefreshAtLTE(v time.Time) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLTE(FieldLastRefreshAt, v))
+}
+
+// LastRefreshAtIsNil applies the IsNil predicate on the "last_refresh_at" field.
+func LastRefreshAtIsNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIsNull(FieldLastRefreshAt))
+}
+
+// LastRefreshAtNotNil applies the NotNil predicate on the "last_refresh_at" field.
+func LastRefreshAtNotNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotNull(FieldLastRefreshAt))
+}
+
+// LastRefreshErrorEQ applies the EQ predicate on the "last_refresh_error" field.
+func LastRefreshErrorEQ(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorNEQ applies the NEQ predicate on the "last_refresh_error" field.
+func LastRefreshErrorNEQ(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNEQ(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorIn applies the In predicate on the "last_refresh_error" field.
+func LastRefreshErrorIn(vs ...string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIn(FieldLastRefreshError, vs...))
+}
+
+// LastRefreshErrorNotIn applies the NotIn predicate on the "last_refresh_error" field.
+func LastRefreshErrorNotIn(vs ...string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotIn(FieldLastRefreshError, vs...))
+}
+
+// LastRefreshErrorGT applies the GT predicate on the "last_refresh_error" field.
+func LastRefreshErrorGT(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGT(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorGTE applies the GTE predicate on the "last_refresh_error" field.
+func LastRefreshErrorGTE(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGTE(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorLT applies the LT predicate on the "last_refresh_error" field.
+func LastRefreshErrorLT(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLT(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorLTE applies the LTE predicate on the "last_refresh_error" field.
+func LastRefreshErrorLTE(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLTE(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorContains applies the Contains predicate on the "last_refresh_error" field.
+func LastRefreshErrorContains(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldContains(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorHasPrefix applies the HasPrefix predicate on the "last_refresh_error" field.
+func LastRefreshErrorHasPrefix(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldHasPrefix(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorHasSuffix applies the HasSuffix predicate on the "last_refresh_error" field.
+func LastRefreshErrorHasSuffix(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldHasSuffix(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorIsNil applies the IsNil predicate on the "last_refresh_error" field.
+func LastRefreshErrorIsNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIsNull(FieldLastRefreshError))
+}
+
+// LastRefreshErrorNotNil applies the NotNil predicate on the "last_refresh_error" field.
+func LastRefreshErrorNotNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotNull(FieldLastRefreshError))
+}
+
+// LastRefreshErrorEqualFold applies the EqualFold predicate on the "last_refresh_error" field.
+func LastRefreshErrorEqualFold(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEqualFold(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorContainsFold applies the ContainsFold predicate on the "last_refresh_error" field.
+func LastRefreshErrorContainsFold(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldContainsFold(FieldLastRefreshError, v))
+}
+
+// LastRefreshErrorKindEQ applies the EQ predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindEQ(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindNEQ applies the NEQ predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindNEQ(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNEQ(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindIn applies the In predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindIn(vs ...string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIn(FieldLastRefreshErrorKind, vs...))
+}
+
+// LastRefreshErrorKindNotIn applies the NotIn predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindNotIn(vs ...string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotIn(FieldLastRefreshErrorKind, vs...))
+}
+
+// LastRefreshErrorKindGT applies the GT predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindGT(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGT(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindGTE applies the GTE predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindGTE(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldGTE(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindLT applies the LT predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindLT(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLT(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindLTE applies the LTE predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindLTE(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldLTE(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindContains applies the Contains predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindContains(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldContains(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindHasPrefix applies the HasPrefix predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindHasPrefix(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldHasPrefix(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindHasSuffix applies the HasSuffix predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindHasSuffix(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldHasSuffix(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindIsNil applies the IsNil predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindIsNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIsNull(FieldLastRefreshErrorKind))
+}
+
+// LastRefreshErrorKindNotNil applies the NotNil predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindNotNil() predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotNull(FieldLastRefreshErrorKind))
+}
+
+// LastRefreshErrorKindEqualFold applies the EqualFold predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindEqualFold(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEqualFold(FieldLastRefreshErrorKind, v))
+}
+
+// LastRefreshErrorKindContainsFold applies the ContainsFold predicate on the "last_refresh_error_kind" field.
+func LastRefreshErrorKindContainsFold(v string) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldContainsFold(FieldLastRefreshErrorKind, v))
 }
 
 // NodeIDEQ applies the EQ predicate on the "node_id" field.
