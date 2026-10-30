@@ -346,6 +346,60 @@ Stripe 的 `UnitAmount` 语义就是**最小货币单位**，与库里的「分�
 
 ---
 
+## 七点五、构建机器切换与磁盘事件（重要记录）
+
+### 为什么从 InstaBox 切到 Baixiong
+
+本批默认把重活放在 InstaBox（`m_agqw5litn4acpbo7b5axu3ycku`）上跑。实际执行时发现**两条并行任务（本批 r6/r7 与另一条 vas/payment 任务）共用同一台 InstaBox、同一个 `/data/workspace/cloudreve-src` 源码树**，互相踩踏，具体表现为：
+
+1. 对方的构建脚本重置了 `cloudreve-src`，把本批已同步进去的 28 个改动文件全部冲掉（复现：`grep capacityUnit` 在对方重置后返回 0）。
+2. 本批改 `frontend/build` 时，对方的 `yarn build` 同时在写同一目录；本批 `rm -rf build/assets` 清掉的是**真正的产物目录**，对方随后又重建了一部分，两边都得到半成品。
+3. 磁盘被双方反复写满：一次冲到 `/` 100%（剩 0），一次 `/data` 91%。
+
+用户指示后采取措施：**本批之后的构建改到 Baixiong 上做**（72GB 空闲、node/yarn 齐全），并且**改为从 GitHub 分支重新 clone**，不再共享 InstaBox 上的源码树。这条只覆盖「空间不足期间」，不是永久改变。
+
+### InstaBox 磁盘清理记录（本轮）
+
+| 步骤 | 释放 | `/` | `/data` |
+|---|---|---|---|
+| 起点 | — | 87%（2.0G 可用） | 84% |
+| 并发构建把盘写满 | — | **100%（0 可用）** | 91%（2.0G） |
+| `docker builder prune -af` | 802.1MB | — | — |
+| 删除死 swap 文件 `/swapfile2`（未激活、`fstab` 无条目，6.1G） | **6.1GB** | **96% → 56%** | — |
+| 清 Go modcache/`/data/home/go`（1.2G） | 1.2GB | — | — |
+| 清中间源码树（`cr-r7`、`fresh` 1.5G、`imgbuild`、`imgctx`、`src`、`build-src`）、临时 tar/b64 | 约 2.5GB | — | — |
+| **清理后** | | **55%（6.7G 可用）** | **75%（5.1G 可用）** |
+
+> `docker container prune` 只回收 28.67kB（没有可回收的已停容器）。**未执行 `docker image prune -af`**。
+
+**保留的镜像**（全部保留，未删）：
+
+| 镜像 | 用途 |
+|---|---|
+| `cloudreve-fork:admin-r7` | 另一任务当前部署（容器 `cloudreve-fork-test` 正在跑它） |
+| `cloudreve-fork:admin-r6` | 该任务回滚位 |
+| `cloudreve-fork:vas-1030-r3` | 本批上一轮部署/回滚位 |
+| `cloudreve-fork:easypay-1030-r2` | 支付任务回滚位（容器 `cloudreve-fork-test-rollback-r2`） |
+| `debian:bookworm-slim` | 基础镜像，后续构建需要 |
+| `mcr.microsoft.com/playwright:v1.49.1-jammy` | 浏览器验证用（3.32GB，保留） |
+
+**本批 r7 镜像未能在 InstaBox 上产出**：镜像构建前源码树被对方重置，随后磁盘写满，因此 `cloudreve-fork:fix-1030-r7` 不存在。当前 InstaBox 上的 `admin-r7` 是另一任务的产物，**不是**本批代码。
+
+### 本批构建与验证状态
+
+| 环节 | 状态 |
+|---|---|
+| 代码改动 | ✅ 已 commit 并推送：`3f181c3` |
+| Go 全量构建 + 单测（Baixiong / InstaBox 均跑过） | ✅ `go build ./...` 通过；`go test ./pkg/filemanager/... ./inventory/...` 全绿，含 9 个新增 y139 单测 |
+| 前端 `tsc --noEmit` | ✅ 191 条与 baseline 完全一致（零新增类型错误） |
+| 前端打包 | ⏳ 已切到 Baixiong 重新 clone 后构建 |
+| 15212 部署 r7 + 浏览器验收 | ⏳ 待前端产物就绪后进行 |
+| 移动云盘「续期成功」路径实机验证 | ❌ 未完成（原因见 6.7：真实账号上无法在不破坏 token 的前提下构造续期窗口，已由单测覆盖） |
+| 多策略隔离 / 失败上报 | ✅ 实机验证通过（见 6.7） |
+| VAS 容量单位 / 单价小数 | ⏳ 代码完成、类型检查通过，待部署后浏览器验收 |
+
+---
+
 ## 八、回滚方式
 
 ```bash
