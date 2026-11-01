@@ -492,6 +492,64 @@ const BasicInfoSection = () => {
             </SettingForm>
           </>
         )}
+        {values.type === PolicyType.openlist && (
+          <>
+            {/* OpenList is the administrator's own instance, so unlike the 139
+                drive its address is a plain, editable URL. The mount path is
+                the virtual directory this policy is anchored at: everything
+                Cloudreve asks for is prefixed with it, and a path that tries to
+                climb out of it is rejected. */}
+            <SettingForm title={t("policy.openlistServer")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  fullWidth
+                  required
+                  placeholder="https://openlist.example.com"
+                  value={values.server}
+                  onChange={onEndpointChange}
+                />
+                <NoMarginHelperText>{t("policy.openlistServerDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+            <SettingForm title={t("policy.openlistMountPath")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  fullWidth
+                  placeholder="/"
+                  value={values.settings?.mount_path}
+                  onChange={(e) =>
+                    setPolicy((p: StoragePolicy) => ({
+                      ...p,
+                      settings: { ...p.settings, mount_path: e.target.value },
+                    }))
+                  }
+                />
+                <NoMarginHelperText>{t("policy.openlistMountPathDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+            <SettingForm title={t("policy.accessCredential")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  placeholder={t("policy.openlistUsername")}
+                  fullWidth
+                  required
+                  value={values.access_key}
+                  onChange={onAccessKeyChange}
+                />
+                <DenseFilledTextField
+                  placeholder={t("policy.openlistPassword")}
+                  sx={{ mt: 1 }}
+                  fullWidth
+                  required
+                  type="password"
+                  value={values.secret_key}
+                  onChange={onSecretKeyChange}
+                />
+                <NoMarginHelperText>{t("policy.openlistCredentialDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+          </>
+        )}
         {values.type === PolicyType.remote && (
           <SettingForm title={t("policy.node")} lgWidth={5}>
             <NodeSelectionInput fullWidth required value={values.node_id ?? 0} onChange={onNodeChange} />

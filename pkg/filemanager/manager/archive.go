@@ -261,8 +261,8 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 // rejectArchiveOnDirectOnlyPolicy refuses to zip a file stored on a policy that
 // must only ever be served straight from the storage provider. Compressing an
 // entry streams its bytes through this site, which a direct-only policy (the 139
-// cloud drive) forbids — the user downloads such files individually instead, and
-// that download jumps to the drive.
+// cloud drive, a self-hosted OpenList) forbids — the user downloads such files
+// individually instead, and that download jumps to the storage.
 func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.File) error {
 	entity := file.PrimaryEntity()
 	if entity == nil {
@@ -274,9 +274,13 @@ func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.F
 		return nil
 	}
 
-	if policy.Type == types.PolicyTypeY139 {
+	switch policy.Type {
+	case types.PolicyTypeY139:
 		return fs.ErrNotSupportedAction.WithError(errors.New(
 			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually"))
+	case types.PolicyTypeOpenList:
+		return fs.ErrNotSupportedAction.WithError(errors.New(
+			"archiving (zip) is disabled on the OpenList policy, download the files individually"))
 	}
 
 	return nil

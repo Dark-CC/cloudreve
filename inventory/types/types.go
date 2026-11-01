@@ -129,6 +129,10 @@ type (
 		ProxyServer string `json:"proxy_server,omitempty"`
 		// InternalProxy whether to use Cloudreve internal proxy to get file content
 		InternalProxy bool `json:"internal_proxy,omitempty"`
+		// MountPath is the OpenList virtual path (mount point prefix) this policy
+		// is anchored at. Every path the driver sends to OpenList is this prefix
+		// joined with the site-relative path. Empty means the OpenList root.
+		MountPath string `json:"mount_path,omitempty"`
 		// OdDriver OneDrive 驱动器定位符
 		OdDriver string `json:"od_driver,omitempty"`
 		// Region 区域代码
@@ -506,6 +510,10 @@ const (
 	// PolicyTypeY139 is the China Mobile cloud drive (139) policy. It relies on
 	// the user's own web login state rather than an official developer API.
 	PolicyTypeY139 = "y139"
+	// PolicyTypeOpenList is a self-hosted OpenList instance the site owner runs
+	// themselves. Cloudreve only calls its HTTP API and hands download URLs to
+	// the browser; file content never flows through Cloudreve.
+	PolicyTypeOpenList = "openlist"
 	// PolicyTypeLoadBalance distributes uploads across weighted child
 	// policies. It is resolved to a concrete child policy before use and
 	// never reaches a storage driver.

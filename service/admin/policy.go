@@ -251,7 +251,9 @@ func (service *RefreshNoticeService) List(c *gin.Context) ([]RefreshNotice, erro
 	storagePolicyClient := dep.StoragePolicyClient()
 
 	ctx := context.WithValue(c, inventory.SkipStoragePolicyCache{}, true)
-	policies, err := storagePolicyClient.ListRefreshNotices(ctx, string(types.PolicyTypeY139))
+	// Every policy type that can fail a credential renewal reports here; the
+	// filter is deliberately empty so a new drive does not need this line edited.
+	policies, err := storagePolicyClient.ListRefreshNotices(ctx, "")
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list credential notices", err)
 	}
@@ -442,6 +444,11 @@ func (service *CreateStoragePolicyCorsService) Create(c *gin.Context) error {
 	case types.PolicyTypeY139:
 		// The 139 cloud drive signs downloads and uploads itself and its object
 		// storage already answers any origin, so there is nothing to configure.
+		return nil
+
+	case types.PolicyTypeOpenList:
+		// The site owner's OpenList instance hands out its own download URLs, so
+		// there is no bucket of ours to add a CORS rule to.
 		return nil
 
 	default:

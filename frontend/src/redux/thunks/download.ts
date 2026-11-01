@@ -64,9 +64,7 @@ export function downloadAll(index: number): AppThunk {
     const files: FileResponse[] = [];
     let token: string | undefined = undefined;
     do {
-      const res: ListResponse = await dispatch(
-        getFileList({ uri: path, next_page_token: token, page_size: 1000 }),
-      );
+      const res: ListResponse = await dispatch(getFileList({ uri: path, next_page_token: token, page_size: 1000 }));
       files.push(...(res.files ?? []));
       token = res.pagination?.next_token;
     } while (token);
@@ -99,9 +97,7 @@ export function downloadMultipleFiles(files: FileResponse[]): AppThunk {
 
     // A remembered choice (checkbox in the picker or Preferences setting)
     // skips the prompt when the method is still available.
-    const remembered = SessionManager.get(UserSettings.ArchiveDownloadMethod) as
-      | MultipleDownloadOption
-      | undefined;
+    const remembered = SessionManager.get(UserSettings.ArchiveDownloadMethod) as MultipleDownloadOption | undefined;
     let finalOption = options[0];
     const rememberedUsable =
       remembered !== undefined &&
@@ -219,22 +215,31 @@ export const cancelSignals: {
   [key: string]: AbortController;
 } = {};
 
+// directOnlyPolicyTypes are the policies whose files are only ever served
+// straight from the storage provider, so no batch download may pull their bytes
+// through this site.
+const directOnlyPolicyTypes: PolicyType[] = [PolicyType.y139, PolicyType.openlist];
+
 // assertNoDirectOnlyPolicy refuses batch downloads that would have to stream
 // file content through this site. Browser-side zipping fetches every entry
-// itself, which a direct-only policy (the 139 cloud drive) forbids: its files
-// are served straight from the drive, one download at a time. The caller gets a
-// readable error instead of a silently relayed archive.
+// itself, which a direct-only policy (the 139 cloud drive, a self-hosted
+// OpenList) forbids: its files are served straight from the storage, one
+// download at a time. The caller gets a readable error instead of a silently
+// relayed archive.
 //
 // A file's own policy only rides along on entity listings, so a plain directory
 // listing falls back to the policy of the directory being browsed.
 function assertNoDirectOnlyPolicy(files: FileResponse[], getState?: () => any): void {
-  const blocked = files.some((f) => f.storage_policy?.type === PolicyType.y139);
+  const isDirectOnly = (policyType?: PolicyType) =>
+    policyType !== undefined && directOnlyPolicyTypes.includes(policyType);
+
+  const blocked = files.some((f) => isDirectOnly(f.storage_policy?.type));
   if (blocked) {
     throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
   }
 
   const current = getState?.()?.fileManager?.[FileManagerIndex.main]?.list?.storage_policy;
-  if (current?.type === PolicyType.y139) {
+  if (isDirectOnly(current?.type)) {
     throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
   }
 }

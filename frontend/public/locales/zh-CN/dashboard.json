@@ -130,9 +130,9 @@
     "reportIssue": "报告问题",
     "roadmap": "路线图",
     "credentialNoticeTitle": "存储策略凭证需要处理",
-    "credentialRefreshFailed": "「{{name}}」的移动云盘凭证续期失败，请手动更新凭证。",
-    "credentialPersistFailed": "「{{name}}」的移动云盘凭证已续期但未能保存，重启后会回退，请检查数据库。",
-    "credentialExpired": "「{{name}}」的移动云盘凭证已过期，续期失败，请手动更新凭证。",
+    "credentialRefreshFailed": "「{{name}}」的{{drive}}凭据续期失败，请手动更新凭据。",
+    "credentialPersistFailed": "「{{name}}」的{{drive}}凭据已续期但未能保存，重启后会回退，请检查数据库。",
+    "credentialExpired": "「{{name}}」的{{drive}}凭据已过期，续期失败，请手动更新凭据。",
     "goToPolicy": "去处理"
   },
   "queue": {
@@ -1001,6 +1001,19 @@
     "giftCodeAmountHelp": "每个兑换码的额度"
   },
   "policy": {
+    "openlist": "OpenList",
+    "openlistServer": "OpenList 实例地址",
+    "openlistServerDes": "你自建 OpenList 的访问地址，如 https://openlist.example.com。只填到域名与端口，不要带路径。",
+    "openlistMountPath": "挂载路径",
+    "openlistMountPathDes": "本站映射到 OpenList 中的虚拟目录。留空或填 / 表示使用实例根目录；填写 /mnt/a 则该策略只能看到 /mnt/a 下的内容，越界访问会被拒绝。",
+    "openlistUsername": "OpenList 用户名",
+    "openlistPassword": "OpenList 密码",
+    "openlistUsernameDes": "OpenList 实例的管理员或普通账号用户名。",
+    "openlistPasswordDes": "上述账号的密码。登录令牌 48 小时过期，本站会用这组账号自动重新登录。",
+    "openlistCredentialDes": "用户名与密码用于换取 OpenList 的登录令牌，修改后立即生效，无需重启。",
+    "openlistRisk": "本策略直连：下载由浏览器直接向 OpenList 取文件，本站不转发任何字节。",
+    "openlistHelp": "当前为只读支持：可浏览目录与下载文件，暂不支持上传、删除、重命名与秒传。",
+    "openlistReadOnly": "只读",
     "y139": "移动云盘",
     "y139Root": "根目录 FileID",
     "y139RootDes": "云盘内用作用户端根目录的 FileID。留空或填写 root 表示直接使用整个云盘。",

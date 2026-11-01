@@ -9,6 +9,7 @@ import LBWizard from "./Wizards/LB/LBWizard";
 import LocalWizard from "./Wizards/Local/LocalWizard";
 import ObsWizard from "./Wizards/OBS/ObsWizard";
 import OneDriveWizard from "./Wizards/OneDrive/OneDriveWizard";
+import OpenListWizard from "./Wizards/OpenList/OpenListWizard";
 import OssWizard from "./Wizards/OSS/OssWizard";
 import QiniuWizard from "./Wizards/Qiniu/QiniuWizard";
 import RemoteWizard from "./Wizards/Remote/RemoteWizard";
@@ -255,6 +256,17 @@ export const PolicyPropsMap: Record<PolicyType, PolicyProps> = {
     chunkSizeMin: 5 * 1024 * 1024, //5MB
     chunkSizeMax: 512 * 1024 * 1024, //512MB
     chunkSizeDes: "policy.chunkSizeDesY139",
+  },
+  [PolicyType.openlist]: {
+    name: "policy.openlist",
+    img: "/static/img/openlist.svg",
+    wizardSize: "md",
+    wizard: OpenListWizard,
+    endpointName: "policy.openlistServer",
+    akName: "policy.openlistUsername",
+    skName: "policy.openlistPassword",
+    // The driver reports no upload capability at all: this iteration is
+    // read-only, so there is no chunk size to pick.
   },
   [PolicyType.qiniu]: {
     name: "policy.qiniu",

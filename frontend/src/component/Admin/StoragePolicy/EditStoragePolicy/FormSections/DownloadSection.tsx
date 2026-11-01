@@ -122,13 +122,13 @@ const DownloadSection = () => {
             </Collapse>
           </FormControl>
         </SettingForm>
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {/* The OpenList policy always hands the browser OpenList's own URL, so
+            there is no server-side relay to switch on. */}
+        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && values.type !== PolicyType.openlist && (
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>
               <FormControlLabel
-                control={
-                  <Switch checked={values.settings?.internal_proxy ?? false} onChange={onInternalProxyChange} />
-                }
+                control={<Switch checked={values.settings?.internal_proxy ?? false} onChange={onInternalProxyChange} />}
                 label={t("policy.downloadRelay")}
               />
               <NoMarginHelperText>
@@ -150,7 +150,7 @@ const DownloadSection = () => {
             </FormControl>
           </SettingForm>
         )}
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && values.type !== PolicyType.openlist && (
           <SettingForm lgWidth={5} title={t("policy.downloadTrafficDiagram")}>
             <TrafficDiagram
               variant="download"

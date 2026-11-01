@@ -35,11 +35,9 @@ const StorageAndUploadSection = () => {
   const [overflowCandidates, setOverflowCandidates] = useState<StoragePolicy[]>([]);
 
   useEffect(() => {
-    dispatch(getStoragePolicyList({ page: 1, page_size: 1000, order_by: "id", order_direction: "asc" })).then(
-      (res) => {
-        setOverflowCandidates(res.policies.filter((p) => p.id !== values.id));
-      },
-    );
+    dispatch(getStoragePolicyList({ page: 1, page_size: 1000, order_by: "id", order_direction: "asc" })).then((res) => {
+      setOverflowCandidates(res.policies.filter((p) => p.id !== values.id));
+    });
   }, [values.id]);
 
   const fileNameInputRef = useRef<HTMLInputElement>(null);
@@ -336,16 +334,17 @@ const StorageAndUploadSection = () => {
         </SettingForm>
         <SettingForm title={t("policy.maxTotalSize")} lgWidth={5}>
           <FormControl fullWidth>
-            <SizeInput variant={"outlined"} value={values.settings?.max_total_size ?? 0} onChange={onMaxTotalSizeChange} />
+            <SizeInput
+              variant={"outlined"}
+              value={values.settings?.max_total_size ?? 0}
+              onChange={onMaxTotalSizeChange}
+            />
             <NoMarginHelperText>{t("policy.maxTotalSizeDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         <SettingForm title={t("policy.overflowPolicy")} lgWidth={5}>
           <FormControl fullWidth>
-            <DenseSelect
-              value={values.settings?.overflow_policy_id ?? 0}
-              onChange={onOverflowChange}
-            >
+            <DenseSelect value={values.settings?.overflow_policy_id ?? 0} onChange={onOverflowChange}>
               <SquareMenuItem value={0}>{t("policy.overflowNone")}</SquareMenuItem>
               {overflowCandidates.map((p) => (
                 <SquareMenuItem key={p.id} value={p.id}>
@@ -368,7 +367,11 @@ const StorageAndUploadSection = () => {
         </SettingForm>
         <SettingForm title={t("policy.auditMaxSize")} lgWidth={5}>
           <FormControl fullWidth>
-            <SizeInput variant={"outlined"} value={values.settings?.audit_max_size ?? 0} onChange={onAuditMaxSizeChange} />
+            <SizeInput
+              variant={"outlined"}
+              value={values.settings?.audit_max_size ?? 0}
+              onChange={onAuditMaxSizeChange}
+            />
             <NoMarginHelperText>{t("policy.auditMaxSizeDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
@@ -437,9 +440,7 @@ const StorageAndUploadSection = () => {
         <SettingForm lgWidth={5}>
           <FormControl fullWidth>
             <FormControlLabel
-              control={
-                <Switch checked={values.settings?.allow_native_name ?? false} onChange={onNativeNameChange} />
-              }
+              control={<Switch checked={values.settings?.allow_native_name ?? false} onChange={onNativeNameChange} />}
               label={t("policy.allowNativeName")}
             />
             <NoMarginHelperText>{t("policy.allowNativeNameDes")}</NoMarginHelperText>
@@ -519,7 +520,9 @@ const StorageAndUploadSection = () => {
             </SettingForm>
           )}
         </Collapse>
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {/* The OpenList policy is read-only in this iteration: it accepts no
+            upload at all, relayed or direct, so neither upload toggle applies. */}
+        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && values.type !== PolicyType.openlist && (
           <>
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>

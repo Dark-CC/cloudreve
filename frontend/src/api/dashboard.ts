@@ -260,6 +260,8 @@ export interface PolicySetting {
   custom_proxy?: boolean;
   proxy_server?: string;
   internal_proxy?: boolean;
+  // Virtual mount point prefix on an OpenList instance; empty means its root.
+  mount_path?: string;
   od_driver?: string;
   region?: string;
   server_side_endpoint?: string;

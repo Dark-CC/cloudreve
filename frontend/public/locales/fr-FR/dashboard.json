@@ -130,10 +130,10 @@
     "aboutForkDes": "Cette instance utilise un fork de Cloudreve maintenu par la communauté, axé sur le client de bureau Windows et l'intégration à l'Explorateur. Un bug ou une idée ? Les rapports et contributions de toute sorte sont les bienvenus.",
     "reportIssue": "Signaler un problème",
     "roadmap": "Feuille de route",
-    "credentialExpired": "The 139 Drive credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
+    "credentialExpired": "The {{drive}} credential of \"{{name}}\" has expired and could not be renewed. Please update it manually.",
     "credentialNoticeTitle": "Storage policy credentials need attention",
-    "credentialPersistFailed": "The 139 Drive credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
-    "credentialRefreshFailed": "The 139 Drive credential of \"{{name}}\" could not be renewed. Please update it manually.",
+    "credentialPersistFailed": "The {{drive}} credential of \"{{name}}\" was renewed but could not be saved, so a restart falls back to the old one. Please check the database.",
+    "credentialRefreshFailed": "The {{drive}} credential of \"{{name}}\" could not be renewed. Please update it manually.",
     "goToPolicy": "Fix it"
   },
   "queue": {
@@ -1001,6 +1001,19 @@
     "giftCodeAmountHelp": "Montant accordé par code"
   },
   "policy": {
+    "openlist": "OpenList",
+    "openlistServer": "OpenList instance address",
+    "openlistServerDes": "Address of the OpenList instance you run, e.g. https://openlist.example.com. Scheme, host and port only — no path.",
+    "openlistMountPath": "Mount path",
+    "openlistMountPathDes": "The virtual folder on OpenList this policy is mapped to. Leave empty or use / for the instance root; /mnt/a exposes only what is under /mnt/a and refuses anything outside it.",
+    "openlistUsername": "OpenList username",
+    "openlistPassword": "OpenList password",
+    "openlistUsernameDes": "Username of an account on that OpenList instance, admin or ordinary.",
+    "openlistPasswordDes": "Password of that account. Login tokens expire after 48 hours and this site logs in again with these credentials automatically.",
+    "openlistCredentialDes": "The username and password are exchanged for an OpenList login token; editing them takes effect immediately, no restart needed.",
+    "openlistRisk": "This policy is direct: the browser downloads from OpenList itself and this site never relays a byte.",
+    "openlistHelp": "Read-only for now: listing and downloading work, uploading, deleting, renaming and instant upload do not yet.",
+    "openlistReadOnly": "Read-only",
     "acceleratedDomainUpload": "Utiliser le domaine d'accélération de transfert pour l'upload",
     "acceleratedDomainUploadDes": "Lorsqu'activé, le <0>domaine d'accélération de transfert</0> de Qiniu sera utilisé lors de l'upload de fichiers.",
     "compare": "Comparer",

@@ -129,10 +129,10 @@
     "aboutForkDes": "本站點運行的是 Cloudreve 的社群維護分支，專注於 Windows 桌面客戶端與檔案總管整合。發現 Bug 或有好想法？歡迎提交回報或任何形式的貢獻。",
     "reportIssue": "回報問題",
     "roadmap": "路線圖",
-    "credentialExpired": "「{{name}}」的 139 雲端硬碟憑證已過期，部分操作可能失敗。",
+    "credentialExpired": "「{{name}}」的{{drive}}憑據已過期，續期失敗，請手動更新憑據。",
     "credentialNoticeTitle": "儲存策略憑證需要處理",
-    "credentialPersistFailed": "「{{name}}」的 139 雲端硬碟憑證已續期，但無法儲存。",
-    "credentialRefreshFailed": "「{{name}}」的 139 雲端硬碟憑證無法續期。",
+    "credentialPersistFailed": "「{{name}}」的{{drive}}憑據已續期但未能儲存，重啟後會回退，請檢查資料庫。",
+    "credentialRefreshFailed": "「{{name}}」的{{drive}}憑據續期失敗，請手動更新憑據。",
     "goToPolicy": "去處理"
   },
   "queue": {
@@ -1000,6 +1000,19 @@
     "giftCodeAmountHelp": "每個兌換碼的額度"
   },
   "policy": {
+    "openlist": "OpenList",
+    "openlistServer": "OpenList 實例位址",
+    "openlistServerDes": "你自架 OpenList 的存取位址，如 https://openlist.example.com。只填網域與連接埠，不要帶路徑。",
+    "openlistMountPath": "掛載路徑",
+    "openlistMountPathDes": "本站對應到 OpenList 中的虛擬目錄。留空或填 / 表示使用實例根目錄；填 /mnt/a 則該策略只能看到 /mnt/a 下的內容，越界存取會被拒絕。",
+    "openlistUsername": "OpenList 使用者名稱",
+    "openlistPassword": "OpenList 密碼",
+    "openlistUsernameDes": "OpenList 實例的管理員或一般帳號名稱。",
+    "openlistPasswordDes": "上述帳號的密碼。登入權杖 48 小時過期，本站會用這組帳號自動重新登入。",
+    "openlistCredentialDes": "使用者名稱與密碼用於換取 OpenList 的登入權杖，修改後立即生效，無需重啟。",
+    "openlistRisk": "本策略直連：下載由瀏覽器直接向 OpenList 取檔，本站不轉發任何位元組。",
+    "openlistHelp": "目前為唯讀支援：可瀏覽目錄與下載檔案，暫不支援上傳、刪除、重新命名與秒傳。",
+    "openlistReadOnly": "唯讀",
     "acceleratedDomainUpload": "使用傳輸加速域名上傳",
     "acceleratedDomainUploadDes": "開啟後，上傳檔案時會使用七牛的 <0>傳輸加速域名</0>。",
     "compare": "儲存策略對比",

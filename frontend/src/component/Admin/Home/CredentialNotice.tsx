@@ -28,22 +28,29 @@ const CredentialNotice = () => {
     return null;
   }
 
+  // The notice is not specific to one drive: 139 and OpenList both renew a
+  // stored credential on their own, so the text names the storage type the
+  // policy actually uses instead of hardcoding a drive name.
   const describe = (n: RefreshNotice) => {
+    const drive = t(`policy.${n.policy_type}`, { defaultValue: n.policy_type });
     switch (n.kind) {
       case "expired":
         return t("summary.credentialExpired", {
           name: n.policy_name,
-          defaultValue: "「{{name}}」的移动云盘凭证已过期，续期失败，请手动更新凭证。",
+          drive,
+          defaultValue: "「{{name}}」的{{drive}}凭据已过期，续期失败，请手动更新凭据。",
         });
       case "persist_failed":
         return t("summary.credentialPersistFailed", {
           name: n.policy_name,
-          defaultValue: "「{{name}}」的移动云盘凭证已续期但未能保存，重启后会回退，请检查数据库。",
+          drive,
+          defaultValue: "「{{name}}」的{{drive}}凭据已续期但未能保存，重启后会回退，请检查数据库。",
         });
       default:
         return t("summary.credentialRefreshFailed", {
           name: n.policy_name,
-          defaultValue: "「{{name}}」的移动云盘凭证续期失败，请手动更新凭证。",
+          drive,
+          defaultValue: "「{{name}}」的{{drive}}凭据续期失败，请手动更新凭据。",
         });
     }
   };

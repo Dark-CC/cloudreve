@@ -133,6 +133,11 @@ export default class UploadManager {
         return new OBS(task, this);
       case PolicyType.y139:
         return new Y139(task, this);
+      case PolicyType.openlist:
+        // The OpenList policy is read-only in this iteration: it has no upload
+        // path at all, so the uploader refuses instead of queuing a task that
+        // would fail on the server.
+        throw new UnknownPolicyError("This storage policy does not support uploads.", task.policy);
       default:
         throw new UnknownPolicyError("Unknown policy type.", task.policy);
     }

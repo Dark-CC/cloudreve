@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/local"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/obs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/openlist"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/oss"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/qiniu"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/remote"
@@ -110,6 +111,25 @@ func (m *manager) GetStorageDriver(ctx context.Context, policy *ent.StoragePolic
 		// so several 139 drives renew independently.
 		policyID := policy.ID
 		y139.SetRefreshErrorReporter(d, func(ctx context.Context, kind, message string) error {
+			return m.policyClient.ReportRefreshError(ctx, policyID, kind, message)
+		})
+
+		return d, nil
+	case types.PolicyTypeOpenList:
+		// The site owner runs the OpenList instance themselves. Cloudreve only
+		// calls its API with a short-lived JWT, and every download is handed to
+		// the browser as OpenList's own URL, so no file content passes through
+		// here.
+		d, err := openlist.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
+		if err != nil {
+			return nil, err
+		}
+
+		// A failed login is not silent: it lands on the policy itself so the
+		// administrator dashboard can show it. Only this policy's row is
+		// touched, so several OpenList instances renew independently.
+		policyID := policy.ID
+		openlist.SetRefreshErrorReporter(d, func(ctx context.Context, kind, message string) error {
 			return m.policyClient.ReportRefreshError(ctx, policyID, kind, message)
 		})
 
