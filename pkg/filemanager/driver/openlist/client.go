@@ -21,9 +21,20 @@ import (
 // the contract below is maintained by hand against the version tested in
 // docs/openlist-api-feasibility.md (v4.2.9). Keep every path here.
 const (
-	apiLogin = "/api/auth/login"
-	apiList  = "/api/fs/list"
-	apiGet   = "/api/fs/get"
+	apiLogin  = "/api/auth/login"
+	apiList   = "/api/fs/list"
+	apiGet    = "/api/fs/get"
+	apiMkdir  = "/api/fs/mkdir"
+	apiRename = "/api/fs/rename"
+	apiMove   = "/api/fs/move"
+	apiRemove = "/api/fs/remove"
+	apiPut    = "/api/fs/put"
+
+	apiMultipartInit     = "/api/fs/multipart/init"
+	apiMultipartChunk    = "/api/fs/multipart/chunk"
+	apiMultipartComplete = "/api/fs/multipart/complete"
+	apiMultipartStatus   = "/api/fs/multipart/status"
+	apiMultipartAbort    = "/api/fs/multipart/abort"
 
 	// listPageSize is the page size requested from /api/fs/list.
 	listPageSize = 200
@@ -73,6 +84,32 @@ type Client interface {
 	GetFileInfo(ctx context.Context, p string) (*FileInfo, error)
 	// MountPath returns the configured anchor prefix without surrounding slashes.
 	MountPath() string
+
+	// Mkdir creates one directory, including missing parents.
+	Mkdir(ctx context.Context, p string) error
+	// Rename renames the entry at p to newName, in place.
+	Rename(ctx context.Context, p, newName string) error
+	// Move moves the entries named in p into the directory dstDir.
+	Move(ctx context.Context, p []string, dstDir string) error
+	// Remove deletes the entries at the given paths.
+	Remove(ctx context.Context, paths []string) error
+
+	// PutStream writes one whole object from body, overwriting an existing one.
+	PutStream(ctx context.Context, p string, body io.Reader, size int64) error
+
+	// MultipartInit opens (or resumes) a multipart upload and reports the chunk
+	// size the server settled on.
+	MultipartInit(ctx context.Context, p string, size int64, chunkSize int64) (*MultipartSession, error)
+	// MultipartChunk uploads the chunk at index. Chunks may arrive out of order
+	// and re-sending one is idempotent.
+	MultipartChunk(ctx context.Context, uploadID string, index int, body io.Reader, size int64) error
+	// MultipartComplete assembles the chunks into the final object.
+	MultipartComplete(ctx context.Context, uploadID string) error
+	// MultipartAbort discards the upload and everything received so far.
+	MultipartAbort(ctx context.Context, uploadID string) error
+	// MultipartStatus looks a live session up by target path and total size,
+	// which is how an interrupted upload is found again after a restart.
+	MultipartStatus(ctx context.Context, p string, size int64) (*MultipartSession, error)
 }
 
 type client struct {

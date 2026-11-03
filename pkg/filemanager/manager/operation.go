@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
@@ -139,10 +141,39 @@ func (m *manager) Create(ctx context.Context, path *fs.URI, fileType types.FileT
 }
 
 func (m *manager) Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error) {
+	// A storage addressed by path keeps its own copy of the tree, so the rename
+	// has to reach it before the index claims the file moved. Resolve the
+	// source first: after Rename the index no longer knows the old path.
+	physical, err := m.physicalRenameTarget(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	if physical != nil {
+		if err := physical.rename(ctx, newName); err != nil {
+			return nil, err
+		}
+	}
+
 	file, indexDiff, err := m.fs.Rename(ctx, path, newName)
 	m.processIndexDiff(ctx, indexDiff)
 	if err != nil {
+		// The index refused the new name: undo what the storage already did so
+		// the two do not drift apart.
+		if physical != nil {
+			if undoErr := physical.rename(ctx, path.Name()); undoErr != nil {
+				m.l.Warning("failed to undo the storage side rename of %q: %s", path.String(), undoErr)
+			}
+		}
 		return file, err
+	}
+
+	if physical != nil {
+		// The object now lives under its new name on the storage, so every
+		// entity below the renamed path has to be re-addressed. Skipping this
+		// leaves the index pointing at addresses the storage no longer has,
+		// which breaks every later download, move and delete.
+		m.relocateEntitySources(ctx, file, physical.policy)
 	}
 
 	// Keep WebDAV mounts bound under the renamed path pointing at its new URI.
@@ -153,12 +184,59 @@ func (m *manager) Rename(ctx context.Context, path *fs.URI, newName string) (fs.
 }
 
 func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error {
+	// Copying leaves the source alone, so only a move needs the storage to act.
+	// The destination has to be validated before the storage is touched: the
+	// index rejects an unknown destination, and by then the objects would
+	// already have been moved, with no way back.
+	var physical []physicalMoveTarget
+	if !isCopy {
+		if _, dstErr := m.fs.Get(ctx, dst); dstErr != nil {
+			return dstErr
+		}
+
+		physical = m.physicalMoveTargets(ctx, src, dst)
+	}
+
+	moved := make([]physicalMoveTarget, 0, len(physical))
+	// undo puts the objects already moved back where they came from. A move
+	// carried the object into the destination folder under its own name, so
+	// that is the address to take it from, not the one it started at.
+	undo := func(from string) {
+		for i := len(moved) - 1; i >= 0; i-- {
+			landed := pathJoin(moved[i].dstDir, pathBase(moved[i].from))
+			if undoErr := moved[i].move(ctx, landed, strings.Trim(moved[i].parentDir, "/")); undoErr != nil {
+				m.l.Warning("failed to undo the storage side move of %q: %s", from, undoErr)
+			}
+		}
+	}
+
+	for _, target := range physical {
+		if err := target.move(ctx, target.from, target.dstDir); err != nil {
+			undo(target.from)
+			return err
+		}
+		moved = append(moved, target)
+	}
+
 	indexDiff, err := m.fs.MoveOrCopy(ctx, src, dst, isCopy)
 	if err != nil {
+		undo("the destination folder")
 		return err
 	}
 
 	m.processIndexDiff(ctx, indexDiff)
+
+	// Same reason as for a rename: a moved object sits somewhere else on the
+	// storage, so the entities below it must follow.
+	for _, target := range moved {
+		movedFile, getErr := m.fs.Get(ctx, dst.JoinRaw(target.uri.Name()))
+		if getErr != nil {
+			m.l.Warning("failed to re-address the entities of %q after the move: %s", target.uri.String(), getErr)
+			continue
+		}
+
+		m.relocateEntitySources(ctx, movedFile, target.policy)
+	}
 
 	// Keep WebDAV mounts bound under moved paths pointing at their new URIs.
 	if !isCopy && m.user != nil {
@@ -167,6 +245,311 @@ func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, is
 		}
 	}
 	return nil
+}
+
+// pathBase and pathJoin address the storage side of a path, which always uses
+// forward slashes regardless of the host.
+func pathBase(p string) string {
+	trimmed := strings.TrimRight(p, "/")
+	if i := strings.LastIndex(trimmed, "/"); i >= 0 {
+		return trimmed[i+1:]
+	}
+
+	return trimmed
+}
+
+func pathJoin(dir, name string) string {
+	dir = strings.TrimRight(dir, "/")
+	if dir == "" {
+		return name
+	}
+
+	return dir + "/" + name
+}
+
+// physicalRenameTarget resolves the object a rename must be mirrored onto, or
+// nil when the storage does not keep a path based tree of its own.
+type physicalRenameTarget struct {
+	driver driver.Handler
+	from   string
+	// policy is the policy the object lives on. It travels with the target
+	// because the file the index returns after a rename is rebuilt from the
+	// updated row and no longer carries the extended info that held it.
+	policy *ent.StoragePolicy
+}
+
+func (p *physicalRenameTarget) rename(ctx context.Context, newName string) error {
+	r, ok := p.driver.(driver.PhysicalRenamer)
+	if !ok {
+		return nil
+	}
+
+	if err := r.RenameFileOnStorage(ctx, p.from, newName); err != nil {
+		return fmt.Errorf("failed to rename the object on the storage: %w", err)
+	}
+
+	return nil
+}
+
+// physicalMoveTarget is one object a move must be mirrored onto.
+type physicalMoveTarget struct {
+	driver    driver.Handler
+	from      string
+	parentDir string
+	// dstDir is where the object goes on the storage. It is resolved from the
+	// destination URI through the policy's directory rule, not from the URI
+	// path: the storage's tree is not the index's tree.
+	dstDir string
+	// policy is the policy the object lives on, kept for the same reason as on
+	// physicalRenameTarget.
+	policy *ent.StoragePolicy
+	// uri is the file this target mirrors, so the re-addressing step can find
+	// the file again under its new parent without guessing.
+	uri *fs.URI
+}
+
+func (p *physicalMoveTarget) move(ctx context.Context, from, dstDir string) error {
+	mv, ok := p.driver.(driver.PhysicalMover)
+	if !ok {
+		return nil
+	}
+
+	if err := mv.MoveFileOnStorage(ctx, from, dstDir); err != nil {
+		return fmt.Errorf("failed to move the object on the storage: %w", err)
+	}
+
+	return nil
+}
+
+// physicalRenameTarget returns the storage side rename to mirror, or nil when
+// the file does not live on a path addressed storage.
+func (m *manager) physicalRenameTarget(ctx context.Context, path *fs.URI) (*physicalRenameTarget, error) {
+	file, err := m.fs.Get(ctx, path, dbfs.WithFileEntities(), dbfs.WithExtendedInfo())
+	if err != nil {
+		// Let Rename report the real problem: the index lookup is the
+		// authoritative one and repeats the same call.
+		m.l.Debug("not renaming %q on the storage: %s", path.String(), err)
+		return nil, nil
+	}
+
+	policy := m.storagePolicyOf(ctx, file)
+	if policy == nil {
+		m.l.Debug("not renaming %q on the storage: no storage policy in its extended info", path.String())
+		return nil, nil
+	}
+
+	d, err := m.GetStorageDriver(ctx, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := d.(driver.PhysicalRenamer); !ok {
+		m.l.Debug("not renaming %q on the storage: driver %T does not mirror renames", path.String(), d)
+		return nil, nil
+	}
+
+	// A folder has no entity of its own, and the storage keeps the folder under
+	// the path the directory rule assigns it, so that path is what gets
+	// renamed. Renaming it there carries every child along in one call.
+	if file.Type() != types.FileTypeFile {
+		if path.Path() == "/" || path.Path() == "" {
+			// The root folder is the policy's mount point itself.
+			return nil, nil
+		}
+
+		rel := strings.Trim(dbfs.PhysicalDirForURI(policy, path, file.OwnerID()), "/")
+		if rel == "" || rel == "." {
+			m.l.Debug("not renaming folder %q on the storage: it resolves to the mount root", path.String())
+			return nil, nil
+		}
+
+		return &physicalRenameTarget{driver: d, from: rel, policy: policy}, nil
+	}
+
+	entity := file.PrimaryEntity()
+	if entity == nil || strings.TrimSpace(entity.Source()) == "" {
+		m.l.Debug("not renaming %q on the storage: it has no entity source", path.String())
+		return nil, nil
+	}
+
+	return &physicalRenameTarget{driver: d, from: entity.Source(), policy: policy}, nil
+}
+
+// physicalMoveTargets returns the storage side moves to mirror, skipping any
+// file that does not live on a path addressed storage.
+func (m *manager) physicalMoveTargets(ctx context.Context, src []*fs.URI, dst *fs.URI) []physicalMoveTarget {
+	res := make([]physicalMoveTarget, 0, len(src))
+	for _, uri := range src {
+		file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithExtendedInfo())
+		if err != nil {
+			m.l.Debug("skipping the storage side move of %q: %s", uri.String(), err)
+			continue
+		}
+
+		policy := m.storagePolicyOf(ctx, file)
+		if policy == nil {
+			continue
+		}
+
+		d, err := m.GetStorageDriver(ctx, policy)
+		if err != nil {
+			m.l.Debug("skipping the storage side move of %q: %s", uri.String(), err)
+			continue
+		}
+
+		if _, ok := d.(driver.PhysicalMover); !ok {
+			continue
+		}
+
+		// A folder is addressed by the path its own directory rule assigns. A
+		// file is addressed by the source its primary entity recorded when it
+		// was written.
+		source := strings.Trim(dbfs.PhysicalDirForURI(policy, uri, file.OwnerID()), "/")
+		if file.Type() == types.FileTypeFile {
+			entity := file.PrimaryEntity()
+			if entity == nil || strings.TrimSpace(entity.Source()) == "" {
+				continue
+			}
+			source = entity.Source()
+		} else if source == "" || source == "." {
+			continue
+		}
+
+		res = append(res, physicalMoveTarget{
+			driver:    d,
+			from:      source,
+			parentDir: pathDir(source),
+			dstDir:    dbfs.PhysicalDirForURI(policy, dst, file.OwnerID()),
+			policy:    policy,
+			uri:       uri,
+		})
+	}
+
+	return res
+}
+
+// extendedStoragePolicy returns the storage policy of a file the index loaded
+// with WithExtendedInfo, or nil when the file has no extended info (the option
+// was not applied, or the policy id could not be resolved). Callers treat nil
+// as "this file is not on a path addressed storage" and skip the storage side
+// operation, so the guard must never be removed: ExtendedInfo itself returns a
+// nil pointer for files loaded without the option.
+// storagePolicyOf returns the policy an object lives on. A file carries it in
+// its extended info; a folder has no entity of its own, so the info is empty
+// and the policy is read off the first child that has one. A folder that holds
+// nothing addressable resolves to nil and its renames are left to the index.
+func (m *manager) storagePolicyOf(ctx context.Context, file fs.File) *ent.StoragePolicy {
+	if policy := extendedStoragePolicy(file); policy != nil {
+		return policy
+	}
+
+	if file.Type() == types.FileTypeFile {
+		return nil
+	}
+
+	_, res, err := m.fs.List(ctx, file.Uri(false), fs.WithPageSize(10), dbfs.WithExtendedInfo())
+	if err != nil {
+		m.l.Debug("failed to look up the storage policy of folder %q: %s", file.Uri(false).String(), err)
+		return nil
+	}
+
+	if res == nil {
+		return nil
+	}
+
+	// The policy the listing reports is the folder's default one, which is not
+	// necessarily where its children were written: a child uploaded under a
+	// non default policy leaves the folder itself homeless. Resolve a child
+	// properly instead of trusting the listing, which carries no extended info.
+	for _, child := range res.Files {
+		full, err := m.fs.Get(ctx, child.Uri(false), dbfs.WithFileEntities(), dbfs.WithExtendedInfo())
+		if err != nil {
+			continue
+		}
+
+		if policy := extendedStoragePolicy(full); policy != nil {
+			return policy
+		}
+	}
+
+	return res.StoragePolicy
+}
+
+func extendedStoragePolicy(file fs.File) *ent.StoragePolicy {
+	info := file.ExtendedInfo()
+	if info == nil {
+		return nil
+	}
+
+	return info.StoragePolicy
+}
+
+// relocateEntitySources re-addresses the entities below a path whose object
+// changed name or location on the storage. The index knows the new tree, the
+// entities still carry the address recorded when they were written; the two
+// only agree again once each entity's source is recomputed from the policy's
+// path rules. Errors are logged rather than returned: the index and the
+// storage already agree with each other on disk, and a half-applied rename is
+// worse than a stale address the next operation reports cleanly.
+func (m *manager) relocateEntitySources(ctx context.Context, root fs.File, policy *ent.StoragePolicy) {
+	if root == nil || root.IsNil() || policy == nil {
+		return
+	}
+
+	files := make([]fs.File, 0, 1)
+	err := m.fs.Walk(ctx, root.Uri(false), math.MaxInt, func(file fs.File, level int) error {
+		if file.Type() == types.FileTypeFile {
+			files = append(files, file)
+		}
+		return nil
+	}, dbfs.WithFileEntities())
+	if err != nil {
+		m.l.Warning("failed to walk %q while re-addressing its entities: %s", root.Uri(false).String(), err)
+		return
+	}
+
+	// The walk starts at the root itself, but make sure a single file is never
+	// missed when a driver reports it as a leaf without yielding it.
+	if root.Type() == types.FileTypeFile {
+		files = append(files, root)
+	}
+
+	client := m.dep.FileClient()
+	for _, file := range files {
+		entityID := file.PrimaryEntityID()
+		if entityID == 0 {
+			continue
+		}
+
+		// The walk yields files without their entity edges loaded, so the
+		// entity is read back by id instead of taken from PrimaryEntity, which
+		// would hand out an empty stand-in with no id and no source.
+		entity, getErr := client.GetEntityByID(ctx, entityID)
+		if getErr != nil {
+			m.l.Warning("failed to read entity %d of %q while re-addressing it: %s",
+				entityID, file.Uri(false).String(), getErr)
+			continue
+		}
+
+		source := dbfs.PhysicalPathForURI(policy, file.Uri(false), file.OwnerID())
+		if source == entity.Source {
+			continue
+		}
+
+		if relocateErr := client.RelocateEntity(ctx, entity, source, policy.ID); relocateErr != nil {
+			m.l.Warning("failed to re-address entity %d of %q: %s", entityID, file.Uri(false).String(), relocateErr)
+		}
+	}
+}
+
+// pathDir returns the parent directory of a storage path.
+func pathDir(p string) string {
+	p = strings.Trim(p, "/")
+	idx := strings.LastIndex(p, "/")
+	if idx < 0 {
+		return "/"
+	}
+	return "/" + p[:idx]
 }
 
 // rewriteDavMounts repoints the given user's dav account mount URIs that

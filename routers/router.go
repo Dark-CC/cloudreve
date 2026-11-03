@@ -646,6 +646,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.UseUploadSession(types.PolicyTypeY139),
 				controllers.ProcessCallback(http.StatusBadRequest, false),
 			)
+			// OpenList upload callback: the browser uploads straight to the
+			// administrator's OpenList instance and reports completion here.
+			callback.GET(
+				"openlist/:sessionID/:key",
+				middleware.UseUploadSession(types.PolicyTypeOpenList),
+				controllers.ProcessCallback(http.StatusBadRequest, false),
+			)
 			// Huawei OBS upload callback
 			callback.POST(
 				"obs/:sessionID/:key",

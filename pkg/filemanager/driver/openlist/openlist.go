@@ -27,13 +27,14 @@ import (
 // content travels between the browser and OpenList and never through this site.
 // This release is read-only: listing and downloads.
 type Driver struct {
-	policy   *ent.StoragePolicy
-	settings setting.Provider
-	config   conf.ConfigProvider
-	l        logging.Logger
-	mime     mime.MimeDetector
-	client   Client
-	mount    string
+	policy    *ent.StoragePolicy
+	settings  setting.Provider
+	config    conf.ConfigProvider
+	l         logging.Logger
+	mime      mime.MimeDetector
+	client    Client
+	mount     string
+	chunkSize int64
 }
 
 var features = &boolset.BooleanSet{}
@@ -41,11 +42,18 @@ var features = &boolset.BooleanSet{}
 func init() {
 	// HandlerCapabilityProxyRequired is deliberately NOT set: it would force
 	// every download through this site and void the 302 to OpenList.
-	boolset.Sets(map[driver.HandlerCapability]bool{}, features)
+	//
+	// HandlerCapabilityUploadSentinelRequired is set because OpenList exposes no
+	// compliance callback a storage provider would sign: this site cannot be
+	// told by OpenList that an upload finished, so a sentinel task has to clean
+	// up a placeholder whose browser never came back.
+	boolset.Sets(map[driver.HandlerCapability]bool{
+		driver.HandlerCapabilityUploadSentinelRequired: true,
+	}, features)
 }
 
-// errReadOnly is what every unimplemented write path answers with.
-var errReadOnly = errors.New("this storage policy is read-only in this release (listing and download only)")
+// errReadOnly is kept for the paths this release still refuses.
+var errReadOnly = errors.New("this storage policy is read-only in this release")
 
 // New creates the driver for an existing storage policy.
 func New(ctx context.Context, policy *ent.StoragePolicy, settings setting.Provider,
@@ -65,13 +73,14 @@ func New(ctx context.Context, policy *ent.StoragePolicy, settings setting.Provid
 	c := NewClient(policy, config, l)
 
 	d := &Driver{
-		policy:   policy,
-		settings: settings,
-		config:   config,
-		l:        l,
-		mime:     mime,
-		client:   c,
-		mount:    c.MountPath(),
+		policy:    policy,
+		settings:  settings,
+		config:    config,
+		l:         l,
+		mime:      mime,
+		client:    c,
+		mount:     c.MountPath(),
+		chunkSize: policyChunkSize(policy),
 	}
 
 	if d.mount == "" {
@@ -177,14 +186,81 @@ func (handler *Driver) LocalPath(ctx context.Context, path string) string {
 	return ""
 }
 
-// Put is out of scope in this release.
+// Put writes one object. It is used both by the relay route (chunks streamed
+// into this site) and by a single-shot write such as WebDAV PUT.
+//
+// The content is sent with OpenList's multipart API so a write that dies halfway
+// can still finish: the session is found again by path and size, and OpenList
+// reassembles it. A file without a declared size cannot be split and is written
+// in one request instead.
 func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
-	return errReadOnly
+	defer file.Close()
+
+	overwrite := file.Mode&fs.ModeOverwrite == fs.ModeOverwrite
+	if !overwrite {
+		if _, err := handler.client.GetFileInfo(ctx, normalizePath(file.Props.SavePath)); err == nil {
+			return fs.ErrFileExisted
+		} else if !isNotFound(err) {
+			return asSerializerError(err)
+		}
+	}
+
+	err := handler.uploadMultipart(ctx, file)
+	if errors.Is(err, ErrFileNotFound) || errors.Is(err, ErrStorageNotFound) {
+		// A marker for "this upload cannot be resumed here"; fall back to one
+		// write rather than failing the upload outright.
+		handler.l.Debug("Multipart init failed for %q, falling back to a single write: %s",
+			file.Props.SavePath, err)
+		err = handler.putStream(ctx, file)
+	}
+
+	if err != nil {
+		return asSerializerError(err)
+	}
+
+	return nil
 }
 
-// Delete is out of scope in this release.
+// Delete removes the objects from the storage. A missing object is a success:
+// the recycle step must be idempotent.
 func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, error) {
-	return files, errReadOnly
+	if len(files) == 0 {
+		return nil, nil
+	}
+
+	targets := make([]string, 0, len(files))
+	for _, f := range files {
+		if normalizePath(f) == "" {
+			// Never remove the mount root.
+			continue
+		}
+		targets = append(targets, f)
+	}
+
+	if err := handler.client.Remove(ctx, targets); err != nil {
+		if isNotFound(err) {
+			return nil, nil
+		}
+		return files, asSerializerError(err)
+	}
+
+	return nil, nil
+}
+
+// RenameFileOnStorage renames one object in place.
+func (handler *Driver) RenameFileOnStorage(ctx context.Context, from, newName string) error {
+	if err := handler.renameFileOnStorage(ctx, from, newName); err != nil {
+		return asSerializerError(err)
+	}
+	return nil
+}
+
+// MoveFileOnStorage moves one object into a folder.
+func (handler *Driver) MoveFileOnStorage(ctx context.Context, from, dstDir string) error {
+	if err := handler.moveFileOnStorage(ctx, from, dstDir); err != nil {
+		return asSerializerError(err)
+	}
+	return nil
 }
 
 // Thumb is unsupported: OpenList exposes no thumbnail API this driver uses.
@@ -212,19 +288,89 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 	return info.RawURL, nil
 }
 
-// Token is out of scope in this release.
+// Token refuses to hand out credentials for a browser-direct upload.
+//
+// OpenList's API has one kind of credential: the login token of an account,
+// with that account's full reach over the whole instance. Giving it to a
+// browser would let any visitor read, overwrite or delete everything the
+// policy's account can touch, which is the administrator's entire storage. So
+// OpenList uploads always take the relay route: chunks come into this site,
+// and Put writes them with the token held in memory here. The manager decides
+// that before ever calling this, and this guard only makes sure a future change
+// there cannot quietly expose the token.
 func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSession, file *fs.UploadRequest) (*fs.UploadCredential, error) {
-	return nil, errReadOnly
+	handler.l.Warning("Refusing a browser-direct OpenList upload for %q: the policy credential "+
+		"grants full access to the instance, so the upload must relay through this site.",
+		file.Props.SavePath)
+	return nil, fs.ErrNotSupportedAction.WithError(
+		errors.New("openlist uploads must be relayed through the server"))
 }
 
-// CancelToken is out of scope in this release.
-func (handler *Driver) CancelToken(ctx context.Context, uploadSession *fs.UploadSession) error {
-	return errReadOnly
-}
-
-// CompleteUpload is out of scope in this release.
+// CompleteUpload finalizes the multipart upload on OpenList.
+//
+// The client has already sent every chunk; this call is what makes the object
+// appear at its final path, so it must run before Cloudreve promotes the
+// placeholder.
 func (handler *Driver) CompleteUpload(ctx context.Context, session *fs.UploadSession) error {
-	return errReadOnly
+	uploadID := session.UploadID
+	if uploadID == "" {
+		uploadID = session.Props.UploadFileID
+	}
+	if uploadID == "" {
+		handler.l.Debug("No OpenList upload id on the session of %q, nothing to finalize.", session.Props.SavePath)
+		return nil
+	}
+
+	if err := handler.client.MultipartComplete(ctx, uploadID); err != nil {
+		// A session OpenList no longer holds may still have produced the
+		// object (a retried completion). Confirm the file is there before
+		// reporting a failure, so a duplicate callback stays harmless.
+		if _, metaErr := handler.client.GetFileInfo(ctx, normalizePath(session.Props.SavePath)); metaErr == nil {
+			handler.l.Debug("OpenList already holds %q, treating the completion as done.",
+				session.Props.SavePath)
+			return nil
+		}
+
+		return asSerializerError(err)
+	}
+
+	if session.SentinelTaskID == 0 {
+		return nil
+	}
+
+	// The sentinel exists to catch a storage that silently dropped the bytes:
+	// read the object back and compare its size.
+	info, err := handler.client.GetFileInfo(ctx, normalizePath(session.Props.SavePath))
+	if err != nil {
+		return fmt.Errorf("failed to read the uploaded file back: %w", err)
+	}
+
+	if session.Props.Size > 0 && info.Size != session.Props.Size {
+		return fmt.Errorf("the uploaded file is %d bytes on the storage but %d were declared",
+			info.Size, session.Props.Size)
+	}
+
+	return nil
+}
+
+// CancelToken discards an abandoned multipart session so OpenList stops holding
+// partial chunks.
+func (handler *Driver) CancelToken(ctx context.Context, uploadSession *fs.UploadSession) error {
+	uploadID := uploadSession.UploadID
+	if uploadID == "" {
+		uploadID = uploadSession.Props.UploadFileID
+	}
+	if uploadID == "" {
+		return nil
+	}
+
+	if err := handler.client.MultipartAbort(ctx, uploadID); err != nil {
+		handler.l.Warning("Failed to abort the OpenList upload session of %q: %s",
+			uploadSession.Props.SavePath, err)
+		return asSerializerError(err)
+	}
+
+	return nil
 }
 
 // Capabilities declares what this policy supports. The raw URL OpenList hands
@@ -242,12 +388,33 @@ func (handler *Driver) MediaMeta(ctx context.Context, path, ext, language string
 	return nil, errors.New("not implemented")
 }
 
+// mimeType returns the content type to declare for an upload.
+func (handler *Driver) mimeType(file *fs.UploadRequest) string {
+	if file.Props.MimeType != "" {
+		return file.Props.MimeType
+	}
+	if handler.mime != nil {
+		return handler.mime.TypeByName(file.Props.Uri.Name())
+	}
+	return "application/octet-stream"
+}
+
 // policyMountPath reads the anchor prefix out of the policy settings.
 func policyMountPath(policy *ent.StoragePolicy) string {
 	if policy == nil || policy.Settings == nil {
 		return ""
 	}
 	return policy.Settings.MountPath
+}
+
+// policyChunkSize is the chunk size the policy asks OpenList for. OpenList caps
+// it at its own MultipartChunkSize and raises anything below 1 MB, so the value
+// returned by MultipartInit is what the browser is told; this is only a wish.
+func policyChunkSize(policy *ent.StoragePolicy) int64 {
+	if policy == nil || policy.Settings == nil {
+		return 0
+	}
+	return policy.Settings.ChunkSize
 }
 
 // parentOf returns the parent directory of a path.

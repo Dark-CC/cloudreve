@@ -135,13 +135,12 @@ export default class UploadManager {
       case PolicyType.y139:
         return new Y139(task, this);
       case PolicyType.openlist:
-        // Read-only in this release: the driver answers every write path with
-        // "not supported", so fail here with one clear message instead of
-        // starting an upload that cannot finish.
-        throw new UploaderError(
-          UploaderErrorName.UnknownPolicyType,
-          i18next.t("uploader.readOnlyPolicyUploadUnsupported"),
-        );
+        // OpenList uploads always relay through this site. Its API only accepts
+        // an account's login token, which carries the whole instance, so the
+        // credential never leaves the server and the browser posts chunks here
+        // instead of straight to the storage. That holds whether or not the
+        // policy's relay switch is on.
+        return new Local(task, this);
       default:
         throw new UnknownPolicyError("Unknown policy type.", task.policy);
     }
