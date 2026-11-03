@@ -270,6 +270,16 @@ const BasicInfoSection = () => {
     [setPolicy],
   );
 
+  const onMountPathChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, mount_path: e.target.value },
+      }));
+    },
+    [setPolicy],
+  );
+
   const onTokenChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setPolicy((p: StoragePolicy) => ({
@@ -488,6 +498,54 @@ const BasicInfoSection = () => {
                   onChange={onSecretKeyChange}
                 />
                 <NoMarginHelperText>{t("policy.y139CredentialDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+          </>
+        )}
+        {values.type === PolicyType.openlist && (
+          <>
+            {/* OpenList has no bucket: the policy is anchored to a virtual path
+                of the administrator's own instance (settings.mount_path) and
+                authenticates with a username and password that the driver uses
+                to log in again when its 48 hour token expires. */}
+            <SettingForm title={t("policy.openListServer")} lgWidth={5}>
+              <DenseFilledTextField
+                fullWidth
+                required
+                value={values.server}
+                onChange={onEndpointChange}
+                placeholder="https://openlist.example.com"
+              />
+              <NoMarginHelperText>{t("policy.openListServerDes")}</NoMarginHelperText>
+            </SettingForm>
+            <SettingForm title={t("policy.openListMountPath")} lgWidth={5}>
+              <DenseFilledTextField
+                fullWidth
+                value={values.settings?.mount_path ?? ""}
+                onChange={onMountPathChange}
+                placeholder="/"
+              />
+              <NoMarginHelperText>{t("policy.openListMountPathDes")}</NoMarginHelperText>
+            </SettingForm>
+            <SettingForm title={t("policy.accessCredential")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  placeholder={t(policyProps.akName ?? "policy.openListUsername")}
+                  fullWidth
+                  required
+                  value={values.access_key}
+                  onChange={onAccessKeyChange}
+                />
+                <DenseFilledTextField
+                  placeholder={t(policyProps.skName ?? "policy.openListPassword")}
+                  sx={{ mt: 1 }}
+                  fullWidth
+                  required
+                  type="password"
+                  value={values.secret_key}
+                  onChange={onSecretKeyChange}
+                />
+                <NoMarginHelperText>{t("policy.openListCredentialDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
           </>

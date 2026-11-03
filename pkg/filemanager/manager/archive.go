@@ -274,9 +274,9 @@ func (m *manager) rejectArchiveOnDirectOnlyPolicy(ctx context.Context, file fs.F
 		return nil
 	}
 
-	if policy.Type == types.PolicyTypeY139 {
+	if policy.Type == types.PolicyTypeY139 || policy.Type == types.PolicyTypeOpenList {
 		return fs.ErrNotSupportedAction.WithError(errors.New(
-			"archiving (zip) is disabled on the 139 cloud drive policy, download the files individually"))
+			"archiving (zip) is disabled on this storage policy, download the files individually"))
 	}
 
 	return nil

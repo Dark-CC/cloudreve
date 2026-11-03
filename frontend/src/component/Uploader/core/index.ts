@@ -1,3 +1,4 @@
+import i18next from "../../../i18n";
 import { PolicyType, StoragePolicy } from "../../../api/explorer.ts";
 import { defaultPath } from "../../../hooks/useNavigation.tsx";
 import { UnknownPolicyError, UploaderError, UploaderErrorName } from "./errors";
@@ -133,6 +134,14 @@ export default class UploadManager {
         return new OBS(task, this);
       case PolicyType.y139:
         return new Y139(task, this);
+      case PolicyType.openlist:
+        // Read-only in this release: the driver answers every write path with
+        // "not supported", so fail here with one clear message instead of
+        // starting an upload that cannot finish.
+        throw new UploaderError(
+          UploaderErrorName.UnknownPolicyType,
+          i18next.t("uploader.readOnlyPolicyUploadUnsupported"),
+        );
       default:
         throw new UnknownPolicyError("Unknown policy type.", task.policy);
     }

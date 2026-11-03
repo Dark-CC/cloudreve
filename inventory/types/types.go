@@ -131,6 +131,11 @@ type (
 		InternalProxy bool `json:"internal_proxy,omitempty"`
 		// OdDriver OneDrive 驱动器定位符
 		OdDriver string `json:"od_driver,omitempty"`
+		// MountPath is the OpenList virtual path this policy is anchored to,
+		// e.g. "/team/docs". Every path this driver sends to OpenList is
+		// resolved under this prefix, so a policy can never reach sibling
+		// mounts. Empty means the OpenList root.
+		MountPath string `json:"mount_path,omitempty"`
 		// Region 区域代码
 		Region string `json:"region,omitempty"`
 		// ServerSideEndpoint 服务端请求使用的 Endpoint，为空时使用 Policy.Server 字段
@@ -506,6 +511,11 @@ const (
 	// PolicyTypeY139 is the China Mobile cloud drive (139) policy. It relies on
 	// the user's own web login state rather than an official developer API.
 	PolicyTypeY139 = "y139"
+	// PolicyTypeOpenList is the OpenList policy: every site administrator runs
+	// their own OpenList instance and this site only talks to its HTTP API.
+	// No OpenList code is vendored or linked here (it is AGPL-3.0), and file
+	// content never passes through this site.
+	PolicyTypeOpenList = "openlist"
 	// PolicyTypeLoadBalance distributes uploads across weighted child
 	// policies. It is resolved to a concrete child policy before use and
 	// never reaches a storage driver.

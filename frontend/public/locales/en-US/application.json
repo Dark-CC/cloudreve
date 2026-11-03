@@ -810,7 +810,8 @@
     "parseResponseError": "Unable to parse response: {{msg}} ({{content}})",
     "concurrentTaskNumber": "Concurrent task limit",
     "dropFileHere": "Drop file to upload",
-    "etaSuffix": ", ETA {{eta}}"
+    "etaSuffix": ", ETA {{eta}}",
+    "readOnlyPolicyUploadUnsupported": "This storage policy is read-only in this release and does not accept uploads yet."
   },
   "vault": {
     "title": "Private space",

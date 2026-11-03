@@ -290,6 +290,9 @@ export interface PolicySetting {
   chunk_concurrency?: number;
   encryption?: boolean;
   lb_policies?: LBPolicyRef[];
+  // mount_path anchors an OpenList policy to one virtual path of that
+  // instance; every request the driver makes is resolved under it.
+  mount_path?: string;
 }
 
 export interface LBPolicyRef {

@@ -221,20 +221,22 @@ export const cancelSignals: {
 
 // assertNoDirectOnlyPolicy refuses batch downloads that would have to stream
 // file content through this site. Browser-side zipping fetches every entry
-// itself, which a direct-only policy (the 139 cloud drive) forbids: its files
-// are served straight from the drive, one download at a time. The caller gets a
+// itself, which a direct-only policy (the 139 cloud drive, OpenList) forbids:
+// its files are served straight from that server, one download at a time. The caller gets a
 // readable error instead of a silently relayed archive.
 //
 // A file's own policy only rides along on entity listings, so a plain directory
 // listing falls back to the policy of the directory being browsed.
+const directOnlyPolicyTypes: (PolicyType | string)[] = [PolicyType.y139, PolicyType.openlist];
+
 function assertNoDirectOnlyPolicy(files: FileResponse[], getState?: () => any): void {
-  const blocked = files.some((f) => f.storage_policy?.type === PolicyType.y139);
+  const blocked = files.some((f) => directOnlyPolicyTypes.includes(f.storage_policy?.type ?? ""));
   if (blocked) {
     throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
   }
 
   const current = getState?.()?.fileManager?.[FileManagerIndex.main]?.list?.storage_policy;
-  if (current?.type === PolicyType.y139) {
+  if (directOnlyPolicyTypes.includes(current?.type ?? "")) {
     throw new Error(i18next.t("fileManager.directOnlyBatchDownloadUnsupported"));
   }
 }

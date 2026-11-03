@@ -810,7 +810,8 @@
     "parseResponseError": "无法解析响应：{{msg}} ({{content}})",
     "concurrentTaskNumber": "同时上传的任务数量",
     "dropFileHere": "松开鼠标开始上传",
-    "etaSuffix": "，预计剩余 {{eta}}"
+    "etaSuffix": "，预计剩余 {{eta}}",
+    "readOnlyPolicyUploadUnsupported": "该存储策略本轮仅支持只读，暂不支持上传。"
   },
   "vault": {
     "title": "私密空间",

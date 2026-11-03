@@ -519,7 +519,9 @@ const StorageAndUploadSection = () => {
             </SettingForm>
           )}
         </Collapse>
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {values.type !== PolicyType.local &&
+          values.type !== PolicyType.y139 &&
+          values.type !== PolicyType.openlist && (
           <>
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
