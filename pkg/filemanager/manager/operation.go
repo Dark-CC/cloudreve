@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -416,12 +417,12 @@ func (m *manager) relocateEntitySources(ctx context.Context, root fs.File) {
 	}
 
 	files := make([]fs.File, 0, 1)
-	err := m.fs.Walk(ctx, root.Uri(false), -1, func(file fs.File, level int) error {
+	err := m.fs.Walk(ctx, root.Uri(false), math.MaxInt, func(file fs.File, level int) error {
 		if file.Type() == types.FileTypeFile {
 			files = append(files, file)
 		}
 		return nil
-	})
+	}, dbfs.WithFileEntities())
 	if err != nil {
 		m.l.Warning("failed to walk %q while re-addressing its entities: %s", root.Uri(false).String(), err)
 		return
