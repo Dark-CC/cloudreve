@@ -1,0 +1,16 @@
+[Unit]
+Description=Model gateway: reverse tunnel to HPC compute node llama-server (18180)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/model-gateway/tunnel.sh
+Restart=always
+RestartSec=20
+User=root
+StandardOutput=append:/var/log/model-gateway.log
+StandardError=append:/var/log/model-gateway.log
+
+[Install]
+WantedBy=multi-user.target
