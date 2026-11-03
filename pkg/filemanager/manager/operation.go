@@ -260,14 +260,14 @@ func (p *physicalMoveTarget) move(ctx context.Context, dstDir string) error {
 // physicalRenameTarget returns the storage side rename to mirror, or nil when
 // the file does not live on a path addressed storage.
 func (m *manager) physicalRenameTarget(ctx context.Context, path *fs.URI) (*physicalRenameTarget, error) {
-	file, err := m.fs.Get(ctx, path, dbfs.WithFileEntities())
+	file, err := m.fs.Get(ctx, path, dbfs.WithFileEntities(), dbfs.WithExtendedInfo())
 	if err != nil {
 		// Let Rename report the real problem: the index lookup is the
 		// authoritative one and repeats the same call.
 		return nil, nil
 	}
 
-	policy := file.ExtendedInfo().StoragePolicy
+	policy := extendedStoragePolicy(file)
 	if policy == nil {
 		return nil, nil
 	}
@@ -306,13 +306,13 @@ func (m *manager) physicalRenameTarget(ctx context.Context, path *fs.URI) (*phys
 func (m *manager) physicalMoveTargets(ctx context.Context, src []*fs.URI) []physicalMoveTarget {
 	res := make([]physicalMoveTarget, 0, len(src))
 	for _, uri := range src {
-		file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities())
+		file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithExtendedInfo())
 		if err != nil {
 			m.l.Debug("skipping the storage side move of %q: %s", uri.String(), err)
 			continue
 		}
 
-		policy := file.ExtendedInfo().StoragePolicy
+		policy := extendedStoragePolicy(file)
 		if policy == nil {
 			continue
 		}
@@ -349,6 +349,21 @@ func (m *manager) physicalMoveTargets(ctx context.Context, src []*fs.URI) []phys
 	}
 
 	return res
+}
+
+// extendedStoragePolicy returns the storage policy of a file the index loaded
+// with WithExtendedInfo, or nil when the file has no extended info (the option
+// was not applied, or the policy id could not be resolved). Callers treat nil
+// as "this file is not on a path addressed storage" and skip the storage side
+// operation, so the guard must never be removed: ExtendedInfo itself returns a
+// nil pointer for files loaded without the option.
+func extendedStoragePolicy(file fs.File) *ent.StoragePolicy {
+	info := file.ExtendedInfo()
+	if info == nil {
+		return nil
+	}
+
+	return info.StoragePolicy
 }
 
 // pathDir returns the parent directory of a storage path.

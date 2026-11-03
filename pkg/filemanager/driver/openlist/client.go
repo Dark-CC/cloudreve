@@ -45,11 +45,6 @@ const (
 	// httpCallTimeout bounds a single API request so a hung OpenList cannot
 	// pin a Cloudreve request forever.
 	httpCallTimeout = 60 * time.Second
-
-	// uploadURLTTL is how long the upload credential handed to the browser
-	// stays valid. OpenList's own multipart session outlives it; the value only
-	// bounds how long a client may start uploading.
-	uploadURLTTL = 2 * time.Hour
 )
 
 // Refresh failure kinds surfaced to the administrator dashboard, mirroring the
