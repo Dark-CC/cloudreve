@@ -27,13 +27,13 @@ import (
 // content travels between the browser and OpenList and never through this site.
 // This release is read-only: listing and downloads.
 type Driver struct {
-	policy   *ent.StoragePolicy
-	settings setting.Provider
-	config   conf.ConfigProvider
-	l        logging.Logger
-	mime     mime.MimeDetector
-	client   Client
-	mount    string
+	policy    *ent.StoragePolicy
+	settings  setting.Provider
+	config    conf.ConfigProvider
+	l         logging.Logger
+	mime      mime.MimeDetector
+	client    Client
+	mount     string
 	chunkSize int64
 }
 

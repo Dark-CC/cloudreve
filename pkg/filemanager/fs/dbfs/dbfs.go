@@ -1098,26 +1098,59 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 
 // generateSavePath generates the physical save path for the upload request.
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
-	currentTime := time.Now()
-	dynamicReplace := func(rule string, pathAvailable bool) string {
-		return fs.ReplaceMagicVar(rule, fs.MagicVarProps{
-			FsSeparator:   fs.Separator,
-			PathAvailable: pathAvailable,
-			Time:          currentTime,
-			UserID:        user.ID,
-			OriginName:    req.Props.Uri.Name(),
-			OriginPath:    req.Props.Uri.Dir(),
-		})
-	}
+	return physicalPathFor(policy, req.Props.Uri, user.ID)
+}
 
-	dirRule := policy.DirNameRule
-	dirRule = filepath.ToSlash(dirRule)
-	dirRule = dynamicReplace(dirRule, true)
+// PhysicalPathForURI returns the path a file with the given URI occupies on the
+// policy's storage under the policy's current path rules. It mirrors
+// generateSavePath so a file keeps the same address after it is renamed or
+// moved: the rules expand the URI, not the upload request.
+func PhysicalPathForURI(policy *ent.StoragePolicy, uri *fs.URI, ownerID int) string {
+	return physicalPathFor(policy, uri, ownerID)
+}
 
-	nameRule := policy.FileNameRule
-	nameRule = dynamicReplace(nameRule, false)
+// physicalPathFor expands the policy's directory and file name rules for one
+// file URI. It is the single place both the upload path and the post-rename
+// path come from, so the two can never disagree.
+func physicalPathFor(policy *ent.StoragePolicy, uri *fs.URI, ownerID int) string {
+	dir := expandDirRule(policy, uri.Dir(), uri, ownerID)
+	return path.Join(dir, expandNameRule(policy, uri))
+}
 
-	return path.Join(path.Clean(dirRule), nameRule)
+// PhysicalDirForURI returns the directory a folder URI maps to on the policy's
+// storage, applying only the directory rule with the folder's own path. A
+// folder expands to itself, so the file name rule must not be appended.
+func PhysicalDirForURI(policy *ent.StoragePolicy, uri *fs.URI, ownerID int) string {
+	return expandDirRule(policy, uri.Path(), uri, ownerID)
+}
+
+// expandDirRule expands the policy's directory rule for one directory path.
+func expandDirRule(policy *ent.StoragePolicy, dirPath string, uri *fs.URI, ownerID int) string {
+	dirRule := filepath.ToSlash(policy.DirNameRule)
+	dirRule = fs.ReplaceMagicVar(dirRule, fs.MagicVarProps{
+		FsSeparator:   fs.Separator,
+		PathAvailable: true,
+		Time:          time.Now(),
+		UserID:        ownerID,
+		OriginName:    uri.Name(),
+		OriginPath:    dirPath,
+	})
+
+	return path.Clean(dirRule)
+}
+
+// expandNameRule expands the policy's file name rule for one URI.
+func expandNameRule(policy *ent.StoragePolicy, uri *fs.URI) string {
+	nameRule := filepath.ToSlash(policy.FileNameRule)
+	nameRule = fs.ReplaceMagicVar(nameRule, fs.MagicVarProps{
+		FsSeparator:   fs.Separator,
+		PathAvailable: false,
+		Time:          time.Now(),
+		OriginName:    uri.Name(),
+		OriginPath:    uri.Dir(),
+	})
+
+	return nameRule
 }
 
 func canMoveOrCopyTo(src, dst *fs.URI, isCopy bool) bool {
