@@ -1,4 +1,5 @@
 import {
+  Alert,
   Collapse,
   FormControl,
   FormControlLabel,
@@ -519,6 +520,13 @@ const StorageAndUploadSection = () => {
             </SettingForm>
           )}
         </Collapse>
+        {values.type === PolicyType.openlist && (
+          <Alert severity="info">
+            <Typography variant="body2">
+              {t("policy.openListUploadRelayNotice")}
+            </Typography>
+          </Alert>
+        )}
         {values.type !== PolicyType.local &&
           values.type !== PolicyType.y139 &&
           values.type !== PolicyType.openlist && (

@@ -111,6 +111,27 @@ type (
 	}
 
 	ListProgressFunc func(int)
+
+	// PhysicalRenamer is implemented by a handler whose storage keeps its own
+	// copy of the file tree, so a rename on this site must be mirrored there.
+	//
+	// Cloudreve's file operations only rewrite index rows; the bytes stay where
+	// they are until a recycle task or the storage itself moves them. A storage
+	// addressed by path (like OpenList) would then serve the old path forever,
+	// so the driver is asked to perform the rename before the index is
+	// committed. Handlers that address files by an opaque id, or that rebuild
+	// their path from the index on every read, simply do not implement it.
+	PhysicalRenamer interface {
+		// RenameFileOnStorage renames the object at from to newName, in place.
+		RenameFileOnStorage(ctx context.Context, from, newName string) error
+	}
+
+	// PhysicalMover is the move counterpart of PhysicalRenamer: a handler whose
+	// storage keeps its own copy of the file tree must be told about a move.
+	PhysicalMover interface {
+		// MoveFileOnStorage moves the object at from into the folder dstDir.
+		MoveFileOnStorage(ctx context.Context, from, dstDir string) error
+	}
 )
 
 const (

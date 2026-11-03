@@ -167,7 +167,15 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 	// (chunks streamed into this site) has no legitimate use for it and would
 	// put file content back through the server. Direct-only is required for
 	// this policy type regardless of the stored relay flag.
-	unrelayed := !uploadSession.Policy.Settings.Relay || m.stateless ||
+	//
+	// OpenList is relay-only. The only credential its API accepts is the
+	// account's own login token, and handing that to a browser would give every
+	// visitor the full reach of the administrator's OpenList account. So the
+	// bytes are always streamed into this site and written on the server side,
+	// and the relay flag cannot switch that off.
+	unrelayed := (!uploadSession.Policy.Settings.Relay &&
+		uploadSession.Policy.Type != types.PolicyTypeOpenList) ||
+		m.stateless ||
 		uploadSession.Policy.Type == types.PolicyTypeY139
 	if unrelayed {
 		credential, err = d.Token(ctx, uploadSession, req)
@@ -278,7 +286,10 @@ func (m *manager) ConfirmUploadSession(ctx context.Context, session *fs.UploadSe
 	// Make sure this storage policy is OK to receive data from clients to Cloudreve server.
 	// The 139 cloud drive never accepts relayed chunks, even when its stored
 	// relay flag was flipped on: its uploads always go straight to the drive.
+	// OpenList is the opposite and always relays, so it passes here whether or
+	// not the flag is set.
 	if session.Policy.Type != types.PolicyTypeLocal &&
+		session.Policy.Type != types.PolicyTypeOpenList &&
 		(!session.Policy.Settings.Relay || session.Policy.Type == types.PolicyTypeY139) {
 		return nil, serializer.NewError(serializer.CodePolicyNotAllowed, "", nil)
 	}

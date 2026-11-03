@@ -11,6 +11,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
@@ -139,9 +140,30 @@ func (m *manager) Create(ctx context.Context, path *fs.URI, fileType types.FileT
 }
 
 func (m *manager) Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error) {
+	// A storage addressed by path keeps its own copy of the tree, so the rename
+	// has to reach it before the index claims the file moved. Resolve the
+	// source first: after Rename the index no longer knows the old path.
+	physical, err := m.physicalRenameTarget(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	if physical != nil {
+		if err := physical.rename(ctx, newName); err != nil {
+			return nil, err
+		}
+	}
+
 	file, indexDiff, err := m.fs.Rename(ctx, path, newName)
 	m.processIndexDiff(ctx, indexDiff)
 	if err != nil {
+		// The index refused the new name: undo what the storage already did so
+		// the two do not drift apart.
+		if physical != nil {
+			if undoErr := physical.rename(ctx, path.Name()); undoErr != nil {
+				m.l.Warning("failed to undo the storage side rename of %q: %s", path.String(), undoErr)
+			}
+		}
 		return file, err
 	}
 
@@ -153,8 +175,34 @@ func (m *manager) Rename(ctx context.Context, path *fs.URI, newName string) (fs.
 }
 
 func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error {
+	// Copying leaves the source alone, so only a move needs the storage to act.
+	var physical []physicalMoveTarget
+	if !isCopy {
+		physical = m.physicalMoveTargets(ctx, src)
+	}
+
+	moved := make([]physicalMoveTarget, 0, len(physical))
+	for _, target := range physical {
+		if err := target.move(ctx, dst.Path()); err != nil {
+			// Undo the ones already moved so the storage stops disagreeing with
+			// the index, which has not changed yet.
+			for i := len(moved) - 1; i >= 0; i-- {
+				if undoErr := moved[i].move(ctx, moved[i].parentDir); undoErr != nil {
+					m.l.Warning("failed to undo the storage side move of %q: %s", moved[i].from, undoErr)
+				}
+			}
+			return err
+		}
+		moved = append(moved, target)
+	}
+
 	indexDiff, err := m.fs.MoveOrCopy(ctx, src, dst, isCopy)
 	if err != nil {
+		for i := len(moved) - 1; i >= 0; i-- {
+			if undoErr := moved[i].move(ctx, moved[i].parentDir); undoErr != nil {
+				m.l.Warning("failed to undo the storage side move of %q: %s", moved[i].from, undoErr)
+			}
+		}
 		return err
 	}
 
@@ -167,6 +215,150 @@ func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, is
 		}
 	}
 	return nil
+}
+
+// physicalRenameTarget resolves the object a rename must be mirrored onto, or
+// nil when the storage does not keep a path based tree of its own.
+type physicalRenameTarget struct {
+	driver driver.Handler
+	from   string
+}
+
+func (p *physicalRenameTarget) rename(ctx context.Context, newName string) error {
+	r, ok := p.driver.(driver.PhysicalRenamer)
+	if !ok {
+		return nil
+	}
+
+	if err := r.RenameFileOnStorage(ctx, p.from, newName); err != nil {
+		return fmt.Errorf("failed to rename the object on the storage: %w", err)
+	}
+
+	return nil
+}
+
+// physicalMoveTarget is one object a move must be mirrored onto.
+type physicalMoveTarget struct {
+	driver    driver.Handler
+	from      string
+	parentDir string
+}
+
+func (p *physicalMoveTarget) move(ctx context.Context, dstDir string) error {
+	mv, ok := p.driver.(driver.PhysicalMover)
+	if !ok {
+		return nil
+	}
+
+	if err := mv.MoveFileOnStorage(ctx, p.from, dstDir); err != nil {
+		return fmt.Errorf("failed to move the object on the storage: %w", err)
+	}
+
+	return nil
+}
+
+// physicalRenameTarget returns the storage side rename to mirror, or nil when
+// the file does not live on a path addressed storage.
+func (m *manager) physicalRenameTarget(ctx context.Context, path *fs.URI) (*physicalRenameTarget, error) {
+	file, err := m.fs.Get(ctx, path, dbfs.WithFileEntities())
+	if err != nil {
+		// Let Rename report the real problem: the index lookup is the
+		// authoritative one and repeats the same call.
+		return nil, nil
+	}
+
+	policy := file.ExtendedInfo().StoragePolicy
+	if policy == nil {
+		return nil, nil
+	}
+
+	d, err := m.GetStorageDriver(ctx, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := d.(driver.PhysicalRenamer); !ok {
+		return nil, nil
+	}
+
+	// A folder has no entity of its own, and the storage keeps the folder under
+	// the same relative path the index does, so its own path is what gets
+	// renamed. Renaming it there carries every child along in one call.
+	if file.Type() != types.FileTypeFile {
+		rel := strings.Trim(path.Path(), "/")
+		if rel == "" {
+			// The root folder is the policy's mount point itself.
+			return nil, nil
+		}
+		return &physicalRenameTarget{driver: d, from: rel}, nil
+	}
+
+	entity := file.PrimaryEntity()
+	if entity == nil || strings.TrimSpace(entity.Source()) == "" {
+		return nil, nil
+	}
+
+	return &physicalRenameTarget{driver: d, from: entity.Source()}, nil
+}
+
+// physicalMoveTargets returns the storage side moves to mirror, skipping any
+// file that does not live on a path addressed storage.
+func (m *manager) physicalMoveTargets(ctx context.Context, src []*fs.URI) []physicalMoveTarget {
+	res := make([]physicalMoveTarget, 0, len(src))
+	for _, uri := range src {
+		file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities())
+		if err != nil {
+			m.l.Debug("skipping the storage side move of %q: %s", uri.String(), err)
+			continue
+		}
+
+		policy := file.ExtendedInfo().StoragePolicy
+		if policy == nil {
+			continue
+		}
+
+		d, err := m.GetStorageDriver(ctx, policy)
+		if err != nil {
+			m.l.Debug("skipping the storage side move of %q: %s", uri.String(), err)
+			continue
+		}
+
+		if _, ok := d.(driver.PhysicalMover); !ok {
+			continue
+		}
+
+		// A folder is addressed by the same relative path the index uses and
+		// moves as one unit on the storage. A file is addressed by the source
+		// its primary entity recorded when it was written.
+		source := strings.Trim(uri.Path(), "/")
+		if file.Type() == types.FileTypeFile {
+			entity := file.PrimaryEntity()
+			if entity == nil || strings.TrimSpace(entity.Source()) == "" {
+				continue
+			}
+			source = entity.Source()
+		} else if source == "" {
+			continue
+		}
+
+		res = append(res, physicalMoveTarget{
+			driver:    d,
+			from:      source,
+			parentDir: pathDir(source),
+		})
+	}
+
+	return res
+}
+
+// pathDir returns the parent directory of a storage path.
+func pathDir(p string) string {
+	p = strings.Trim(p, "/")
+	idx := strings.LastIndex(p, "/")
+	if idx < 0 {
+		return "/"
+	}
+	return "/" + p[:idx]
 }
 
 // rewriteDavMounts repoints the given user's dav account mount URIs that
