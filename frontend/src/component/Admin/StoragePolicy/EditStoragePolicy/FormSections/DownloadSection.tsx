@@ -122,7 +122,9 @@ const DownloadSection = () => {
             </Collapse>
           </FormControl>
         </SettingForm>
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {values.type !== PolicyType.local &&
+          values.type !== PolicyType.y139 &&
+          values.type !== PolicyType.openlist && (
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>
               <FormControlLabel
@@ -150,7 +152,9 @@ const DownloadSection = () => {
             </FormControl>
           </SettingForm>
         )}
-        {values.type !== PolicyType.local && values.type !== PolicyType.y139 && (
+        {values.type !== PolicyType.local &&
+          values.type !== PolicyType.y139 &&
+          values.type !== PolicyType.openlist && (
           <SettingForm lgWidth={5} title={t("policy.downloadTrafficDiagram")}>
             <TrafficDiagram
               variant="download"

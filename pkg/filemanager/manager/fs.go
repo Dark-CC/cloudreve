@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/local"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/obs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/openlist"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/oss"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/qiniu"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/remote"
@@ -110,6 +111,26 @@ func (m *manager) GetStorageDriver(ctx context.Context, policy *ent.StoragePolic
 		// so several 139 drives renew independently.
 		policyID := policy.ID
 		y139.SetRefreshErrorReporter(d, func(ctx context.Context, kind, message string) error {
+			return m.policyClient.ReportRefreshError(ctx, policyID, kind, message)
+		})
+
+		return d, nil
+	case types.PolicyTypeOpenList:
+		d, err := openlist.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
+		if err != nil {
+			return nil, err
+		}
+
+		// The token deliberately is NOT written back to the policy: OpenList
+		// authenticates with username and password, and the only credential
+		// slot on a policy is access_key, which already holds the username.
+		// Caching the 48 hour token in memory and logging in again when it
+		// expires or the process restarts keeps the credentials intact.
+
+		// A failed login lands on the policy itself so the administrator
+		// dashboard can show it, exactly like the 139 drive.
+		policyID := policy.ID
+		openlist.SetRefreshErrorReporter(d, func(ctx context.Context, kind, message string) error {
 			return m.policyClient.ReportRefreshError(ctx, policyID, kind, message)
 		})
 
