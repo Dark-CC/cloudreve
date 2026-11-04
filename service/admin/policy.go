@@ -22,6 +22,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/oss"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/s3"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
@@ -318,6 +319,19 @@ func (service *CreateStoragePolicyService) Create(c *gin.Context) (*GetStoragePo
 
 	if service.Policy.Type == types.PolicyTypeLocal {
 		service.Policy.DirNameRule = util.DataPath("uploads/{uid}/{path}")
+	}
+
+	// Every other policy type used to get its path rules only from the
+	// administrator's wizard, which fills them in client side. A policy created
+	// by an API call, a script or a migration therefore reached the database
+	// with both rules empty, and every upload against it then expanded to an
+	// empty save path. Apply the same defaults here so no policy can be stored
+	// in that state.
+	if strings.TrimSpace(service.Policy.DirNameRule) == "" {
+		service.Policy.DirNameRule = dbfs.DefaultDirNameRule
+	}
+	if strings.TrimSpace(service.Policy.FileNameRule) == "" {
+		service.Policy.FileNameRule = dbfs.DefaultFileNameRule
 	}
 
 	service.Policy.ID = 0
