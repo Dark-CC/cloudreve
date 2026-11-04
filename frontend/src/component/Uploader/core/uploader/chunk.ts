@@ -46,16 +46,19 @@ export default abstract class Chunk extends Base {
   };
 
   private async uploadChunksWithDynamicPool() {
-    // Get chunks that need to be uploaded
-    // A part with no signed URL was not meant to be transferred: the storage
-    // already holds this content and the backend reported `no_parts_uploaded`,
-    // or it signed fewer URLs than there are parts. Trying to PUT it would fail
-    // with "No upload URL signed" and leave the upload stuck.
-    const signedUrls = this.task.session?.upload_urls || [];
+    // Get chunks that need to be uploaded.
+    //
+    // `upload_urls` is only meaningful for drivers that sign one URL per part
+    // (the 139 cloud drive and the object storages). Relay uploads post every
+    // chunk to this site through one fixed endpoint and get no `upload_urls`
+    // at all — local, remote, and OpenList policies all take that route.
+    // Filtering by a signed URL here used to drop every one of those chunks,
+    // leaving the placeholder (and its `sys:upload_session_id`) behind while
+    // the uploader still reported success. A storage that actually holds the
+    // content already signals it with `no_parts_uploaded`, handled in upload().
     const chunksToUpload = this.chunks
       .map((chunk, index) => ({ chunk, index }))
-      .filter(({ chunk, index }) => this.task.chunkProgress[index].loaded < chunk.size || chunk.size === 0)
-      .filter(({ index }) => !!signedUrls[index]);
+      .filter(({ chunk, index }) => this.task.chunkProgress[index].loaded < chunk.size || chunk.size === 0);
 
     if (chunksToUpload.length === 0) {
       this.logger.info("All chunks already uploaded, skipping.");
