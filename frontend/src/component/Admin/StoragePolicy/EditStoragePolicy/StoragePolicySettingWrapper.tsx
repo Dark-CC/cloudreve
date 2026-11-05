@@ -28,6 +28,8 @@ const defaultPolicy: StoragePolicy = {
   type: PolicyType.local,
   name: "",
   edges: {},
+  dir_name_rule: "uploads/{uid}/{path}",
+  file_name_rule: "{originname}",
 };
 
 export const StoragePolicySettingContext = createContext<StoragePolicySettingContextProps>({
@@ -77,10 +79,22 @@ const StoragePolicySettingWrapper = ({ policyID, children, onPolicyChange }: Sto
       }
     }
 
+    // A policy saved with an empty path rule expands to an empty save path, so
+    // every upload against it fails or lands as a nameless object and the file
+    // stays listed as "uploading" forever. The backend applies the same
+    // defaults, this only keeps the form from ever submitting blank rules.
+    const payload: StoragePolicy = {
+      ...modifiedValues,
+      edges: {},
+      dir_name_rule:
+        modifiedValues.dir_name_rule?.trim() || defaultPolicy.dir_name_rule || "uploads/{uid}/{path}",
+      file_name_rule: modifiedValues.file_name_rule?.trim() || defaultPolicy.file_name_rule || "{originname}",
+    };
+
     setSubmitting(true);
     dispatch(
       upsertStoragePolicy({
-        policy: { ...modifiedValues, edges: {} },
+        policy: payload,
       }),
     )
       .then((res) => {
