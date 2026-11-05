@@ -1,6 +1,5 @@
 /**
- * 诊断脚本：为什么在真实浏览器里选文件后没有发起上传请求。
- * 输出：所有网络请求（含被拦的第三方）、上传相关 DOM、控制台消息。
+ * 诊断脚本（无请求拦截版）：选文件后前端是否发起上传请求。
  */
 const fs = require('fs');
 const path = require('path');
@@ -15,34 +14,33 @@ const log = (...a) => { const s = a.map(String).join(' '); lines.push(s); consol
 
 (async () => {
   const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
+  log('step launch');
   const b = await chromium.launch({ executablePath: process.env.CHROME, ignoreDefaultArgs: ['--headless=old'], args: ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage'] });
   const ctx = await b.newContext({ locale: 'zh-CN' });
   const p = await ctx.newPage();
   const reqs = [];
-  p.on('request', r => reqs.push(r.method() + ' ' + r.url()));
-  p.on('console', m => log('[console.' + m.type() + ']', m.text().slice(0, 300)));
-  p.on('pageerror', e => log('[pageerror]', e.message.split('\n')[0].slice(0, 200)));
+  p.on('request', r => { const u = r.url(); if (u.includes(HOST) && u.includes('/api')) reqs.push(r.method() + ' ' + u.slice(u.indexOf('/api'))); });
   try {
+    log('step goto');
     await p.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await sleep(3000);
+    log('step login1');
     await p.fill('input[type=email]', EMAIL);
     await p.press('input[type=email]', 'Enter');
     await sleep(2500);
+    log('step login2');
     await p.fill('input[type=password]', PASSWORD);
     await p.press('input[type=password]', 'Enter');
     await sleep(9000);
-    if (!p.url().includes('/home')) { await p.goto(BASE + '/home', { waitUntil: 'domcontentloaded' }); await sleep(9000); }
     log('url', p.url());
+    if (!p.url().includes('/home')) { await p.goto(BASE + '/home', { waitUntil: 'domcontentloaded' }); await sleep(9000); log('url2', p.url()); }
 
-    // 上传相关 DOM
     const dom = await p.evaluate(() => {
       const out = [];
-      document.querySelectorAll('input[type=file], [class*=upload], [id*=upload], [class*=Upload]').forEach(e => {
-        out.push({ tag: e.tagName, id: e.id, cls: (e.className || '').toString().slice(0, 120), type: e.type, accept: e.accept, hidden: e.offsetParent === null });
-      });
-      return out.slice(0, 30);
+      document.querySelectorAll('input[type=file]').forEach(e => out.push({ id: e.id, cls: (e.className || '').toString().slice(0, 100), accept: e.accept, hidden: e.offsetParent === null, outer: e.outerHTML.slice(0, 200) }));
+      return out;
     });
-    log('upload-dom', JSON.stringify(dom, null, 1));
+    log('file-inputs', JSON.stringify(dom));
 
     const name = 'diag-' + Date.now() + '.bin';
     const local = path.join(OUTDIR, name);
@@ -55,8 +53,8 @@ const log = (...a) => { const s = a.map(String).join(' '); lines.push(s); consol
       await input.setInputFiles(local);
       log('setInputFiles-done');
       await sleep(15000);
-      log('reqs-after-select', JSON.stringify(reqs.filter(u => u.includes(HOST) && u.includes('/api')), null, 1));
-      log('body-after', (await p.locator('body').innerText()).slice(-800).replace(/\n+/g, ' | '));
+      log('api-reqs', JSON.stringify(reqs));
+      log('body-after', (await p.locator('body').innerText()).slice(-600).replace(/\n+/g, ' | '));
     }
     await p.screenshot({ path: path.join(OUTDIR, 'diag.png') });
   } catch (e) { log('ERR', e.message.split('\n')[0]); }
