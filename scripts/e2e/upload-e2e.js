@@ -107,21 +107,21 @@ const countUploading = async page => {
 
     // 等进入文件列表（登录成功会跳到 /home）；若前端没自动跳转，登录 cookie 已写入，直接导航过去
     let onHome = false;
-    for (let i = 0; i < 25; i++) {
-      await sleep(1000);
-      if (page.url().includes('/home')) { onHome = true; log('on-home-at', i + 's'); break; }
+    try {
+      await withTimeout(page.waitForURL('**/home**', { timeout: 60000 }), 75000, 'wait-url');
+      onHome = true;
+      log('on-home via redirect');
+    } catch (e) {
+      log('no-auto-redirect (' + e.message.split('\n')[0] + '), goto /home directly');
     }
     if (!onHome) {
-      log('no-auto-redirect, goto /home directly');
-      await withTimeout(page.goto(BASE + '/home', { waitUntil: 'domcontentloaded', timeout: 40000 }), 60000, 'goto-home');
-      for (let i = 0; i < 30; i++) {
-        await sleep(1000);
-        if (page.url().includes('/home')) { onHome = true; log('on-home-at', 'goto+' + i + 's'); break; }
-      }
+      await withTimeout(page.goto(BASE + '/home', { waitUntil: 'domcontentloaded', timeout: 60000 }), 90000, 'goto-home');
+      onHome = page.url().includes('/home');
+      log('after goto url', page.url());
     }
     record('logged-in', onHome);
     // 等前端 Uploader 初始化完成（它初始化后才接受拖拽）
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 60; i++) {
       if (uploaderLogs.some(t => t.includes('Set allowed file suffix'))) { log('uploader-ready-at', i + 's'); break; }
       await sleep(1000);
     }
