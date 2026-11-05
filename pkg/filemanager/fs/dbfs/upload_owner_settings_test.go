@@ -19,19 +19,29 @@ func versionRetentionEnabled(owner *ent.User, fileName string) bool {
 }
 
 // TestVersionRetentionToleratesNilOwnerSettings guards the version retention
-// lookup in CompleteUpload: a missing owner or nullable settings column must
-// fall back to one version, not panic while the last chunk is being finalized.
+// lookup in CompleteUpload.
+//
+// The owner's settings column is nullable and the owner edge can be missing
+// from a partially loaded file, so the retention policy has to be read through
+// nil checks. It used to be dereferenced straight away: the panic escaped
+// CompleteUpload, the placeholder file and its upload session metadata stayed
+// behind, and the file was listed as uploading forever even though every chunk
+// had been stored correctly.
 func TestVersionRetentionToleratesNilOwnerSettings(t *testing.T) {
 	if versionRetentionEnabled(nil, "a.png") {
 		t.Error("missing owner must not enable version retention")
 	}
+
 	if versionRetentionEnabled(&ent.User{}, "a.png") {
 		t.Error("nil settings must not enable version retention")
 	}
 }
 
+// TestVersionRetentionReadsSettingsWhenPresent keeps the actual policy working
+// once the nil guard is in place.
 func TestVersionRetentionReadsSettingsWhenPresent(t *testing.T) {
 	owner := &ent.User{Settings: &types.UserSetting{VersionRetention: true}}
+
 	if !versionRetentionEnabled(owner, "a.png") {
 		t.Error("retention enabled in settings should be honoured")
 	}

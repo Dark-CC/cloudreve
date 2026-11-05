@@ -402,10 +402,11 @@ func (f *DBFS) CompleteUpload(ctx context.Context, session *fs.UploadSession) (f
 	// Max allowed versions
 	maxVersions := 1
 	// The owner's settings column is nullable and the owner itself can be
-	// missing from a partially loaded file, so both need a nil check before
-	// the retention policy is read. Without it a panic here escaped the
-	// handler after the last chunk was stored: the placeholder and its
-	// upload session metadata survived and the file stayed "uploading".
+	// missing from the loaded edges, so both need a nil check before the
+	// retention policy is read. Every other reader of these two does the
+	// same; this one used to dereference them straight away and panicked in
+	// CompleteUpload, which left the placeholder file behind with its upload
+	// session metadata intact and the file listed as uploading forever.
 	if entityType == types.EntityTypeVersion &&
 		owner != nil && owner.Settings != nil &&
 		owner.Settings.VersionRetention &&

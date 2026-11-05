@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -1124,9 +1125,49 @@ func PhysicalDirForURI(policy *ent.StoragePolicy, uri *fs.URI, ownerID int) stri
 	return expandDirRule(policy, uri.Path(), uri, ownerID)
 }
 
+// Default path rules for a policy that was stored without them.
+//
+// A policy created while these fields carried no default (every storage policy
+// type except local did: the administrators' wizards filled them in client
+// side, so a policy created through the API, a migration or an older release
+// could be stored with both rules empty) expands to an empty save path. The
+// upload is then refused, or worse, completed against an empty object name: the
+// placeholder stays, its upload session metadata is never cleared, and the file
+// is listed as "uploading" forever even though the transfer itself succeeded.
+// Falling back to the same rules a desktop setup would use keeps such a policy
+// writable instead of silently broken.
+const (
+	// DefaultDirNameRule places files under uploads/{uid}/<their folder path>.
+	DefaultDirNameRule = "uploads/{uid}/{path}"
+	// DefaultFileNameRule keeps the original file name.
+	DefaultFileNameRule = "{originname}"
+)
+
+// dirNameRule returns the directory rule to expand for this policy.
+func dirNameRule(policy *ent.StoragePolicy) string {
+	if policy == nil {
+		return DefaultDirNameRule
+	}
+	if rule := strings.TrimSpace(policy.DirNameRule); rule != "" {
+		return rule
+	}
+	return DefaultDirNameRule
+}
+
+// fileNameRule returns the file name rule to expand for this policy.
+func fileNameRule(policy *ent.StoragePolicy) string {
+	if policy == nil {
+		return DefaultFileNameRule
+	}
+	if rule := strings.TrimSpace(policy.FileNameRule); rule != "" {
+		return rule
+	}
+	return DefaultFileNameRule
+}
+
 // expandDirRule expands the policy's directory rule for one directory path.
 func expandDirRule(policy *ent.StoragePolicy, dirPath string, uri *fs.URI, ownerID int) string {
-	dirRule := filepath.ToSlash(policy.DirNameRule)
+	dirRule := filepath.ToSlash(dirNameRule(policy))
 	dirRule = fs.ReplaceMagicVar(dirRule, fs.MagicVarProps{
 		FsSeparator:   fs.Separator,
 		PathAvailable: true,
@@ -1141,7 +1182,7 @@ func expandDirRule(policy *ent.StoragePolicy, dirPath string, uri *fs.URI, owner
 
 // expandNameRule expands the policy's file name rule for one URI.
 func expandNameRule(policy *ent.StoragePolicy, uri *fs.URI) string {
-	nameRule := filepath.ToSlash(policy.FileNameRule)
+	nameRule := filepath.ToSlash(fileNameRule(policy))
 	nameRule = fs.ReplaceMagicVar(nameRule, fs.MagicVarProps{
 		FsSeparator:   fs.Separator,
 		PathAvailable: false,
@@ -1149,6 +1190,13 @@ func expandNameRule(policy *ent.StoragePolicy, uri *fs.URI) string {
 		OriginName:    uri.Name(),
 		OriginPath:    uri.Dir(),
 	})
+
+	// A file name rule that expands to nothing (or to everything the path has
+	// above it) would address a directory instead of a file on the storage.
+	// Keep the original name rather than writing an object nobody can download.
+	if strings.TrimSpace(nameRule) == "" || strings.Contains(nameRule, "/") {
+		return uri.Name()
+	}
 
 	return nameRule
 }
