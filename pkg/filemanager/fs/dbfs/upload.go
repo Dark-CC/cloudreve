@@ -401,7 +401,14 @@ func (f *DBFS) CompleteUpload(ctx context.Context, session *fs.UploadSession) (f
 	owner := filePrivate.Owner()
 	// Max allowed versions
 	maxVersions := 1
+	// The owner's settings column is nullable and the owner itself can be
+	// missing from the loaded edges, so both need a nil check before the
+	// retention policy is read. Every other reader of these two does the
+	// same; this one used to dereference them straight away and panicked in
+	// CompleteUpload, which left the placeholder file behind with its upload
+	// session metadata intact and the file listed as uploading forever.
 	if entityType == types.EntityTypeVersion &&
+		owner != nil && owner.Settings != nil &&
 		owner.Settings.VersionRetention &&
 		(len(owner.Settings.VersionRetentionExt) == 0 || util.IsInExtensionList(owner.Settings.VersionRetentionExt, file.Name())) {
 		// Retention is enabled for this file
