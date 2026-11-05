@@ -166,13 +166,15 @@ async function countUploading(page) {
   }
 
   if (exitCode === 0) {
-    const bad = result.filter(([k, v]) =>
-      (k === 'logged-in' && v !== 'true') ||
-      (k === 'uploading-after' && Number(v) !== 0) ||
-      (k === 'uploading-after-reload' && Number(v) !== 0) ||
-      (k === 'file-in-list' && v !== 'true') ||
-      (k === 'file-in-list-after-reload' && v !== 'true'));
-    if (bad.length) exitCode = 1;
+    const bad = result.filter(([k, v]) => {
+      const s = String(v);
+      return (k === 'logged-in' && s !== 'true') ||
+        (k === 'uploading-after' && Number(s) !== 0) ||
+        (k === 'uploading-after-reload' && Number(s) !== 0) ||
+        (k === 'file-in-list' && s !== 'true') ||
+        (k === 'file-in-list-after-reload' && s !== 'true');
+    });
+    if (bad.length) { exitCode = 1; log('FAILED-ASSERTIONS', JSON.stringify(bad)); }
     record('VERDICT', exitCode === 0 ? 'PASS' : 'FAIL');
   }
   console.log('result file:', RESULT_FILE);
