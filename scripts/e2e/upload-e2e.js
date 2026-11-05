@@ -116,10 +116,12 @@ const withTimeout = (p, ms, tag) => Promise.race([
     sessionReqs.length = 0;
     uploaderLogs.length = 0;
 
-    // 拖拽上传：与用户把文件拖进窗口等价，是前端 Uploader 真正监听的入口
+    // 拖拽上传：与用户把文件拖进窗口等价，是前端 Uploader 真正监听的入口。
+    // 内容用随机字节，避免命中服务端秒传（那样就不会真正走分片上传链路）。
     await page.evaluate(async ({ name, size }) => {
       const dt = new DataTransfer();
-      const buf = new Uint8Array(size); buf.fill(120);
+      const buf = new Uint8Array(size);
+      for (let i = 0; i < size; i++) buf[i] = (Math.random() * 256) | 0;
       dt.items.add(new File([buf], name, { type: 'application/octet-stream' }));
       for (const el of [document.body, document.documentElement]) {
         for (const type of ['dragenter', 'dragover', 'drop']) {
@@ -129,11 +131,13 @@ const withTimeout = (p, ms, tag) => Promise.race([
     }, { name, size });
     log('dropped', name);
 
+    // 上传完成判定：chunk 全传完，或命中服务端秒传，二者都视为完成
     let queueDone = false;
     for (let i = 0; i < 90; i++) {
       await sleep(1000);
-      if (uploaderLogs.some(t => t.includes('Upload task completed'))) { queueDone = true; log('upload-completed-at', i + 's'); break; }
-      if (uploaderLogs.some(t => t.includes('Failed') || t.includes('error'))) { log('upload-error-seen'); break; }
+      if (uploaderLogs.some(t => t.includes('Upload task completed'))) { queueDone = true; log('upload-completed-at', i + 's', '(chunks)'); break; }
+      if (uploaderLogs.some(t => t.includes('Rapid upload'))) { queueDone = true; log('upload-completed-at', i + 's', '(rapid)'); break; }
+      if (uploaderLogs.some(t => /Failed|error/i.test(t))) { log('upload-error-seen', uploaderLogs.find(t => /Failed|error/i.test(t))); break; }
     }
     record('uploader-reported-complete', queueDone);
     record('upload-requests', sessionReqs.length);
