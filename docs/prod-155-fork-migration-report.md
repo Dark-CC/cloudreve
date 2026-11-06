@@ -2,23 +2,37 @@
 
 执行时间：2026-11-07
 目标主机：`155.117.85.143`（x86_64，主机名 `elaborate-extreme`）
-结论：**新环境已跑起来，数据完整，分享与真实下载链路验证通过。旧站与旧库原样保留，可随时回滚。**
+结论：**新站已上线接管流量**，数据与旧站逐表相等，分享与真实下载链路验证通过。旧站与旧库原样保留，**一条命令即可切回**。
+
+---
+
+## 〇、切换结论（最重要，先看这里）
+
+**已完成切换：`pan.cdn.ad` 现在指向新站（fork 4.23.8，端口 5213）。** 用户访问已恢复，维护页已撤销。
+
+| 检查项 | 结果 |
+|---|---|
+| 网站是否已由新站接管 | ✅ 是（`/api/v4/site/ping` 返回 `4.23.8`） |
+| 443 是否正常 | ✅ 正常（首页 200，站点配置正常返回） |
+| 回滚命令 | `sed -i 's|proxy_pass http://127.0.0.1:5213;|proxy_pass http://127.0.0.1:5212;|' /opt/nginx/nginx.conf && docker exec nginx nginx -s reload` |
 
 ---
 
 ## 一、当前状态一览
 
-| 项目 | 旧环境（生产，原样保留） | 新环境（fork 4.23.8） |
+| 项目 | 旧环境（生产，原样保留、不再接流量） | 新环境（fork 4.23.8，**已接管流量**） |
 |---|---|---|
 | 容器 | `cloudreve-service` + `cloudreve-postgresql` + `cloudreve-redis` | `cloudreve-fork` + `cloudreve-fork-postgresql` + `cloudreve-fork-redis` |
 | 版本 | 4.18.0-pro | 4.23.8（linux_amd64 发版二进制） |
-| 监听 | `127.0.0.1:5212`（已关公网） | `127.0.0.1:5213`（仅回环） |
-| 数据库 | PG 17，库 `cloudreve`，4.8 GB | PG 17.10，库 `cloudreve_fork`，**2.36 GB** |
+| 监听 | `127.0.0.1:5212`（仅回环，无公网） | `127.0.0.1:5213`（仅回环，无公网） |
+| 数据库 | PG 17，库 `cloudreve`，4.8 GB | PG 17.10，库 `cloudreve_fork`，2.36 GB |
 | Redis | `cloudreve-redis` | `cloudreve-fork-redis`（独立实例） |
 | 目录 | `/opt/cloudreve/` | `/opt/cloudreve-fork/` |
-| 对外 | 无（nginx 现返回维护页） | 无（验收通过后由 nginx 切换） |
+| 对外 | 无 | **经 nginx 443** |
 
-**用户访问现状：`pan.cdn.ad` 显示「系统维护中」页面。** 这是有意为之——迁移期间停站，防止用户上传造成数据分叉。
+**用户访问现状：`pan.cdn.ad` 已正常打开新站首页**（标题 `FullStack Storage`）。
+
+两个端口都**只监听 127.0.0.1**，公网实测均不可达（`curl` 返回 000），对外唯一入口是 nginx 的 443。
 
 ---
 
@@ -208,30 +222,104 @@ HTTP 200，下载 18,959,715 字节（与数据库记录完全一致）
 
 ---
 
+## 七之二、上线切换（已执行）
+
+**操作**：把 `pan.cdn.ad` 的 nginx 转发从维护页改为新站。
+
+改动位置：`/opt/nginx/nginx.conf` 第 224 行附近
+```diff
+-        # MAINT: 2026-11-07 维护窗口，迁移完成后改回 http://127.0.0.1:5212
+-        location / {
+-            root /usr/share/nginx/html;
+-            try_files /maintenance.html =503;
+-            # proxy_pass http://127.0.0.1:5212;
++        # SWITCHED 2026-11-07: 已切到 fork 新站 5213；回滚改成 http://127.0.0.1:5212 并 reload
++        location / {
++            proxy_pass http://127.0.0.1:5213;
+```
+
+**切换前已再备份一份当前配置**：`/opt/backup-prod-155/20261107/nginx.conf.before-switch-20261107-015820`（12,884 字节）
+
+配置校验通过后 `reload`，nginx 无重启中断。
+
+### 切换后的三项实测
+
+**① 站点配置 / 版本（能看出是新站）**
+```
+$ curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/api/v4/site/ping
+{"code":0,"data":"4.23.8","msg":""}          ← 旧站为 4.18.0-pro，此处明确是新站
+
+$ curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/api/v4/site/config/basic
+{"code":0,"data":{"instance_id":"c5c7b024-...","title":"FullStack Storage","themes":"..."...}}
+```
+> 注：`/api/v4/site/config`（不带段名）返回 404 是**正常**的——该路由在 4.23.8 与 4.18 中都必须带 `:section`，旧站（5212）同样返回 404。正确路径是 `/api/v4/site/config/basic`。
+
+**② 首页（不是维护页）**
+```
+$ curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/
+http=200 size=4215
+<title>FullStack Storage</title>
+<script async type="module" crossorigin src="/assets/index-DsCJIZF-.js"
+维护页字样出现次数: 0
+```
+
+**③ 新站容器健康、日志无错误**
+```
+$ docker ps --filter name=cloudreve-fork --format "{{.Names}}|{{.Status}}"
+cloudreve-fork|Up
+cloudreve-fork-postgresql|Up
+cloudreve-fork-redis|Up
+
+$ docker logs cloudreve-fork --since 5m | grep -iE "error|panic|fatal"
+（无输出）
+
+$ docker logs cloudreve-fork --tail
+[Info] 200 |  28.005389ms | GET "/"
+[Info] 200 | 1.53826ms   | GET "/api/v4/site/ping"
+```
+
+### 切换后其他确认
+
+- **端口暴露面**：5212 与 5213 均只监听 `127.0.0.1`；公网实测均不可达（`curl` 返回 000）。对外唯一入口是 nginx 443。**未新开任何公网端口。**
+- **分享仍正常**：`https://pan.cdn.ad/api/v4/share/info/bAuQ` 返回正常（访问计数已从 2 增至 4，说明切换后有真实浏览）。
+- **数据仍与旧库相等**：用户 630、文件 727,997、实体 1,094,499、分享 349，逐项相同。
+- **旧站保持原样**：`cloudreve-service`、`cloudreve-postgresql`、`cloudreve-redis` 全部在跑，数据未动，只是不再接流量。
+
+---
+
 ## 八、回滚操作（每条可直接执行）
 
-### 8.1 从维护页切回旧站（让用户先恢复访问）
+### 8.1 【最常用】切回旧站 5212（一秒回滚）
 ```bash
-# 宿主机编辑：/opt/nginx/nginx.conf 第 224-228 行附近
-#   把 location / 里的
-#       root /usr/share/nginx/html;
-#       try_files /maintenance.html =503;
-#   改回
-#       proxy_pass http://127.0.0.1:5212;
-#   改完执行：
+sed -i 's|proxy_pass http://127.0.0.1:5213;|proxy_pass http://127.0.0.1:5212;|' /opt/nginx/nginx.conf
 docker exec nginx nginx -t && docker exec nginx nginx -s reload
 
-# 验证
-curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/ | head -c 200
+# 验证：应返回 4.18.0-pro
+curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/api/v4/site/ping
 ```
-若 `nginx.conf` 已改乱，可直接用备份覆盖：
+**旧站容器一直在跑、旧库从未被改，所以切回去立即生效，不需要启任何服务。**
+
+### 8.2 若 nginx.conf 已改乱，用文件恢复
 ```bash
+# 切到新站之前的维护页状态：
+cp /opt/backup-prod-155/20261107/nginx.conf.before-switch-20261107-015820 /opt/nginx/nginx.conf
+
+# 或回到最开始（维护页之前、直连 5212 的原始状态）：
 cp /opt/backup-prod-155/20261107/nginx.conf.before-maint /opt/nginx/nginx.conf
+
 docker exec nginx nginx -t && docker exec nginx nginx -s reload
 ```
 
-### 8.2 5212 恢复公网绑定
-**一般情况下不需要**——用户是通过 nginx 的 443 访问的，5212 只做本机回环转发，恢复公网绑定反而扩大暴露面。
+### 8.3 恢复维护页（需要再次停站时）
+```bash
+cp /opt/backup-prod-155/20261107/nginx.conf.before-switch-20261107-015820 /opt/nginx/nginx.conf
+docker exec nginx nginx -t && docker exec nginx nginx -s reload
+# 验证：应返回 200 且页面含「系统维护中」
+curl -sk -H "Host: pan.cdn.ad" https://127.0.0.1/ | grep -c '系统维护中'
+```
+
+### 8.4 5212 恢复公网绑定（一般不需要）
+**不建议做**——用户是通过 nginx 的 443 访问的，5212 只做本机回环转发，恢复公网绑定只会扩大暴露面。
 确需恢复时：
 ```bash
 cp /opt/backup-prod-155/20261107/docker-compose.yml.before /opt/cloudreve/docker-compose.yml
@@ -239,7 +327,7 @@ cd /opt/cloudreve && docker compose up -d
 ss -lntp | grep 5212      # 应显示 0.0.0.0:5212
 ```
 
-### 8.3 恢复 OpenList
+### 8.5 恢复 OpenList（如有需要）
 ```bash
 mkdir -p /opt/openlist-restore && cd /opt/openlist-restore
 tar -xzf /opt/backup-prod-155/20261107/openlist-backup.tar.gz
@@ -248,8 +336,8 @@ docker compose up -d
 ss -lntp | grep -E ':5244|:5245'    # 应重新出现监听
 ```
 
-### 8.4 数据库回滚（极端情况）
-新环境完全独立，**旧库从头到尾没被改过**（审计日志、任务、全部数据原样）。所以数据库层面不需要「回滚」，旧容器重新对外即可。
+### 8.6 数据库回滚（极端情况）
+新环境完全独立，**旧库从头到尾没被改过**（审计日志、任务、全部数据原样）。所以数据库层面不需要「回滚」，8.1 切回旧站即可。
 灾难场景才需要从备份重建：
 ```bash
 docker exec -i cloudreve-postgresql psql -U cloudreve -d postgres -c 'CREATE DATABASE cloudreve_restore;'
@@ -257,9 +345,10 @@ cat /opt/backup-prod-155/20261107/cloudreve-full.dump | \
   docker exec -i cloudreve-postgresql pg_restore -U cloudreve -d cloudreve_restore --no-owner
 ```
 
-### 8.5 停止新环境（不影响旧站）
+### 8.7 停止新环境（不影响旧站）
 ```bash
 cd /opt/cloudreve-fork && docker compose down
+# 然后按 8.1 切回旧站
 ```
 
 ---
@@ -267,15 +356,28 @@ cd /opt/cloudreve-fork && docker compose down
 ## 九、磁盘与清理
 
 - 磁盘余量：**118 GB 可用**（总 193 GB，使用 39%），全程未紧张。
-- 已清理：Go 编译临时源码目录（约 261 MB）、验证下载的文件、各步临时 SQL 与脚本、迁移演练库（26 GB，早前已删）。
+- 本次清理释放约 **1 MB**（散落的临时文件；大体积的 Go 编译目录、演练库已于前序步骤清理，合计约 261 MB + 26 GB）。
+- 已清理：验证下载的文件、各步临时 SQL/脚本/CSV、新旧库容器内的导出文件、Go 编译临时源码目录。
 - 保留：`/opt/backup-prod-155/20261107/`（644 MB，回滚依赖，**请勿删**）、`/opt/cloudreve-fork/`（新环境本体）。
-- 未触碰该机其他业务：订阅面板、sing-box、frps、advpn、`kuaichuan.service`、misub、subconverter 全部原样运行。
+- **未触碰该机其他业务**：订阅面板、sing-box、frps、advpn、`kuaichuan.service`、misub、subconverter 全部原样运行（已逐个核实容器状态）。
 
 ---
 
-## 十、建议但本轮未动
+## 十、建议但本轮未动：HTTPS 证书已全线过期
 
-**HTTPS 证书已全线过期。** `*.cdn.ad`（Cloudreve 实际使用的那张）于 **2026-10-21 到期**，其余几张更早。这意味着用户现在通过浏览器访问时会看到证书告警，即便切到新环境也一样。
+**这是当前最影响用户体验的问题：用户浏览器会看到安全警告。本轮未做任何改动。**
+
+证书文件均在 `/opt/nginx/certs/`：
+
+| 证书文件 | 域名 | 到期日 | 状态 | 用途 |
+|---|---|---|---|---|
+| `cdn.ad.pem` | `*.cdn.ad` | **2026-10-21** | ❌ 已过期 | **Cloudreve 实际在用**（`pan.cdn.ad`、`ai.cdn.ad`、`send.cdn.ad`、`kt.cdn.ad`、`cdn.ad`） |
+| `misub.kdns.fr.fullchain.cer` | `misub.kdns.fr` | 2026-09-09 | ❌ 已过期 | 订阅面板 |
+| `acme.qzyun.net.fullchain.cer` | `acme.qzyun.net` | 2026-08-04 | ❌ 已过期 | 其他 |
+| `panel.qzyun.net.fullchain.cer` | `panel.qzyun.net` | 2026-08-04 | ❌ 已过期 | 其他 |
+| `strapi.qzyun.net.fullchain.cer` | `strapi.qzyun.net` | 2026-08-04 | ❌ 已过期 | 其他 |
+
+**实际在用、影响用户的就一张：`cdn.ad.pem`（通配 `*.cdn.ad`，2026-10-21 到期）。**
 
 本轮用户未要求处理证书，故**未做任何改动**。建议尽快续期，可选项：
 - `acme.sh` 已在机器上有镜像（`neilpang/acme.sh`），可用 DNS 方式自动签发并配置续期；
@@ -285,12 +387,21 @@ cd /opt/cloudreve-fork && docker compose down
 
 ---
 
-## 十一、下一步（需你确认后进行）
+## 十一、当前状态与后继事项
 
-1. **切换流量**：nginx `pan.cdn.ad` 从维护页改为 `proxy_pass http://127.0.0.1:5213`，用户即访问新环境。
-2. 切换后观察一段时间（建议数小时到一天），确认无异常。
-3. 再决定旧容器（`cloudreve-service` / `cloudreve-postgresql` / `cloudreve-redis`）的最终退役，**在此之前旧环境一律不动**。
+### 已完成
+1. ✅ 备份与验证
+2. ✅ 5212 关公网（仅本机回环）
+3. ✅ OpenList 停掉并删除（数据目录与备份均保留）
+4. ✅ 新环境搭建（Docker + PostgreSQL + Redis，4.23.8）
+5. ✅ 数据迁移与增量同步，逐表与旧库相等
+6. ✅ **已上线切换：`pan.cdn.ad` 现由新站接管，用户访问已恢复**
 
-> 数据一致性：维护期内产生的 32 个文件、2 个分享已做增量同步（见 6.4 节），**当前 fork 与生产逐表相等**，可以直接切换。
->
-> 但要注意：**维护页生效后，理论上用户已无法上传**。若切换前发现旧库又有新写入，需再跑一次增量同步，否则这批数据不会出现在新环境。
+### 待办（需你决定）
+1. **观察期**：建议观察数小时到一天，确认无异常。有问题随时按 8.1 一条命令切回，旧站一直就绪。
+2. **旧环境退役**：`cloudreve-service` / `cloudreve-postgresql` / `cloudreve-redis` 目前仍全部运行。**在你明确确认新站稳定之前，建议一律不动**。
+3. **旧库停写后的数据去向**：从切换完成起，新站写入的**新库（`cloudreve_fork`）**，旧库（`cloudreve`）保持切换时点的快照。两边已不再同步。
+4. **证书续期**（见第十节）：影响最大，建议优先处理。
+5. **旧站备份脚本里的明文凭据**：`/opt/cloudreve/backup.sh` 内含明文访问密钥，建议后续改为从环境变量或密钥文件读取。
+
+> 数据一致性说明：切换前 fork 与旧库**逐表相等**（用户 630 / 文件 727,997 / 实体 1,094,499 / 分享 349）。切换后两边开始各自独立。若日后需再取旧库的数据，需按 6.4 节再做一次增量同步。
