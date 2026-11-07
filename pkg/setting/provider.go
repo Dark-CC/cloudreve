@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
+	"github.com/cloudreve/Cloudreve/v4/pkg/htmlsafe"
 )
 
 type (
@@ -1364,20 +1365,32 @@ func (s *settingProvider) SiteBasicLocalized(ctx context.Context, lang string) *
 func (s *settingProvider) Localized(ctx context.Context, key, lang string) string {
 	base := s.getString(ctx, key, "")
 	if lang == "" {
-		return base
+		return sanitizeLocalized(key, base)
 	}
 
 	raw := s.getString(ctx, key+"_i18n", "")
 	if raw == "" {
-		return base
+		return sanitizeLocalized(key, base)
 	}
 
 	var translations map[string]string
 	if err := json.Unmarshal([]byte(raw), &translations); err != nil || len(translations) == 0 {
-		return base
+		return sanitizeLocalized(key, base)
 	}
 
-	return MatchLanguage(translations, lang, base)
+	return sanitizeLocalized(key, MatchLanguage(translations, lang, base))
+}
+
+// sanitizeLocalized applies per-setting output filtering for values that are
+// rendered as HTML in the client. It runs at read time so every consumer — the
+// web UI, the desktop and mobile apps, and any direct API caller — receives the
+// same filtered content, and so values stored before the sanitiser existed are
+// covered too.
+func sanitizeLocalized(key, value string) string {
+	if key == "announcement" {
+		return htmlsafe.Sanitize(value)
+	}
+	return value
 }
 
 // MatchLanguage picks the best translation for lang from translations.

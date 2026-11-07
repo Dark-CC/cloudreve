@@ -3,6 +3,7 @@ import Grid from "@mui/material/Grid";
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { isTrueVal } from "../../../../session/utils.ts";
+import SafeHTMLContent from "../../../Common/SafeHTMLContent.tsx";
 import { DenseFilledTextField } from "../../../Common/StyledComponents.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent, StyledInputAdornment } from "../Settings.tsx";
@@ -134,7 +135,7 @@ const SiteInformation = () => {
                 <DenseFilledTextField
                   fullWidth
                   multiline
-                  rows={4}
+                  rows={6}
                   onChange={(e) => setSettings({ announcement: e.target.value })}
                   value={values.announcement}
                 />
@@ -146,6 +147,26 @@ const SiteInformation = () => {
                 />
                 <NoMarginHelperText>{t("settings.announcementDes")}</NoMarginHelperText>
               </FormControl>
+              {values.announcement && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {t("settings.announcementPreview")}
+                  </Typography>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      p: 2,
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      maxHeight: 320,
+                      overflow: "auto",
+                    }}
+                  >
+                    <SafeHTMLContent html={values.announcement} />
+                  </Box>
+                </Box>
+              )}
             </SettingForm>
             <SettingForm title={t("settings.tosUrl")} lgWidth={5}>
               <FormControl fullWidth>
