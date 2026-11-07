@@ -228,13 +228,54 @@ func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Co
 		l.Warning("Failed to remove all KV entries while schema migration: %s", err)
 	}
 
-	// List existing settings into a map
+	// List existing settings into a map. Soft-deleted rows must be included:
+	// their names still occupy the settings_name_key unique index, so inserting
+	// them again fails with a duplicate key error. A database that soft-deleted
+	// a default setting (an admin removed an auth provider, say) would
+	// otherwise take the whole process down on the next schema migration.
+	//
+	// ent's generated queries always append `deleted_at IS NULL`, which cannot
+	// be combined with DeletedAtNotNil(), so the names are read with raw SQL.
 	existingSettings := make(map[string]*ent.Setting)
+	rows, err := client.QueryContext(ctx, "SELECT id, name FROM settings")
+	if err != nil {
+		l.Warning("Failed to query existing settings: %s", err)
+	}
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id int
+			var name string
+			if err := rows.Scan(&id, &name); err != nil {
+				l.Warning("Failed to scan setting row: %s", err)
+				continue
+			}
+			existingSettings[name] = &ent.Setting{ID: id, Name: name}
+		}
+		if err := rows.Err(); err != nil {
+			l.Warning("Failed to iterate settings: %s", err)
+		}
+	}
+
+	// Soft-deleted names are recorded separately so the loop below can log
+	// them without resurrecting a setting an admin deliberately removed.
+	softDeleted := make(map[string]bool)
+	if delRows, err := client.QueryContext(ctx, "SELECT name FROM settings WHERE deleted_at IS NOT NULL"); err != nil {
+		l.Warning("Failed to query soft-deleted settings: %s", err)
+	} else if delRows != nil {
+		defer delRows.Close()
+		for delRows.Next() {
+			var name string
+			if err := delRows.Scan(&name); err == nil {
+				softDeleted[name] = true
+			}
+		}
+	}
+
 	settings, err := client.Setting.Query().All(ctx)
 	if err != nil {
 		l.Warning("Failed to query existing settings: %s", err)
 	}
-
 	for _, s := range settings {
 		existingSettings[s.Name] = s
 	}
@@ -242,6 +283,10 @@ func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Co
 	l.Info("Insert default settings...")
 	for k, v := range DefaultSettings {
 		if existing, ok := existingSettings[k]; ok {
+			if softDeleted[k] {
+				l.Debug("Skip inserting setting %s, soft-deleted.", k)
+				continue
+			}
 			if k == OIDCSigningPrivateKeySetting && existing.Value == "" {
 				client.Setting.UpdateOne(existing).SetValue(v).SaveX(ctx)
 			}
