@@ -71,6 +71,21 @@ func (c *settingClient) Gets(ctx context.Context, names []string) (map[string]st
 		settings[s.Name] = s.Value
 	}
 
+	// A row can be missing even though the key is a known setting: the default
+	// settings are only seeded by the one-shot migration, so installations that
+	// were upgraded before a key was introduced never get its row. Fill those in
+	// from the defaults so callers (admin settings forms in particular) receive
+	// every requested key instead of having to handle undefined holes.
+	for _, name := range names {
+		if _, ok := settings[name]; ok {
+			continue
+		}
+
+		if def, ok := DefaultSettings[name]; ok {
+			settings[name] = def
+		}
+	}
+
 	return settings, nil
 }
 
@@ -616,6 +631,8 @@ var DefaultSettings = map[string]string{
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
 	"email_disable_subaddress":                   "0",
+	"email_subaddress_chars":                     "+",
+	"invitation_code_required":                   "0",
 	"smtp_auth":                                  "autodiscover",
 	"captcha_type":                               "normal",
 	"captcha_height":                             "60",
@@ -641,8 +658,8 @@ var DefaultSettings = map[string]string{
 	"captcha_cap_site_key":                       "",
 	"captcha_cap_secret_key":                     "",
 	"captcha_cap_asset_server":                   "jsdelivr",
-	"captcha_geetest_captcha_id":                "",
-	"captcha_geetest_captcha_key":               "",
+	"captcha_geetest_captcha_id":                 "",
+	"captcha_geetest_captcha_key":                "",
 	"thumb_width":                                "400",
 	"thumb_height":                               "300",
 	"thumb_entity_suffix":                        "{blob_path}/{blob_name}._thumb",
