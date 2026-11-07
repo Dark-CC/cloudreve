@@ -339,3 +339,163 @@ SELECT COALESCE(MAX(id),0)+1, now(), now(), 'oidc_signing_private_key',
 ### 一处要注意的恢复操作
 
 清理测试账号时一度误删了 5,079 个「无引用实体」（A 上本来就有 5,082 个孤儿实体，不影响任何文件访问）。已通过重新 COPY 缺失 id 补齐到 366,092。经验：**删除文件记录时不要连带用 `id NOT IN (SELECT entity_id FROM file_entities)` 清理 entities**——Pro 库里本来就存在无引用实体。
+
+---
+
+## 10. B 服务器上线配置（nginx + 证书 + 监听收敛）
+
+### 10.1 nginx 反向代理
+
+新建独立配置文件 `/etc/nginx/conf.d/pan.qzyun.net.conf`，**不修改任何既有站点文件**：
+
+- `upstream pan_backend { server 127.0.0.1:5212; keepalive 16; }`
+- `:80` → `301 https://$host$request_uri`（保留 `/.well-known/acme-challenge/` 目录，便于日后续证书）
+- `:443 ssl http2` → 反代到 `pan_backend`，转发 `Host` / `X-Real-IP` / `X-Forwarded-For` / `X-Forwarded-Proto`
+- 上传相关：`client_max_body_size 0`、`proxy_request_buffering off`、`proxy_buffering off`、`proxy_read_timeout 600s`
+- 独立日志：`/var/log/nginx/pan.qzyun.net.{access,error}.log`
+
+操作序列：`nginx -t` 通过 → `systemctl reload nginx`（**reload 不是 restart**，不打断既有站点）。
+
+### 10.2 HTTPS 证书
+
+从 A 只读复制 `/etc/nginx/ssl/pan_qzyun_net/` 到 B 同路径：
+
+| 项 | A 原证书 | B 现在 |
+| --- | --- | --- |
+| subject | CN = pan.qzyun.net | CN = pan.qzyun.net |
+| serial | 479C7FA23033EE3786BBBEE9EAAAE492 | 479C7FA23033EE3786BBBEE9EAAAE492 |
+| 到期 | Jan 16 08:51:25 2027 GMT | Jan 16 08:51:25 2027 GMT |
+
+目录权限 `700`，`private.key` 权限 `600`，`fullchain.crt` `644`。证书有效至 **2027-01-16**。
+
+### 10.3 fork 监听收敛
+
+`/opt/cloudreve-fork/run.sh` 中 `CR_CONF_System.Listen` 由 `0.0.0.0:5212` 改为 **`127.0.0.1:5212`**（原文件备份为 `run.sh.bak.<时间戳>`），`systemctl restart cloudreve-fork` 后确认：
+
+```
+LISTEN 0  4096  127.0.0.1:5212  0.0.0.0:*  users:(("cloudreve",pid=4120588,fd=13))
+```
+
+对外只经 nginx 443 暴露，不再直接监听公网。
+
+### 10.4 站点联通实测
+
+| 检查 | 结果 |
+| --- | --- |
+| `nginx -t` | syntax is ok / test is successful |
+| `systemctl is-active nginx` | active |
+| B 本机 `Host: pan.qzyun.net` → 443 | HTTP **200** |
+| B 本机 80 → 443 | HTTP **301** → `https://pan.qzyun.net/` |
+| 外网直连 B `120.220.76.88:443` | HTTP **200**（0.64s） |
+| 外网直连 B `120.220.76.88:80` | HTTP **301** |
+| fork 直连 `127.0.0.1:5212` | HTTP **200** |
+
+**B 的公网入口 IP 是 `120.220.76.88`**（`ifconfig.me` 与网卡一致）。B 的第二网卡 `60.214.102.28` 从外网不可达（连接超时），**不能作为域名解析目标**。
+
+### 10.5 既有站点零影响确认
+
+| 站点 | 结果 |
+| --- | --- |
+| panel.qzyun.cn | HTTP 307 |
+| strapi.qzyun.cn | HTTP 302 |
+| www.qzyun.cn | HTTP 200 |
+
+三者行为与迁移前一致，未改其任何配置文件。
+
+### 10.6 域名当前状态（重要）
+
+`pan.qzyun.net` 解析为 **CNAME → `pan.qzyun.net.a1.initaa.com` → `163.181.214.1`**，即经过 CDN（响应头 `server: ESA`）。
+
+实测结论：
+
+| 目标 | 结果 |
+| --- | --- |
+| 外网直连 A `120.220.76.26:443`（Host: pan.qzyun.net） | **200** |
+| 外网直连 B `120.220.76.88:443`（Host: pan.qzyun.net） | **200** |
+| 经域名 `https://pan.qzyun.net/` | **522**（CDN 回源失败） |
+
+**两个源站都健康，522 发生在 CDN 回源环节**，属 CDN 控制台侧配置（回源地址仍指向旧源或未指向 B），需在 CDN 后台把回源地址改为 `120.220.76.88`（HTTPS，443 端口，回源 Host 使用 `pan.qzyun.net`）。服务器端已无待办。
+
+另注：CDN 边缘返回的证书为 `serial 06E8CCE5A6DE0B8C3E22D847364493ED4F4E`（CDN 自己的证书，2027-01-02 到期），非 A/B 源站证书。
+
+---
+
+## 11. 真实数据验证（上线后补测）
+
+### 11.1 真实文件下载（对象存储链路，实测拿到实际字节）
+
+以真实分享 `新文件.md`（owner `nellos`，265 字节）为例：
+
+1. **实体 → 策略 → 路径**：`primary_entity` 对应对象键 `/uploads/26/Uqiq69QF.md`；策略 2 规则 `dir_name_rule = uploads/{uid}/{path}`、`file_name_rule = {randomkey8}{ext}`，与对象键完全吻合。
+2. **策略 → 凭据 → 取字节**：fork 生成预签名 URL（AWS4-HMAC-SHA256，`X-Amz-Credential=.../20261107/beijing/s3/aws4_request`），直连对象存储 `https://qzyun.ss.bscstorage.com` 取回：
+
+```
+HTTP 200  265 字节
+内容（真实文件正文）：
+剪映：[https://ai.feishu.cn/wiki/...]（略）
+XDGAME入库：...
+sha256: ec4502c7eb87d00d1559adc138553caaec3efa9e03340dd45caf5e682dff49e1
+```
+
+3. **一致性**：连续两次独立下载 sha256 完全相同；字节数 265 与数据库记录 265 相等。
+
+第二个真实文件（不同用户、不同 ng 目录）交叉验证：
+
+```
+分享 xY4co → 新文件.txt
+对象 /uploads/872/upuK9Axy.txt
+HTTP 200  6 字节
+内容: 你好
+sha256: 670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e
+```
+
+> 说明：验证一律使用真实用户、真实文件记录与真实对象路径，未使用任何手工插入的测试记录。
+
+### 11.2 分享可打开
+
+| 分享 hashid | 名称 | 大小 | 所有者 | 结果 |
+| --- | --- | --- | --- | --- |
+| WlkFJ | 新文件.md | 265 B | nellos | `code:0`，可列出文件 |
+| V4tV | 软件 | 目录 | 3242692624 | `code:0` |
+| xY4co | 新文件.txt | 6 B | 3223398545 | `code:0`，可下载 |
+
+`GET /api/v4/share/info/<hashid>` 均返回 `code:0`，所有者、大小、创建时间正确；分享内文件列表 `GET /api/v4/file?uri=cloudreve://<hashid>@share` 正常返回。
+
+### 11.3 存储策略逐条核对（只核键名与长度，不记录值）
+
+| id | 名称 | 类型 | ak | sk | bucket | endpoint | 私有 | 文件数 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Default storage policy | local | — | — | — | — | — | 0 |
+| 2 | QZYUN-CN | s3 | ak20 | sk40 | qzyun | https://ss.bscstorage.com/ | ★ | 207,721 |
+| 3 | BSYUN | s3 | ak20 | sk40 | qzyun | https://ss.bscstorage.com/ | ★ | 13,996 |
+| 4 | 从机 | remote | — | — | — | — | — | 0 |
+| 5 | QZYUN-HK | s3 | ak20 | sk40 | qzyun | https://hkong.bscstorage.com/ | ★ | 601 |
+| 6 | 1yunpan | s3 | ak32 | sk32 | 5gfpyyw89p8g | https://s3.1yunpan.com | — | 0 |
+| 7 | Test | s3 | ak27 | sk40 | baixiong | https://oss.kuocai.net/s3 | ★ | 0 |
+| 8 | 1Y | s3 | ak32 | sk32 | 5gfpyyw89p8g | https://s3.1yunpan.com | ★ | 0 |
+| 9 | 1YUNPAN | s3 | ak32 | sk32 | 5meplzy98oow | https://s3.1yunpan.com | ★ | 0 |
+| 10 | 1yp | s3 | ak32 | sk32 | 5m3ekdhzod8g | https://s3.1yunpan.com | ★ | 0 |
+
+与 A 原库逐条比对：id、名称、类型、ak/sk 长度、bucket、endpoint、私有标志**全部一致**。8 条对象存储策略凭据齐备，其中策略 2/3/5 承载 222,318 个真实文件。
+
+### 11.4 临时测试账号
+
+为验证登录与接口，临时创建 `migtest@example.com`（Admin 组），验证完成后**立即删除**：删除后 `users` 总数为 **883**，与 A 一致，无残留。**未改动任何真实用户密码。**
+
+### 11.5 「客户端下载」入口保持关闭
+
+`settings.show_desktop_app_promotion = '0'`，并已 `DEL setting_show_desktop_app_promotion` 清 Redis 缓存（原值确为 `1`）。`GET /api/v4/site/config/app` 返回：
+
+```json
+{"code":0,"data":{"shop_nav":false,"score_enabled":false},"msg":""}
+```
+
+不含 `desktop_app_promotion` 字段，前端因此不渲染该入口。
+
+---
+
+## 12. 回滚方式与 A 服务器现状
+
+- **A 服务器全程原样未动**：三个容器 `cloudreve-service` / `cloudreve-redis` / `cloudreve-mysql` 持续运行（Up 5 weeks），数据库、配置文件、nginx 均未修改；对 A 只做过**只读**操作（读证书、查库、导出）。
+- A 至今仍在正常服务真实用户（访问日志持续写入，文件下载持续返回 302）。
+- **回滚方式：把域名解析改回指向 A 即可**，无需任何数据恢复动作。A 上的 MySQL 库为最新状态，随时可退。
