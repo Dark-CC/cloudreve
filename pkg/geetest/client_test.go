@@ -163,7 +163,7 @@ func TestVerifyFallsBackToSecondEndpoint(t *testing.T) {
 
 func TestVerifyAllEndpointsDown(t *testing.T) {
 	old := validateEndpoints
-	validateEndpoints = []string{"http://127.0.0.1:1/v4/validate.php", "http://127.0.0.1:2/v4/validate.php"}
+	validateEndpoints = []string{"http://127.0.0.1:1/validate", "http://127.0.0.1:2/validate"}
 	defer func() { validateEndpoints = old }()
 
 	client := request.NewClient(nil)
@@ -171,4 +171,50 @@ func TestVerifyAllEndpointsDown(t *testing.T) {
 	require.Error(t, err)
 	require.False(t, ok)
 	require.True(t, strings.Contains(err.Error(), "127.0.0.1"))
+}
+
+// TestDefaultEndpointsAreOfficialGuards against a regression to the retired
+// api2.geetest.com host or to an endpoint that a WAF answers with HTML.
+func TestDefaultEndpointsAreOfficial(t *testing.T) {
+	require.NotEmpty(t, validateEndpoints)
+	for _, ep := range validateEndpoints {
+		require.True(t, strings.HasPrefix(ep, "https://gcaptcha4."), "unexpected endpoint %s", ep)
+		require.True(t, strings.HasSuffix(ep, "/validate"), "unexpected path in endpoint %s", ep)
+	}
+}
+
+// TestVerifySkipsWAFInterceptionPage covers the production failure mode: an
+// upstream WAF answers with 200 and an HTML block page instead of GeeTest's
+// JSON verdict. That must not be reported as a captcha mismatch; the next
+// endpoint has to be tried, and if all are blocked the caller sees an error.
+func TestVerifySkipsWAFInterceptionPage(t *testing.T) {
+	blocked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<!doctype html><html><body>Restricted Access</body></html>"))
+	}))
+	defer blocked.Close()
+
+	good := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"status":"success","result":"success"}`))
+	}))
+	defer good.Close()
+
+	old := validateEndpoints
+	defer func() { validateEndpoints = old }()
+	client := request.NewClient(nil)
+	cfg := &setting.GeeTest{CaptchaID: "cid", CaptchaKey: "ckey"}
+
+	// Blocked endpoint first: the good one still decides the result.
+	validateEndpoints = []string{blocked.URL, good.URL}
+	ok, err := Verify(t.Context(), client, cfg, testParams())
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	// Only blocked endpoints: surface an error rather than a silent mismatch.
+	validateEndpoints = []string{blocked.URL}
+	ok, err = Verify(t.Context(), client, cfg, testParams())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "WAF")
+	require.False(t, ok)
 }

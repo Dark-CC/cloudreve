@@ -28,9 +28,16 @@ const (
 
 // validateEndpoints are the official endpoints, tried in order. Overridden
 // in tests.
+//
+// The host list mirrors Config.apiServers inside the official gt4.js SDK
+// (gcaptcha4.geetest.com / gcaptcha4.geevisit.com), and the path is the
+// server-side secondary validation API documented for GeeTest v4. The older
+// api2.geetest.com host no longer resolves and api.geetest.com is fronted by
+// an EdgeOne WAF that answers /v4/validate.php with a bare 567 interception
+// page, so neither can be used for validation.
 var validateEndpoints = []string{
-	"https://api2.geetest.com/v4/validate.php",
-	"https://api.geetest.com/v4/validate.php",
+	"https://gcaptcha4.geetest.com/validate",
+	"https://gcaptcha4.geevisit.com/validate",
 }
 
 // ValidateParams holds the fields yielded by the gt4.js widget on success.
@@ -92,9 +99,20 @@ func Verify(ctx context.Context, client request.Client, cfg *setting.GeeTest, p 
 			continue
 		}
 
+		// A WAF/CDN interception page is not a GeeTest verdict: treat it as an
+		// endpoint failure so the next official endpoint gets a chance. Without
+		// this the caller cannot tell "GeeTest rejected the ticket" apart from
+		// "the endpoint was blocked", and reports a bogus captcha mismatch.
+		if !looksLikeJSON(res) {
+			lastErr = fmt.Errorf("endpoint %s returned a non-JSON response of %d bytes (likely blocked by an upstream WAF/CDN)",
+				endpoint, len(res))
+			continue
+		}
+
 		var parsed validateResponse
 		if err := json.Unmarshal([]byte(res), &parsed); err != nil {
-			return false, fmt.Errorf("failed to parse captcha result: %w", err)
+			lastErr = fmt.Errorf("failed to parse captcha result: %w", err)
+			continue
 		}
 
 		switch {
@@ -109,6 +127,14 @@ func Verify(ctx context.Context, client request.Client, cfg *setting.GeeTest, p 
 	}
 
 	return false, lastErr
+}
+
+// looksLikeJSON reports whether the response body starts with a JSON object,
+// i.e. whether it can plausibly be a GeeTest API verdict rather than an HTML
+// error page injected by an upstream WAF or CDN.
+func looksLikeJSON(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	return strings.HasPrefix(trimmed, "{")
 }
 
 // signToken builds the sign_token form field: the HMAC-SHA256 hex digest of
