@@ -405,3 +405,81 @@ cd /opt/cloudreve-fork && docker compose down
 5. **旧站备份脚本里的明文凭据**：`/opt/cloudreve/backup.sh` 内含明文访问密钥，建议后续改为从环境变量或密钥文件读取。
 
 > 数据一致性说明：切换前 fork 与旧库**逐表相等**（用户 630 / 文件 727,997 / 实体 1,094,499 / 分享 349）。切换后两边开始各自独立。若日后需再取旧库的数据，需按 6.4 节再做一次增量同步。
+
+---
+
+## 十二、隐藏网页「客户端下载」入口（2026-11-07）
+
+按用户要求隐藏网页上的「客户端下载」入口，**仅隐藏入口**，网页其他功能与已安装的客户端均不受影响。
+
+### 12.1 入口位置与实现方式（先查清再动手）
+
+该入口**不是写死的界面元素**，fork 内建了一个后台开关：
+
+| 项目 | 内容 |
+|---|---|
+| 设置键名 | `show_desktop_app_promotion` |
+| 后台位置 | 管理后台 → 设置 → 站点信息 → 「桌面客户端」→「展示桌面客户端引导页面」 |
+| 默认值 | `1`（开启，见 `inventory/setting.go:761`） |
+| 出厂读取 | `pkg/setting/provider.go:482` → `AppSetting.DesktopPromotion` |
+| 对外字段 | `GET /api/v4/site/config/app` 的 `desktop_app_promotion`（`omitempty`，false 时不下发） |
+| 前端消费 | `frontend/src/component/Pages/Devices/Devices.tsx:32,59,94` |
+
+**关闭该开关的效果**：`/connect`（「连接与挂载」）页面上「Windows 客户端」tab 整个消失，连同里面的「下载 Windows 客户端」按钮（指向 `github.com/Dark-CC/cloudreve/releases/latest`）一并消失。
+
+**入口排查结论**：全站仅此一处。已逐个确认：
+- 没有 `/download`、`/client` 之类的独立页面路由；
+- 侧栏「连接与挂载」入口本身**不受此开关控制**（它由 `webdav` 组权限或 `show_app_promotion` 决定），WebDAV、iOS 客户端两个 tab 照常可用；
+- 站点底部、登录页均无客户端下载入口；
+- 管理后台首页里有指向 GitHub Releases 的链接，但那属于管理员工具页，不是面向用户的下载入口，按范围要求未改动。
+
+### 12.2 本次操作（未改代码、未发版、未重启）
+
+设置值存放在数据库、并缓存在 Redis（键 `setting_show_desktop_app_promotion`，**无 TTL**）。因此必须**同时**改库与清缓存，只改库不会生效。
+
+```bash
+# 1) 备份原值（已存于 /opt/backup-prod-155/20261107/setting-show_desktop_app_promotion.before.txt）
+docker exec cloudreve-fork-postgresql psql -U cloudreve -d cloudreve_fork -tAc \
+  "select id,name,value,updated_at from settings where name='show_desktop_app_promotion';"
+
+# 2) 关闭
+docker exec cloudreve-fork-postgresql psql -U cloudreve -d cloudreve_fork -c \
+  "UPDATE settings SET value='0', updated_at=now() WHERE name='show_desktop_app_promotion';"
+
+# 3) 清缓存（关键，漏掉则仍显示）
+docker exec cloudreve-fork-redis redis-cli DEL setting_show_desktop_app_promotion
+```
+
+### 12.3 回滚（一条命令，秒级，无需重启）
+
+```bash
+docker exec cloudreve-fork-postgresql psql -U cloudreve -d cloudreve_fork -c \
+  "UPDATE settings SET value='1', updated_at=now() WHERE name='show_desktop_app_promotion';" && \
+docker exec cloudreve-fork-redis redis-cli DEL setting_show_desktop_app_promotion
+```
+
+或者更简单：管理员在后台把「展示桌面客户端引导页面」开关重新打开并保存——后台保存路径会自动清缓存（`service/admin/site.go:337`），效果与上面完全一致。
+
+### 12.4 验证结果
+
+**接口层**
+
+| 检查 | 改前 | 改后 |
+|---|---|---|
+| `GET /api/v4/site/config/app` | `{"desktop_app_promotion":true,...}` | `{"shop_nav":false,"score_enabled":false}`（该字段不再下发） |
+| `GET /api/v4/site/ping` | `4.23.8` | `4.23.8`（未变） |
+
+**真实浏览器渲染**（无头 Chromium 加载生产站点 `/connect`，只改写该接口响应做前后对照，未触碰任何用户账号）
+
+| 项目 | 改前 | 改后（当前线上） |
+|---|---|---|
+| 「Windows 客户端」tab | ✅ 出现 | ❌ 不出现 |
+| 「下载 Windows 客户端」按钮 | ✅ 出现 | ❌ 不出现 |
+| 下载链接 `github.com/Dark-CC/cloudreve/releases/latest` | ✅ 存在 | ❌ 不存在 |
+| 侧栏「连接与挂载」入口 | ✅ 在 | ✅ **仍在**（未受影响） |
+
+**功能回归**：站点配置四个接口（`basic`/`app`/`login`/`captcha`）全部 200；页面路由 `/`、`/home`、`/connect`、`/login`、`/shares`、`/discover` 全部 200；登录接口正常返回业务校验结果（非 500）；三个容器均正常。**登录、列文件、上传、下载、分享的代码路径完全未被触碰**——本次只改了一个配置值。
+
+**改动范围核对**：近 30 分钟内 `settings` 表只有 `show_desktop_app_promotion` 一个键被本次改动（`announcement` 是用户此前自行在后台修改的公告，早于本次操作）。
+
+**未做**：未修改任何用户账号/密码/数据；未重新构建、未发版、未重启任何容器。
