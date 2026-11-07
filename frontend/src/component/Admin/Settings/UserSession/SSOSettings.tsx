@@ -65,9 +65,9 @@ const SSOSettings = () => {
           <FormControl fullWidth>
             <DenseFilledTextField
               label={t("settings.displayName")}
-              value={values.sso_display_name}
+              value={values.sso_display_name ?? ""}
               onChange={(e) => setSettings({ sso_display_name: e.target.value })}
-              required
+              required={enabled}
             />
             <NoMarginHelperText>{t("settings.displayNameDes")}</NoMarginHelperText>
           </FormControl>

@@ -258,6 +258,46 @@ func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Co
 	}
 }
 
+// seedMissingDefaultSettings inserts any default setting whose row is absent.
+// Default settings are otherwise only written by the one-shot migration, so an
+// installation that was already marked at the current version before a new
+// setting was introduced never receives that row. Existing rows are left
+// untouched, which makes this idempotent and safe to run on every boot.
+func seedMissingDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Context) {
+	settings, err := client.Setting.Query().All(ctx)
+	if err != nil {
+		l.Warning("Failed to query existing settings while seeding defaults: %s", err)
+		return
+	}
+
+	existing := make(map[string]struct{}, len(settings))
+	for _, s := range settings {
+		existing[s.Name] = struct{}{}
+	}
+
+	seeded := 0
+	for k, v := range DefaultSettings {
+		if _, ok := existing[k]; ok {
+			continue
+		}
+
+		if override, ok := os.LookupEnv(EnvDefaultOverwritePrefix + k); ok {
+			v = override
+		}
+
+		if _, err := client.Setting.Create().SetName(k).SetValue(v).Save(ctx); err != nil {
+			l.Warning("Failed to seed default setting %q: %s", k, err)
+			continue
+		}
+
+		seeded++
+	}
+
+	if seeded > 0 {
+		l.Info("Seeded %d missing default setting(s).", seeded)
+	}
+}
+
 func migrateDefaultStoragePolicy(l logging.Logger, client *ent.Client, ctx context.Context) error {
 	if _, err := client.StoragePolicy.Query().Where(storagepolicy.ID(1)).First(ctx); err == nil {
 		l.Info("Default storage policy (ID=1) already exists, skip migrating.")

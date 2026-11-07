@@ -47,6 +47,11 @@ func InitializeDBClient(l logging.Logger,
 		// Databases ported from Pro by older fork builds carry the version
 		// mark yet still miss the group↔policy bindings — heal them here too.
 		repairProGroupPolicyBindings(l, client, ctx)
+		// Likewise, settings introduced after the database was first migrated
+		// never got seeded (default settings only run during the one-shot
+		// migration), leaving known keys without rows. Adding them is
+		// idempotent: existing rows are left untouched.
+		seedMissingDefaultSettings(l, client, ctx)
 		l.Info("Database schema is up to date.")
 	}
 
