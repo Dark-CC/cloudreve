@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
@@ -56,4 +57,35 @@ func TestSeedMissingDefaultSettings(t *testing.T) {
 	count := client.Setting.Query().CountX(ctx)
 	seedMissingDefaultSettings(l, client, ctx)
 	require.Equal(t, count, client.Setting.Query().CountX(ctx), "seeding twice must not add rows")
+}
+
+// TestSeedMissingDefaultSettingsSoftDeleted ensures a soft-deleted default
+// setting is treated as present. Its name still occupies settings_name_key, so
+// seeding it would fail on every boot and spam the log with duplicate-key
+// warnings (observed on the B site, which carries 7 such rows).
+func TestSeedMissingDefaultSettingsSoftDeleted(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	l := logging.NewConsoleLogger(logging.LevelWarning)
+
+	client.Setting.Create().SetName("sso_display_name").SetValue("SSO").SetDeletedAt(time.Now()).SaveX(ctx)
+
+	require.NotPanics(t, func() { seedMissingDefaultSettings(l, client, ctx) })
+
+	// The seeding run legitimately adds every other missing default, so the
+	// assertion is on this row: it must stay soft-deleted and must not gain a
+	// second, live twin.
+	live, err := client.Setting.Query().Where(setting.Name("sso_display_name")).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, live, "soft-deleted row must not be re-created as a live row")
+
+	// Still soft-deleted, not resurrected.
+	delRows, err := client.QueryContext(ctx, "SELECT COUNT(*) FROM settings WHERE name = ? AND deleted_at IS NOT NULL", "sso_display_name")
+	require.NoError(t, err)
+	defer delRows.Close()
+	require.True(t, delRows.Next())
+	var n int
+	require.NoError(t, delRows.Scan(&n))
+	require.Equal(t, 1, n)
 }

@@ -309,15 +309,29 @@ func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Co
 // setting was introduced never receives that row. Existing rows are left
 // untouched, which makes this idempotent and safe to run on every boot.
 func seedMissingDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Context) {
-	settings, err := client.Setting.Query().All(ctx)
+	// Read names with raw SQL so soft-deleted rows count as present. Their
+	// names still occupy the settings_name_key unique index while being
+	// invisible to ent's generated queries, so treating them as missing would
+	// log a duplicate-key warning for them on every single boot.
+	existing := make(map[string]struct{}, len(DefaultSettings))
+	rows, err := client.QueryContext(ctx, "SELECT name FROM settings")
 	if err != nil {
 		l.Warning("Failed to query existing settings while seeding defaults: %s", err)
 		return
 	}
-
-	existing := make(map[string]struct{}, len(settings))
-	for _, s := range settings {
-		existing[s.Name] = struct{}{}
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				l.Warning("Failed to scan setting row while seeding defaults: %s", err)
+				continue
+			}
+			existing[name] = struct{}{}
+		}
+		if err := rows.Err(); err != nil {
+			l.Warning("Failed to iterate settings while seeding defaults: %s", err)
+		}
 	}
 
 	seeded := 0
