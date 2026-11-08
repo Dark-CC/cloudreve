@@ -21,6 +21,13 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// ScopeAttribute marks the container the announcement is rendered in. Every
+// selector emitted from a <style> block is rewritten to match only inside an
+// element carrying it (see SanitizeCSS), which is what keeps announcement CSS
+// from repainting the rest of the site. The value is shared by contract with
+// frontend/src/component/Common/SafeHTMLContent.tsx.
+const ScopeAttribute = "data-cr-announcement"
+
 // allowedTags is the set of elements permitted in announcement content.
 //
 // The list is deliberately limited to structural typography and layout. The
@@ -39,8 +46,9 @@ import (
 //   - meta, base, link, title, head — retarget relative URLs or inject headers.
 //   - svg, math, and every namespaced foreign element — long history of
 //     sanitizer bypasses, and unnecessary for text announcements.
-//   - style element — arbitrary CSS can cover the whole viewport, hide the real
-//     UI, or exfiltrate data via url() loads.
+//   - style element — handled separately: its text is passed through
+//     SanitizeCSS (selector scoping + declaration filtering) and re-emitted as
+//     one scoped <style>. An unfiltered style element never reaches the output.
 //   - video, audio, source, track — auto-loads remote media; embedding is still
 //     possible through an allowed <a> link instead.
 type allowedTags = map[string]struct{}
@@ -59,8 +67,8 @@ var allowedTagsSet = allowedTags{
 }
 
 // globalAttributes are allowed on every permitted element. `class` is included
-// so existing markdown/editor output keeps its styling hooks; `style` is NOT —
-// see sanitiseStyle for the narrow subset that is allowed instead.
+// so existing markdown/editor output keeps its styling hooks; `style` is
+// admitted only through sanitizeDeclarations (see writeAttrs).
 var globalAttributes = map[string]struct{}{
 	"class": {}, "id": {}, "title": {}, "dir": {}, "lang": {},
 }
@@ -69,14 +77,14 @@ var globalAttributes = map[string]struct{}{
 // attribute not listed here (and not in globalAttributes) is dropped, which
 // removes all on* event handlers, `srcdoc`, `formaction`, `xlink:href`, etc.
 var tagAttributes = map[string]map[string]struct{}{
-	"a":   {"href": {}, "target": {}, "rel": {}, "name": {}},
-	"img": {"src": {}, "alt": {}, "width": {}, "height": {}, "loading": {}},
-	"td":  {"colspan": {}, "rowspan": {}, "align": {}, "valign": {}},
-	"th":  {"colspan": {}, "rowspan": {}, "align": {}, "valign": {}, "scope": {}},
-	"col": {"span": {}, "width": {}},
-	"ol":  {"start": {}, "type": {}, "reversed": {}},
-	"ul":  {"type": {}},
-	"li":  {"value": {}},
+	"a":       {"href": {}, "target": {}, "rel": {}, "name": {}},
+	"img":     {"src": {}, "alt": {}, "width": {}, "height": {}, "loading": {}},
+	"td":      {"colspan": {}, "rowspan": {}, "align": {}, "valign": {}},
+	"th":      {"colspan": {}, "rowspan": {}, "align": {}, "valign": {}, "scope": {}},
+	"col":     {"span": {}, "width": {}},
+	"ol":      {"start": {}, "type": {}, "reversed": {}},
+	"ul":      {"type": {}},
+	"li":      {"value": {}},
 	"details": {"open": {}},
 	"table":   {"border": {}, "cellpadding": {}, "cellspacing": {}, "width": {}},
 	"hr":      {"size": {}, "width": {}, "noshade": {}},
@@ -105,7 +113,9 @@ func Sanitize(input string) string {
 	}
 
 	// Parse a fragment rather than a whole document: the announcement is not a
-	// standalone page, and ParseFragment keeps leading text nodes.
+	// standalone page, and ParseFragment keeps leading text nodes. It also
+	// flattens a pasted full document (doctype, html, head, body wrappers) into
+	// its parts, which is what an administrator pasting a saved page expects.
 	ctx := &html.Node{Type: html.ElementNode, Data: "div", DataAtom: atom.Div}
 	nodes, err := html.ParseFragment(strings.NewReader(input), ctx)
 	if err != nil {
@@ -114,12 +124,42 @@ func Sanitize(input string) string {
 		return ""
 	}
 
+	// Style sheets are collected first and handled by SanitizeCSS, which scopes
+	// every selector to the announcement container. They are still dropped by
+	// writeNode below, so no <style> ever reaches the output unfiltered.
+	var styleText strings.Builder
+	for _, n := range nodes {
+		collectStyleText(n, &styleText)
+	}
+
 	var b strings.Builder
+	if css := SanitizeCSS(styleText.String()); css != "" {
+		b.WriteString("<style>")
+		b.WriteString(css)
+		b.WriteString("</style>")
+	}
 	for _, n := range nodes {
 		writeNode(&b, n)
 	}
 
 	return b.String()
+}
+
+// collectStyleText appends the text of every <style> element in the tree, in
+// document order.
+func collectStyleText(n *html.Node, b *strings.Builder) {
+	if n.Type == html.ElementNode && strings.EqualFold(n.Data, "style") {
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.TextNode {
+				b.WriteString(c.Data)
+			}
+		}
+		b.WriteString("\n")
+		return
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		collectStyleText(c, b)
+	}
 }
 
 // writeNode serialises n and its subtree, applying the allow-list.
@@ -197,9 +237,21 @@ func writeAttrs(b *strings.Builder, tag string, attrs []html.Attribute) {
 
 		name := strings.ToLower(a.Key)
 
-		// Defence in depth: refuse every event handler and style attribute even
-		// if a future edit adds them to a list above.
-		if strings.HasPrefix(name, "on") || name == "style" || name == "srcdoc" || name == "formaction" {
+		// Defence in depth: refuse every event handler even if a future edit
+		// adds one to a list above.
+		if strings.HasPrefix(name, "on") || name == "srcdoc" || name == "formaction" {
+			continue
+		}
+
+		// style is admitted at all only through the declaration filter below,
+		// which keeps the visual properties an administrator needs and drops
+		// everything that positions, animates or loads remote content.
+		if name == "style" {
+			if decls := sanitizeDeclarations(a.Val); decls != "" {
+				b.WriteString(" style=\"")
+				b.WriteString(escapeAttr(decls))
+				b.WriteString("\"")
+			}
 			continue
 		}
 
