@@ -19,6 +19,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import org.cloudreve.android.CloudreveApp
+import org.cloudreve.android.R
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
@@ -49,7 +50,7 @@ class CameraUploadWorker(context: Context, params: WorkerParameters) :
             .take(MAX_PER_RUN)
 
         items.forEachIndexed { i, item ->
-            setForeground(progressInfo("Backing up ${item.name}", i, items.size))
+            setForeground(progressInfo(applicationContext.getString(R.string.notif_backing_up, item.name), i, items.size))
             try {
                 val tmp = stageToCache(item)
                 try {
@@ -125,7 +126,7 @@ class CameraUploadWorker(context: Context, params: WorkerParameters) :
     private fun progressInfo(text: String, index: Int, total: Int): ForegroundInfo {
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("Cloudreve camera backup")
+            .setContentTitle(applicationContext.getString(R.string.notif_camera_title))
             .setContentText("$text (${index + 1}/$total)")
             .setOngoing(true)
             .build()
@@ -140,7 +141,7 @@ class CameraUploadWorker(context: Context, params: WorkerParameters) :
         val manager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Camera backup", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.notif_channel_camera_backup), NotificationManager.IMPORTANCE_LOW)
         )
     }
 

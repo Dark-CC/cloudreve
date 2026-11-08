@@ -19,6 +19,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import org.cloudreve.android.CloudreveApp
+import org.cloudreve.android.R
 import org.cloudreve.android.util.CrUri
 import java.io.File
 import java.io.FileOutputStream
@@ -135,8 +136,11 @@ class SyncFolderWorker(context: Context, params: WorkerParameters) :
     private fun progressInfo(text: String, done: Int): ForegroundInfo {
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("Cloudreve folder sync")
-            .setContentText(if (done == 0) text else "$text ($done uploaded)")
+            .setContentTitle(applicationContext.getString(R.string.notif_sync_title))
+            .setContentText(
+                if (done == 0) text
+                else applicationContext.getString(R.string.notif_sync_uploaded, text, done)
+            )
             .setOngoing(true)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -150,7 +154,7 @@ class SyncFolderWorker(context: Context, params: WorkerParameters) :
         val manager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Folder sync", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.notif_channel_folder_sync), NotificationManager.IMPORTANCE_LOW)
         )
     }
 
