@@ -264,3 +264,113 @@ psqlc "select name, value from settings where deleted_at is null and name in ('s
 ### 观察项（不在验收范围，仅提醒）
 
 `email_subaddress_chars` 当前值为 `<code>+-.</code>`（2026-11-07 23:47:07 由后台保存写入）。该值看起来是把带格式的文本贴进了输入框。它参与邮箱子地址（`user+tag@domain`）的解析，建议用户自己确认是否想设为 `+-.`（默认值 `+`）。本任务**未改动该值**。
+
+## 十、部署后只读核验（2026-11-08 18:37 那次重启）
+
+本次核验**全部只读**：未改任何设置值、未重启服务、未动用户账号与密码、未替用户点保存。
+
+### 1. 运行的二进制确实包含本修复
+
+```
+路径    /opt/cloudreve-fork/cloudreve
+时间    2026-11-08 18:36
+sha256  eca8ce5d85824c60deb868b82abd2f2d7b15b3a8ee2d0dfb79200f7ed2a0db90
+服务    cloudreve-fork active，启动于 2026-11-08 18:37:05 CST（重启前不可用 1.59 秒）
+```
+
+二进制内可检出符号（2 处）：
+
+```
+github.com/cloudreve/Cloudreve/v4/inventory.seedMissingDefaultSettings
+github.com/cloudreve/Cloudreve/v4/inventory.seedMissingDefaultSettings.deferwrap1
+```
+
+以及日志格式串 `Failed to seed default setting %q: %s`、`Seeded %d missing default setting(s).`。
+
+### 2. 补种走的是哪条路径
+
+本次启动**不是**走「schema 已最新」分支，而是走完整迁移：
+
+```
+18:37:05 [inventory/migration.go:43]  Start initializing database schema...
+18:37:05 [inventory/migration.go:44]  Creating basic table schema...
+18:37:05 [inventory/migration.go:283] Insert default settings...
+18:37:05 [inventory/migration.go:362] Default storage policy (ID=1) already exists, skip migrating.
+```
+
+原因：本次构建的版本标记是 `db_version_4.23.9`（无 `v` 前缀），而库里此前只有 `db_version_4.23.8` 与 `db_version_v4.23.9`（11-07 那版构建的版本串带 `v`）。标记不匹配 → `needMigration` 为真 → 跑完整迁移，迁移过程本身就会补齐缺失的默认设置行，并在结束时写入标记 `db_version_4.23.9 = installed`。
+
+因此本次补种由既有函数 `migrateDefaultSettings`（migration.go:283）完成，**新增的 `seedMissingDefaultSettings` 本次未被走到**（它属于「版本已最新」分支，下次启动才会进入，届时若无缺失则不打印任何日志）。两者行为一致：只补缺失、不覆盖已有。
+
+顺带一个值得留意的现象：`db_version_v4.23.9` 与 `db_version_4.23.9` 并存，说明前后两次构建的 `BackendVersion` 一个是 `v4.23.9`、一个是 `4.23.9`。这不影响运行，但会让「版本是否最新」的判断反复跳变。
+
+### 3. spec 里那 21 项 key 的逐一比对
+
+21 项现已**全部存在**，本次补种补上了其中唯一缺失的 1 项。
+
+| key | 库中值 | DefaultSettings | 本次补种 | 值一致 |
+| --- | --- | --- | --- | --- |
+| `invitation_code_required` | `0` | `0` | **是**（18:37:05） | ✅ |
+| `sso_enabled` | `0` | `0` | 否（11-07 17:19） | ✅ |
+| `sso_display_name` | `SSO` | `SSO` | 否（11-07 16:54） | ✅ |
+| `sso_issuer` | 空 | 空 | 否 | ✅ |
+| `sso_client_id` | 空 | 空 | 否 | ✅ |
+| `sso_client_secret` | 空 | 空 | 否 | ✅ |
+| `sso_scopes` | 空 | 空 | 否 | ✅ |
+| `sso_register_enabled` | `1` | `1` | 否 | ✅ |
+| `sso_auto_redirect` | `0` | `0` | 否 | ✅ |
+| `qq_connect_enabled` | `0` | `0` | 否 | ✅ |
+| `qq_connect_app_id` | 空 | 空 | 否 | ✅ |
+| `qq_connect_app_secret` | 空 | 空 | 否 | ✅ |
+| `qq_connect_register_enabled` | `1` | `1` | 否 | ✅ |
+| `wechat_connect_enabled` | `0` | `0` | 否 | ✅ |
+| `wechat_connect_app_id` | 空 | 空 | 否 | ✅ |
+| `wechat_connect_app_secret` | 空 | 空 | 否 | ✅ |
+| `wechat_connect_register_enabled` | `1` | `1` | 否 | ✅ |
+| `email_filter_mode` | `0` | `0` | 否 | ✅ |
+| `email_filter_list` | 空 | 空 | 否 | ✅ |
+| `email_disable_subaddress` | `1` | `0` | 否（11-07 17:19） | ❌ 早前已被改过，本次未覆盖 |
+| `email_subaddress_chars` | `<code>+-.</code>` | `+` | 否（11-07 23:47 用户保存） | ❌ 用户自己写入，本次未覆盖 |
+
+- **补上了**：`invitation_code_required`（值 `0`，等于默认值）。
+- **仍未补**：无。其余 20 项在本次之前就已有行，无需补插。
+- `sso_display_name`：存在且值 `SSO`，= 默认值，是 11-07 16:54 那次启动补上的，非本次。
+- 两处「值不一致」恰好是本次补种**没有覆盖已有行**的正面证据。
+
+### 4. 行数：原有 / 现有 / 新增
+
+```
+原有（2026-11-08 00:00 之前创建）  307 行（含 7 行软删除）
+现有                              310 行（未软删除 303 + 软删除 7）
+新增                                3 行
+```
+
+新增的 3 行，来源分开算：
+
+| name | 时间 | 来源 |
+| --- | --- | --- |
+| `audit_log_retention_days` | 11-08 00:11:59 | 用户自己的后台操作，**不属于本次部署** |
+| `invitation_code_required` | 11-08 18:37:05 | **本次部署启动补种** |
+| `db_version_4.23.9` | 11-08 18:37:05 | **本次部署启动写入版本标记** |
+
+即：本次部署实际新增 **2 行**。
+
+没有行被删除或改动，用 11-07 17:22 的备份做 name 差集（只读）验证：
+
+```
+备份时 distinct name 306 → 现在 310
+备份里有、现在没有的： （空）
+现在有、备份里没有的： audit_log_retention_days / db_version_4.23.9 /
+                     email_subaddress_chars / invitation_code_required
+```
+
+「备份里有、现在没有」为空 = 原有行一个都没丢。其中 `email_subaddress_chars`（11-07 23:47）在备份之后由用户写入，故出现在新增一侧。
+
+### 5. 结论
+
+- 补种**确实生效**：本次启动补上 `invitation_code_required`，值等于 `DefaultSettings` 的 `0`。
+- 已有行**未被覆盖**：两处与默认值不同的行仍是用户自己的值。
+- 没有行丢失，没有行被删。
+- 二进制含修复符号，后续启动将走 `seedMissingDefaultSettings` 分支，行为一致。
+
+未做的部分：没有替用户在后台点保存（由用户自己验），没有改任何设置值。
