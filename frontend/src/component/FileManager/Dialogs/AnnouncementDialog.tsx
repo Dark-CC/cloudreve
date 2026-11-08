@@ -15,8 +15,13 @@ import { useTranslation } from "react-i18next";
 import { getAnnouncement, sendUpdateUserSetting } from "../../../api/api.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session/index.ts";
+import SafeHTMLContent from "../../Common/SafeHTMLContent.tsx";
 
 const MarkdownEditor = lazy(() => import("../../Viewers/MarkdownEditor/Editor.tsx"));
+
+// looksLikeHTML reports whether the stored announcement contains markup, so
+// announcements written before HTML support existed keep rendering as Markdown.
+const looksLikeHTML = (s: string): boolean => /<\/?[a-z][\s\S]*>/i.test(s);
 
 const Loading = () => (
   <Box>
@@ -74,16 +79,20 @@ const AnnouncementDialog = () => {
     <Dialog open onClose={close} maxWidth="sm" fullWidth>
       <DialogTitle>{t("application:announcement.title")}</DialogTitle>
       <DialogContent dividers>
-        <Suspense fallback={<Loading />}>
-          <MarkdownEditor
-            displayOnly
-            value={content}
-            darkMode={theme.palette.mode === "dark"}
-            readOnly={true}
-            onChange={() => {}}
-            initialValue={content}
-          />
-        </Suspense>
+        {looksLikeHTML(content) ? (
+          <SafeHTMLContent html={content} />
+        ) : (
+          <Suspense fallback={<Loading />}>
+            <MarkdownEditor
+              displayOnly
+              value={content}
+              darkMode={theme.palette.mode === "dark"}
+              readOnly={true}
+              onChange={() => {}}
+              initialValue={content}
+            />
+          </Suspense>
+        )}
       </DialogContent>
       <DialogActions sx={{ justifyContent: "space-between" }}>
         <FormControlLabel

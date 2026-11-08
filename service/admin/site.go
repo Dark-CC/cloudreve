@@ -14,6 +14,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
+	"github.com/cloudreve/Cloudreve/v4/pkg/htmlsafe"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
@@ -215,6 +216,9 @@ var (
 		"siteURL":      siteUrlPreProcessor,
 		"mime_mapping": mimeMappingPreProcessor,
 		"secret_key":   secretKeyPreProcessor,
+		// The announcement is rendered as HTML for every logged-in user, so it
+		// is sanitised on write as well as on read.
+		"announcement": announcementPreProcessor,
 	}
 	postprocessors = map[string]SettingPostProcessor{
 		"mime_mapping":                               mimeMappingPostProcessor,
@@ -346,6 +350,17 @@ func (s *SetSettingService) SetSetting(c *gin.Context) (map[string]string, error
 	}
 
 	return s.Settings, nil
+}
+
+// announcementPreProcessor runs the admin-authored announcement through the
+// allow-list sanitiser before it is stored. Sanitising on read as well (see
+// settingProvider.Localized) means rows written before this existed, or through
+// any other path, are still safe when served.
+func announcementPreProcessor(ctx context.Context, settings map[string]string) error {
+	if v, ok := settings["announcement"]; ok {
+		settings["announcement"] = htmlsafe.Sanitize(v)
+	}
+	return nil
 }
 
 func siteUrlPreProcessor(ctx context.Context, settings map[string]string) error {
