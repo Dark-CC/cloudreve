@@ -82,22 +82,32 @@ PATCH {"settings":{"email_active":"1"}}  →  {"code":0,...}
 
 香港站同一栏 7 个 `sso_*` 键齐全、`sso_display_name = "SSO"`、`email_active = 1`，保存正常；settings 共 301 行，库自 fork 建起。说明这是**国内站迁移产物缺行**导致的个例，不是 fork 的通用缺陷。而修复放在读取与启动补齐两层后，两台站都能受益。
 
-## 五、国内站现状复核（2026-11-07 17:2x）
+## 五、国内站现状复核（2026-11-07 23:50）
 
 复核时发现国内站生产库已与排查初期不同，此处以实测为准：
 
-| 项目 | 排查初期 | 当前实测 |
+| 项目 | 排查初期 | 当前实测（2026-11-07 23:50） |
 | --- | --- | --- |
-| settings 行数（未软删除） | 245 | **299** |
+| settings 行数（未软删除） | 245 | **301** |
 | 软删除行数 | — | 7 |
 | `sso_display_name` | 缺失 | 存在，值 `SSO` |
 | `invitation_code_required` | 缺失 | **仍缺失** |
-| `email_subaddress_chars` | 缺失 | **仍缺失** |
-| `max(id)` / 序列 | — | 311 / `last_value=312`（正常） |
+| `email_subaddress_chars` | 缺失 | 存在，值见下方观察项 |
+| `email_active` | `0` | **`1`**（2026-11-07 23:46:40 由用户在后台保存） |
+| `max(id)` / 序列 | — | 316 / `last_value=316`（正常） |
 
-也就是说：早前缺失的 21 个「用户会话」键中，**19 个已在今天 16:53–17:19 之间被补进库**（`created_at` 为证），只剩 `invitation_code_required`、`email_subaddress_chars` 两个不含在前端表单必填项里、不影响保存的键仍然缺失。
+也就是说：早前缺失的 21 个「用户会话」键中，除 `invitation_code_required` 外都已有行；那 20 个由生产进程自身的启动补齐与后续后台保存写入，**本任务没有任何生产写操作**。
 
-**这里没有任何本任务的写操作。** 这些行由生产进程自身的启动迁移逻辑写入，形成于本任务只读排查期间另一次重启之后；本任务的全部验证都在独立副本 `zz_probe_prod` 与独立实例（127.0.0.1:5299）上进行。
+**线上已经有两次成功的后台保存为证**（服务端日志，均为 HTTP 200）：
+
+```
+23:46:40  PATCH /api/v4/admin/settings   200   → email_active 由 0 改为 1
+23:47:07  PATCH /api/v4/admin/settings   200   → 新建 email_subaddress_chars
+```
+
+这两次来自用户自己的后台操作（IPv6 2408:…:91ac），说明这栏当前**可以保存**。但请区分两件事：能保存是因为库被补齐了，不是因为缺陷被修掉。
+
+**这里没有任何本任务的写操作。** 上述行均由生产进程自身的启动迁移与用户自己的后台操作写入；本任务的全部验证都在独立副本 `zz_probe_prod` 与独立实例（127.0.0.1:5299）上进行。
 
 由此带来的两个结论：
 
@@ -125,7 +135,7 @@ PATCH {"settings":{"email_active":"1"}}  →  {"code":0,...}
 ## 六、影响面与部署
 
 - 修复对已有配置**只增不改**：`seedMissingDefaultSettings` 跳过所有已存在的键，不会覆盖站点名称、邮箱激活状态等任何现网值。
-- 国内站实际还缺 2 个键（`invitation_code_required`、`email_subaddress_chars`），新版本启动时会按 `DefaultSettings` 的默认值（分别为 `0` 与 `+`）补上，不臆造值。
+- 国内站实际还缺 1 个键（`invitation_code_required`），新版本启动时会按 `DefaultSettings` 的默认值（`0`）补上，不臆造值。`email_subaddress_chars` 已由后台保存写入，启动补齐会跳过它。
 - 「邮箱激活」当前生产值 `email_active=0` 不会被改动。
 - 本任务与 #84（极验地址修复、公告支持 HTML）**必须合并为一次构建**，两台站部署同一份二进制。
 - 部署方式不同：国内站宿主直跑（127.0.0.1:5212），香港站 Docker 容器（127.0.0.1:5213）。
@@ -136,3 +146,121 @@ PATCH {"settings":{"email_active":"1"}}  →  {"code":0,...}
 ## 七、遗留
 
 「站点公告支持 HTML 格式」是另一件事（#84），本次只记录不实现。
+
+## 八、部署归属
+
+本任务的修复已随 PR #183 合入 `baixiong`，由 **#84 统一构建部署**，两台站部署同一份二进制。本任务**不部署、不重启任何生产服务、不改生产库**。
+
+部署后需复查国内站（`pan.qzyun.net`）。复查项见下节清单。
+
+## 九、部署后验收清单
+
+以下 5 条按顺序做，任一条不过即回滚。前两条是构建核对，后三条是行为核对。
+
+### 1. 构建确实包含本修复（两台都查）
+
+```bash
+sha256sum /opt/cloudreve-fork/cloudreve                        # 国内站（B）
+docker exec cloudreve-fork sha256sum /cloudreve/cloudreve      # 香港站（155）
+strings <上面的二进制路径> | grep -c seedMissingDefaultSettings  # 必须 ≥ 1
+```
+
+两个 sha256 必须相同；`grep -c` 必须 ≥ 1。当前线上二进制是 `4ca50c55…`，该项为 **0**，即未包含本修复。
+
+### 2. 启动日志出现补齐动作（国内站首次启动时）
+
+```bash
+grep -E "Seeded [0-9]+ missing default setting" /opt/cloudreve-fork/logs/service.log | tail -3
+```
+
+应看到补齐本次仍缺的 `invitation_code_required`（预期 1 条，值 `0`）。香港站该栏本就完整，**预期为 0 条**，属正常。
+
+### 3. 后台「用户会话」栏保存往返（用户可自己点）
+
+进入后台 `/admin/settings?tab=userSession`，把「邮箱激活」开关**切换一次再切回原值**，点保存：
+
+- 出现保存成功提示，浏览器开发者工具里 `PATCH /api/v4/admin/settings` 返回 **200**；
+- 刷新页面，开关状态仍是刚才切换后的状态；
+- 清一次 Redis 里 `setting_*` 键后重新打开页面，值仍不变。
+
+代跑命令（把 `admin@…` 与口令换成测试管理员）：
+
+```bash
+TOK=$(curl -s -X POST http://127.0.0.1:5212/api/v4/session/token \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"<管理员>","password":"<口令>"}' | python3 -c 'import json,sys;print(json.load(sys.stdin)["data"]["token"]["access_token"])')
+
+curl -s -X PATCH http://127.0.0.1:5212/api/v4/admin/settings \
+  -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+  -d '{"settings":{"email_active":"1"}}'          # 期望 {"code":0,...}
+
+curl -s -X POST http://127.0.0.1:5212/api/v4/admin/settings \
+  -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+  -d '{"keys":["email_active","invitation_code_required","sso_display_name"]}'
+# 期望三个键都有值，invitation_code_required 为 "0"，无 null
+```
+
+### 4. 「必填项缺失」在隔离副本上仍能保存（**不许动生产库**）
+
+在生产库的独立副本上删掉一个必填键，模拟「库比代码旧」，验证两个新行为：
+
+```bash
+# 1) 建副本（不碰 cloudreve 库）
+docker exec -e PGPASSWORD="$PG" cloudreve-fork-pg psql -U cloudreve -d postgres \
+  -c 'drop database if exists zz_accept;' -c 'create database zz_accept owner cloudreve;'
+docker exec -e PGPASSWORD="$PG" cloudreve-fork-pg bash -c \
+  'pg_dump -U cloudreve -d cloudreve -n public --no-owner | psql -q -U cloudreve -d zz_accept'
+
+# 2) 删掉必填键 sso_display_name
+docker exec -e PGPASSWORD="$PG" cloudreve-fork-pg psql -U cloudreve -d zz_accept \
+  -c "delete from settings where name='sso_display_name';"
+
+# 3) 用副本起一个临时实例（127.0.0.1:5298，独立 data/），请求同一组 key
+#    期望：GET 仍返回 sso_display_name（后端从 DefaultSettings 回填），不再出现 null
+#    且 PATCH email_active 返回 200、code=0
+
+# 4) 删掉临时实例与副本
+docker exec -e PGPASSWORD="$PG" cloudreve-fork-pg psql -U cloudreve -d postgres -c 'drop database zz_accept;'
+```
+
+关键判据：**前端不再出现 `undefined` 的必填项**（修复前为 `GET 返回 10 个 key、sso_display_name = None`，修复后应补齐为默认值），并且保存不再静默失败。
+
+### 5. 现有配置值逐项未变（逐项对照，任一不符即回滚）
+
+部署前基线（2026-11-07 23:50 实测）：
+
+| key | 基线值 |
+| --- | --- |
+| `siteName` | 全栈云盘 |
+| `siteURL` | https://pan.qzyun.net |
+| `email_active` | `1` |
+| `register_enabled` | `0` |
+| `payment_currency_code` | `CNY` |
+| `smtpHost` | smtpdm.aliyun.com |
+| `default_group` | `2` |
+| `authn_enabled` | `1` |
+| `expose_user_email` | `1` |
+| `avatar_path` | avatar |
+| `avatar_size` | `4194304` |
+| `avatar_size_l` | `200` |
+| `gravatar_server` | https://www.gravatar.com/ |
+| `sso_enabled` | `0` |
+| `sso_display_name` | SSO |
+| `captcha_type` | geetest |
+
+行数基线：未软删除 **301** 行、软删除 **7** 行、`max(id)=316`、`settings_id_seq.last_value=316`。
+
+部署后重跑同一查询逐项比对。**预期变化仅两类**：
+
+- 新增 `invitation_code_required`（值 `0`）1 行；
+- 上表 16 个值一个都不应改变。
+
+```bash
+source /root/qs.sh   # 或直接用 psqlc 包装
+psqlc "select count(*) from settings where deleted_at is null;"
+psqlc "select name, value from settings where deleted_at is null and name in ('siteName','siteURL','email_active','register_enabled','payment_currency_code','smtpHost','default_group','authn_enabled','expose_user_email','avatar_path','avatar_size','avatar_size_l','gravatar_server','sso_enabled','sso_display_name','captcha_type') order by name;"
+```
+
+### 观察项（不在验收范围，仅提醒）
+
+`email_subaddress_chars` 当前值为 `<code>+-.</code>`（2026-11-07 23:47:07 由后台保存写入）。该值看起来是把带格式的文本贴进了输入框。它参与邮箱子地址（`user+tag@domain`）的解析，建议用户自己确认是否想设为 `+-.`（默认值 `+`）。本任务**未改动该值**。
