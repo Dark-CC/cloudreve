@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.cloudreve.android.R
 import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.api.SearchHit
 import org.cloudreve.android.data.FavoriteEntry
@@ -39,6 +40,7 @@ data class FilesUiState(
 class FilesViewModel(
     private val repo: FileRepository,
     private val favorites: FavoritesStore,
+    private val appContext: Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FilesUiState())
@@ -213,7 +215,7 @@ class FilesViewModel(
                     )
                 )
             }
-                .onSuccess { _state.value = _state.value.copy(snackbar = "Saved for offline") }
+                .onSuccess { _state.value = _state.value.copy(snackbar = appContext.getString(R.string.files_saved_for_offline)) }
                 .onFailure { _state.value = _state.value.copy(snackbar = it.message) }
             _state.value = _state.value.copy(favoriteSaving = false)
         }
@@ -225,7 +227,9 @@ class FilesViewModel(
             runCatching {
                 val url = repo.downloadUrl(entry.path)
                 val resp = repo.download(url)
-                if (!resp.isSuccessful) throw Exception("Download failed: HTTP ${resp.code()}")
+                if (!resp.isSuccessful) {
+                    throw Exception(appContext.getString(R.string.error_download_http, resp.code()))
+                }
                 val out = File(entry.localFile)
                 resp.body()!!.byteStream().use { input ->
                     FileOutputStream(out).use { input.copyTo(it) }
@@ -246,7 +250,9 @@ class FilesViewModel(
     private suspend fun downloadTo(dir: File, file: FileObject, name: String): File {
         val url = repo.downloadUrl(file.path)
         val resp = repo.download(url)
-        if (!resp.isSuccessful) throw Exception("Download failed: HTTP ${resp.code()}")
+        if (!resp.isSuccessful) {
+            throw Exception(appContext.getString(R.string.error_download_http, resp.code()))
+        }
         dir.mkdirs()
         val out = File(dir, name)
         resp.body()!!.byteStream().use { input ->

@@ -35,7 +35,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         uris.forEachIndexed { i, uriString ->
             val uri = Uri.parse(uriString)
             val name = resolveDisplayName(uri)
-            setForeground(progressInfo("Uploading $name", i, uris.size))
+            setForeground(progressInfo(applicationContext.getString(R.string.notif_uploading, name), i, uris.size))
             try {
                 val tmp = stageToCache(uri, name)
                 try {
@@ -73,7 +73,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     private fun progressInfo(name: String, index: Int, total: Int): ForegroundInfo {
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("Cloudreve upload")
+            .setContentTitle(applicationContext.getString(R.string.notif_upload_title))
             .setContentText("$name (${index + 1}/$total)")
             .setOngoing(true)
             .build()
@@ -87,7 +87,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     private fun createChannel() {
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Uploads", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.notif_channel_uploads), NotificationManager.IMPORTANCE_LOW)
         )
     }
 

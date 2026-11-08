@@ -121,9 +121,9 @@ private class AppViewModelFactory(private val app: CloudreveApp) : ViewModelProv
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
         modelClass.isAssignableFrom(LoginViewModel::class.java) ->
-            LoginViewModel(app.sessionManager, app.apiClient) as T
+            LoginViewModel(app.sessionManager, app.apiClient, app) as T
         modelClass.isAssignableFrom(FilesViewModel::class.java) ->
-            FilesViewModel(app.fileRepository, app.favoritesStore) as T
+            FilesViewModel(app.fileRepository, app.favoritesStore, app) as T
         else -> throw IllegalArgumentException("Unknown ViewModel ${modelClass.name}")
     }
 }

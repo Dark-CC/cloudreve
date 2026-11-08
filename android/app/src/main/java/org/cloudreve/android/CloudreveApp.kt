@@ -37,7 +37,7 @@ class CloudreveApp : Application() {
         super.onCreate()
         sessionManager = SessionManager(this)
         apiClient = ApiClient(sessionManager)
-        fileRepository = FileRepository(apiClient)
+        fileRepository = FileRepository(this, apiClient)
         cameraUploadSettings = CameraUploadSettings(this)
         favoritesStore = FavoritesStore(this)
         taskNotifySettings = TaskNotifySettings(this)

@@ -2,6 +2,7 @@ package org.cloudreve.android.data
 
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.cloudreve.android.R
 import org.cloudreve.android.api.ApiClient
 import org.cloudreve.android.api.CreateFileRequest
 import org.cloudreve.android.api.CreateUploadSessionRequest
@@ -19,22 +20,31 @@ import java.io.File
 
 class ApiException(val code: Int, message: String) : Exception(message)
 
-class FileRepository(private val api: ApiClient) {
+class FileRepository(
+    private val appContext: android.content.Context,
+    private val api: ApiClient,
+) {
 
     private fun <T> Response<org.cloudreve.android.api.ApiResponse<T>>.unwrap(): T {
-        if (!isSuccessful) throw ApiException(code(), "HTTP ${code()}")
-        val body = body() ?: throw ApiException(-1, "Empty response")
+        if (!isSuccessful) throw ApiException(code(), appContext.getString(R.string.error_http, code()))
+        val body = body() ?: throw ApiException(-1, appContext.getString(R.string.error_empty_response))
         if (body.code != 0 || body.data == null) {
-            throw ApiException(body.code, body.msg.ifEmpty { "API error ${body.code}" })
+            throw ApiException(
+                body.code,
+                body.msg.ifEmpty { appContext.getString(R.string.error_api, body.code) },
+            )
         }
         return body.data
     }
 
     private fun <T> Response<org.cloudreve.android.api.ApiResponse<T>>.unwrapEmpty() {
-        if (!isSuccessful) throw ApiException(code(), "HTTP ${code()}")
-        val body = body() ?: throw ApiException(-1, "Empty response")
+        if (!isSuccessful) throw ApiException(code(), appContext.getString(R.string.error_http, code()))
+        val body = body() ?: throw ApiException(-1, appContext.getString(R.string.error_empty_response))
         if (body.code != 0) {
-            throw ApiException(body.code, body.msg.ifEmpty { "API error ${body.code}" })
+            throw ApiException(
+                body.code,
+                body.msg.ifEmpty { appContext.getString(R.string.error_api, body.code) },
+            )
         }
     }
 
@@ -44,7 +54,7 @@ class FileRepository(private val api: ApiClient) {
     suspend fun downloadUrl(uri: String): String =
         api.service().fileUrls(FileUrlRequest(listOf(uri), download = true))
             .unwrap().urls.firstOrNull()?.url
-            ?: throw ApiException(-1, "No download URL returned")
+            ?: throw ApiException(-1, appContext.getString(R.string.error_no_download_url))
 
     suspend fun download(url: String) = api.service().download(url)
 
@@ -140,7 +150,10 @@ class FileRepository(private val api: ApiClient) {
                     svc.uploadChunkPut(target, body)
                 }
                 if (!resp.isSuccessful) {
-                    throw ApiException(resp.code(), "Chunk $index upload failed: HTTP ${resp.code()}")
+                    throw ApiException(
+                        resp.code(),
+                        appContext.getString(R.string.error_chunk_upload, index, resp.code()),
+                    )
                 }
                 resp.body()?.close()
                 sent += read
@@ -152,7 +165,10 @@ class FileRepository(private val api: ApiClient) {
         if (session.completeUrl.isNotEmpty()) {
             val resp = svc.completeUpload(resolveUrl(session.completeUrl))
             if (!resp.isSuccessful) {
-                throw ApiException(resp.code(), "Upload completion failed: HTTP ${resp.code()}")
+                throw ApiException(
+                    resp.code(),
+                    appContext.getString(R.string.error_upload_complete, resp.code()),
+                )
             }
             resp.body()?.close()
         }

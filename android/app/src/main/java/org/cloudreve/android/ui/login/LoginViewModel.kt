@@ -1,11 +1,13 @@
 package org.cloudreve.android.ui.login
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.cloudreve.android.api.ApiClient
+import org.cloudreve.android.R
 import org.cloudreve.android.api.PasswordLoginRequest
 import org.cloudreve.android.data.SessionManager
 import java.net.URLEncoder
@@ -24,6 +26,7 @@ data class LoginUiState(
 class LoginViewModel(
     private val session: SessionManager,
     private val api: ApiClient,
+    private val appContext: Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -36,7 +39,7 @@ class LoginViewModel(
     fun login() {
         val s = _state.value
         if (s.serverUrl.isBlank() || s.email.isBlank() || s.password.isBlank()) {
-            _state.value = s.copy(error = "Fill in server, email and password")
+            _state.value = s.copy(error = appContext.getString(R.string.login_error_empty_fields))
             return
         }
         _state.value = s.copy(loading = true, error = null)
@@ -46,7 +49,9 @@ class LoginViewModel(
                 val resp = api.service().login(PasswordLoginRequest(s.email, s.password))
                 val body = resp.body()
                 if (!resp.isSuccessful || body == null || body.code != 0 || body.data == null) {
-                    throw Exception(body?.msg ?: "Login failed (HTTP ${resp.code()})")
+                    throw Exception(
+                        body?.msg ?: appContext.getString(R.string.login_error_http, resp.code())
+                    )
                 }
                 val login = body.data
                 session.saveSession(
@@ -58,7 +63,10 @@ class LoginViewModel(
                 )
                 _state.value = _state.value.copy(loading = false, loggedIn = true)
             } catch (e: Exception) {
-                _state.value = _state.value.copy(loading = false, error = e.message ?: "Login failed")
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = e.message ?: appContext.getString(R.string.login_error_failed),
+                )
             }
         }
     }
@@ -72,7 +80,7 @@ class LoginViewModel(
     fun startOAuth(): String? {
         val s = _state.value
         if (s.serverUrl.isBlank()) {
-            _state.value = s.copy(error = "Enter the server URL first")
+            _state.value = s.copy(error = appContext.getString(R.string.login_error_need_server))
             return null
         }
         val verifier = randomBase64Url(48)
@@ -96,9 +104,9 @@ class LoginViewModel(
         viewModelScope.launch {
             try {
                 val pending = session.takePendingOAuth()
-                    ?: throw Exception("No pending sign-in — start again")
+                    ?: throw Exception(appContext.getString(R.string.login_error_no_pending))
                 if (pending.second != state) {
-                    throw Exception("OAuth state mismatch")
+                    throw Exception(appContext.getString(R.string.login_error_state_mismatch))
                 }
                 val resp = api.service().oauthToken(
                     clientId = OAUTH_CLIENT_ID,
@@ -109,7 +117,9 @@ class LoginViewModel(
                 )
                 val token = resp.body()
                 if (!resp.isSuccessful || token == null || token.accessToken.isEmpty()) {
-                    throw Exception("Token exchange failed (HTTP ${resp.code()})")
+                    throw Exception(
+                        appContext.getString(R.string.login_error_token_exchange, resp.code())
+                    )
                 }
                 // The token response carries no user; fetch profile from userinfo.
                 val info = runCatching {
@@ -126,7 +136,10 @@ class LoginViewModel(
                 )
                 _state.value = _state.value.copy(loading = false, loggedIn = true)
             } catch (e: Exception) {
-                _state.value = _state.value.copy(loading = false, error = e.message ?: "Sign-in failed")
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = e.message ?: appContext.getString(R.string.login_error_browser),
+                )
             }
         }
     }

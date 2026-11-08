@@ -1,8 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  默认（也是唯一的）界面语言：简体中文。
+
+  本 fork 面向中文用户，界面文案统一为简体中文并放在默认资源目录 values/ 下，
+  这样无论系统语言是什么，所有设备都会显示中文。应用名称 app_name 保持
+  "Cloudreve Mobile" 不变（用户明确要求不改应用名称）。
+
+  若日后需要英文界面，新增 values-en/strings.xml 覆盖这些键即可——届时界面
+  语言会跟随系统语言，那与"界面固定中文"的产品要求相反，需先确认。
+-->
 <resources>
+    <!-- 应用与更新 -->
     <string name="app_name">Cloudreve Mobile</string>
-    <string name="update_available_title">Update available</string>
-    <string name="update_available_message">A new version of Cloudreve Mobile is available on Google Play.</string>
-    <string name="update_now">Update</string>
-    <string name="update_later">Later</string>
+    <string name="update_available_title">有可用更新</string>
+    <string name="update_available_message">Cloudreve Mobile 的新版本已在 Google Play 上发布。</string>
+    <string name="update_now">更新</string>
+    <string name="update_later">稍后</string>
+
+    <!-- 通用 -->
+    <string name="common_cancel">取消</string>
+    <string name="common_done">完成</string>
+    <string name="common_retry">重试</string>
+    <string name="common_create">创建</string>
+
+    <!-- 登录 -->
+    <string name="login_subtitle">登录到你的服务器</string>
+    <string name="login_server_url">服务器地址</string>
+    <string name="login_server_url_hint">https://drive.example.com</string>
+    <string name="login_email">邮箱</string>
+    <string name="login_password">密码</string>
+    <string name="login_submit">登录</string>
+    <string name="login_submit_browser">使用浏览器登录</string>
+    <string name="login_error_empty_fields">请填写服务器地址、邮箱和密码</string>
+    <string name="login_error_need_server">请先填写服务器地址</string>
+    <string name="login_error_http">登录失败（HTTP %1$d）</string>
+    <string name="login_error_failed">登录失败</string>
+    <string name="login_error_no_pending">没有待完成的登录，请重新开始</string>
+    <string name="login_error_state_mismatch">登录状态校验失败，请重新登录</string>
+    <string name="login_error_token_exchange">换发令牌失败（HTTP %1$d）</string>
+    <string name="login_error_browser">浏览器登录失败</string>
+
+    <!-- 文件列表 -->
+    <string name="files_title">文件</string>
+    <string name="files_root_name">我的文件</string>
+    <string name="files_path_in_root">我的文件 / %1$s</string>
+    <string name="files_search_hint">搜索文件</string>
+    <string name="files_search_empty">没有找到与“%1$s”匹配的文件</string>
+    <string name="files_empty">文件夹为空</string>
+    <string name="files_error">出错了</string>
+    <string name="files_download_failed">下载失败</string>
+    <string name="files_share_failed">创建分享失败</string>
+    <string name="files_search_failed">搜索失败</string>
+    <string name="files_share_copied">已复制分享链接</string>
+    <string name="files_saved_to_cache">已保存到缓存：%1$s</string>
+    <string name="files_saved_for_offline">已保存，可离线查看</string>
+    <string name="files_upload_queued">已加入上传队列（%1$d 个文件）</string>
+    <string name="files_kind_folder">文件夹</string>
+    <string name="files_new_folder_title">新建文件夹</string>
+    <string name="files_new_folder_label">文件夹名称</string>
+    <string name="files_rename_title">重命名</string>
+    <string name="files_rename_label">新名称</string>
+    <string name="files_delete_title">确定删除 %1$s？</string>
+    <string name="files_delete_message">文件将被移到回收站。</string>
+
+    <!-- 操作与无障碍描述 -->
+    <string name="action_search">搜索</string>
+    <string name="action_close_search">关闭搜索</string>
+    <string name="action_up">返回上一级</string>
+    <string name="action_offline_files">离线文件</string>
+    <string name="action_backup_sync">备份与同步</string>
+    <string name="action_new_folder">新建文件夹</string>
+    <string name="action_refresh">刷新</string>
+    <string name="action_sign_out">退出登录</string>
+    <string name="action_upload">上传</string>
+    <string name="action_more">更多</string>
+    <string name="action_download">下载</string>
+    <string name="action_keep_offline">保存到离线</string>
+    <string name="action_remove_offline">移除离线副本</string>
+    <string name="action_share">分享</string>
+    <string name="action_rename">重命名</string>
+    <string name="action_delete">删除</string>
+
+    <!-- 离线文件 -->
+    <string name="offline_title">离线文件</string>
+    <string name="offline_empty">还没有离线保存的文件。在文件的菜单里选择“保存到离线”。</string>
+    <string name="offline_saved_at">%1$s · 保存于 %2$s</string>
+    <string name="offline_redownload">重新下载</string>
+    <string name="offline_remove">移除</string>
+
+    <!-- 备份与同步 -->
+    <string name="backup_title">备份与同步</string>
+    <string name="backup_camera_switch">自动备份新照片和视频</string>
+    <string name="backup_remote_folder">远程文件夹</string>
+    <string name="backup_wifi_only">仅 Wi-Fi</string>
+    <string name="backup_include_videos">包含视频</string>
+    <string name="backup_last_backup">上次备份：%1$s</string>
+    <string name="backup_notify_tasks">任务完成时通知</string>
+    <string name="sync_mirror_switch">镜像本地文件夹</string>
+    <string name="sync_local_folder">本地：%1$s</string>
+    <string name="sync_remote_folder">远程文件夹（同步）</string>
+    <string name="sync_wifi_only">仅 Wi-Fi 同步</string>
+    <string name="sync_last_sync">上次同步：%1$s</string>
+    <string name="sync_now">立即同步</string>
+
+    <!-- 通知渠道与后台任务 -->
+    <string name="notif_channel_uploads">上传</string>
+    <string name="notif_channel_camera_backup">相机备份</string>
+    <string name="notif_channel_tasks">任务提醒</string>
+    <string name="notif_channel_folder_sync">文件夹同步</string>
+    <string name="notif_upload_title">Cloudreve 上传</string>
+    <string name="notif_uploading">正在上传 %1$s</string>
+    <string name="notif_camera_title">Cloudreve 相机备份</string>
+    <string name="notif_backing_up">正在备份 %1$s</string>
+    <string name="notif_task_title">Cloudreve 任务</string>
+    <string name="notif_task_completed">%1$s 已完成</string>
+    <string name="notif_task_canceled">%1$s 已取消</string>
+    <string name="notif_task_failed">%1$s 失败：%2$s</string>
+    <string name="notif_task_failed_bare">%1$s 失败</string>
+    <string name="notif_sync_title">Cloudreve 文件夹同步</string>
+    <string name="notif_sync_uploaded">%1$s（已上传 %2$d 个）</string>
+
+    <!-- 快捷设置磁贴 -->
+    <string name="tile_camera_on">相机备份已开启</string>
+    <string name="tile_camera_off">相机备份已关闭</string>
+
+    <!-- 系统文件访问（SAF） -->
+    <string name="documents_root_name">我的文件</string>
+    <string name="documents_read_only">此处的 Cloudreve 文件为只读</string>
+    <string name="documents_not_found">找不到：%1$s</string>
+    <string name="documents_no_thumbnail">没有缩略图</string>
+
+    <!-- 错误信息 -->
+    <string name="error_http">HTTP %1$d</string>
+    <string name="error_empty_response">服务器返回内容为空</string>
+    <string name="error_api">接口错误 %1$d</string>
+    <string name="error_no_download_url">没有获取到下载地址</string>
+    <string name="error_chunk_upload">第 %1$d 块上传失败：HTTP %2$d</string>
+    <string name="error_upload_complete">完成上传失败：HTTP %1$d</string>
+    <string name="error_download_http">下载失败：HTTP %1$d</string>
 </resources>

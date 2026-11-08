@@ -15,6 +15,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import org.cloudreve.android.CloudreveApp
+import org.cloudreve.android.R
 import java.util.concurrent.TimeUnit
 
 /**
@@ -57,13 +58,15 @@ class TaskPollWorker(context: Context, params: WorkerParameters) :
         if (!NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) return
         val label = type.substringAfterLast('.').replace('_', ' ')
         val text = when (status) {
-            "completed" -> "$label completed"
-            "canceled" -> "$label canceled"
-            else -> "$label failed" + (error?.let { ": $it" } ?: "")
+            "completed" -> applicationContext.getString(R.string.notif_task_completed, label)
+            "canceled" -> applicationContext.getString(R.string.notif_task_canceled, label)
+            else -> error?.let {
+                applicationContext.getString(R.string.notif_task_failed, label, it)
+            } ?: applicationContext.getString(R.string.notif_task_failed_bare, label)
         }
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Cloudreve task")
+            .setContentTitle(applicationContext.getString(R.string.notif_task_title))
             .setContentText(text)
             .setAutoCancel(true)
             .build()
@@ -75,7 +78,7 @@ class TaskPollWorker(context: Context, params: WorkerParameters) :
         val manager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Task updates", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.notif_channel_tasks), NotificationManager.IMPORTANCE_DEFAULT)
         )
     }
 

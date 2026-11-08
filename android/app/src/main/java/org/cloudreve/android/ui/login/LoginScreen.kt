@@ -22,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.cloudreve.android.R
 
 @Composable
 fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
@@ -52,7 +54,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
         Text("Cloudreve", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Sign in to your server",
+            stringResource(R.string.login_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -61,8 +63,8 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = viewModel::onServerUrlChange,
-            label = { Text("Server URL") },
-            placeholder = { Text("https://drive.example.com") },
+            label = { Text(stringResource(R.string.login_server_url)) },
+            placeholder = { Text(stringResource(R.string.login_server_url_hint)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
@@ -71,7 +73,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
         OutlinedTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.login_email)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
@@ -80,7 +82,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.login_password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -101,7 +103,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             if (state.loading) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             } else {
-                Text("Sign in")
+                Text(stringResource(R.string.login_submit))
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -119,7 +121,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             enabled = !state.loading,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Sign in with browser")
+            Text(stringResource(R.string.login_submit_browser))
         }
     }
 }
