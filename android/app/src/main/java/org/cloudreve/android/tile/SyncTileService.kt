@@ -8,6 +8,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.cloudreve.android.CloudreveApp
+import org.cloudreve.android.R
 import org.cloudreve.android.work.CameraUploadWorker
 
 /**
@@ -44,7 +45,9 @@ class SyncTileService : TileService() {
         val enabled = app.cameraUploadSettings.snapshotNow().enabled
         qsTile?.apply {
             state = if (enabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = if (enabled) "Camera backup on" else "Camera backup off"
+            subtitle = applicationContext.getString(
+                if (enabled) R.string.tile_camera_on else R.string.tile_camera_off
+            )
             updateTile()
         }
     }

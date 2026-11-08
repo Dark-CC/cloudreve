@@ -72,12 +72,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
 import org.cloudreve.android.CloudreveApp
+import org.cloudreve.android.R
 import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.data.FavoriteEntry
@@ -117,7 +119,7 @@ fun FilesScreen(
     ) { uris ->
         if (uris.isNotEmpty()) {
             UploadWorker.enqueue(context, uris, state.currentUri)
-            scope.launch { snackbar.showSnackbar("Upload queued (${uris.size} file${if (uris.size > 1) "s" else ""})") }
+            scope.launch { snackbar.showSnackbar(context.getString(R.string.files_upload_queued, uris.size)) }
         }
     }
 
@@ -168,7 +170,7 @@ fun FilesScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(searchFocus),
-                            placeholder = { Text("Search files") },
+                            placeholder = { Text(stringResource(R.string.files_search_hint)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(
@@ -177,7 +179,7 @@ fun FilesScreen(
                         )
                     } else {
                         Column {
-                            Text("Files")
+                            Text(stringResource(R.string.files_title))
                             Text(
                                 pathLabel(state.currentUri),
                                 style = MaterialTheme.typography.labelSmall,
@@ -191,43 +193,43 @@ fun FilesScreen(
                 navigationIcon = {
                     if (inSearch || searchOpen) {
                         IconButton(onClick = { closeSearch() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close search")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close_search))
                         }
                     } else if (!CrUri.isRoot(state.currentUri)) {
                         IconButton(onClick = { viewModel.navigateUp() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Up")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_up))
                         }
                     }
                 },
                 actions = {
                     if (!inSearch && !searchOpen) {
                         IconButton(onClick = { searchOpen = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
                         }
                         IconButton(onClick = { favoritesOpen = true }) {
                             Icon(
                                 if (state.favorites.isEmpty()) Icons.Default.StarBorder
                                 else Icons.Default.Star,
-                                contentDescription = "Offline files",
+                                contentDescription = stringResource(R.string.action_offline_files),
                                 tint = if (state.favorites.isEmpty()) MaterialTheme.colorScheme.onSurface
                                 else MaterialTheme.colorScheme.primary,
                             )
                         }
                         IconButton(onClick = { cameraSettingsOpen = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Backup & sync")
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.action_backup_sync))
                         }
                         IconButton(onClick = { mkdirOpen = true }) {
-                            Icon(Icons.Default.CreateNewFolder, contentDescription = "New folder")
+                            Icon(Icons.Default.CreateNewFolder, contentDescription = stringResource(R.string.action_new_folder))
                         }
                         IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
                         }
                         IconButton(onClick = onSignOut) {
-                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign out")
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.action_sign_out))
                         }
                     } else if (!inSearch) {
                         IconButton(onClick = { viewModel.search(searchText) }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
                         }
                     }
                 },
@@ -235,7 +237,7 @@ fun FilesScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { uploadLauncher.launch(arrayOf("*/*")) }) {
-                Icon(Icons.Default.UploadFile, contentDescription = "Upload")
+                Icon(Icons.Default.UploadFile, contentDescription = stringResource(R.string.action_upload))
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -261,7 +263,7 @@ fun FilesScreen(
                             scope.launch {
                                 runCatching { viewModel.downloadToCache(context, file) }
                                     .onSuccess { local -> openFile(context, local) }
-                                    .onFailure { snackbar.showSnackbar(it.message ?: "Download failed") }
+                                    .onFailure { snackbar.showSnackbar(it.message ?: context.getString(R.string.files_download_failed)) }
                             }
                         },
                     )
@@ -274,14 +276,22 @@ fun FilesScreen(
                 state.error != null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(state.error ?: "Error", color = MaterialTheme.colorScheme.error)
-                            TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
+                            Text(
+                                state.error ?: stringResource(R.string.files_error),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            TextButton(onClick = { viewModel.refresh() }) {
+                                Text(stringResource(R.string.common_retry))
+                            }
                         }
                     }
                 }
                 state.files.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Empty folder", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.files_empty),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 else -> {
@@ -301,7 +311,7 @@ fun FilesScreen(
                                         scope.launch {
                                             runCatching { viewModel.downloadToCache(context, file) }
                                                 .onSuccess { local -> openFile(context, local) }
-                                                .onFailure { snackbar.showSnackbar(it.message ?: "Download failed") }
+                                                .onFailure { snackbar.showSnackbar(it.message ?: context.getString(R.string.files_download_failed)) }
                                         }
                                     }
                                 },
@@ -316,16 +326,16 @@ fun FilesScreen(
                                                 cm.setPrimaryClip(
                                                     android.content.ClipData.newPlainText("share", link)
                                                 )
-                                                snackbar.showSnackbar("Share link copied")
+                                                snackbar.showSnackbar(context.getString(R.string.files_share_copied))
                                             }
-                                            .onFailure { snackbar.showSnackbar(it.message ?: "Share failed") }
+                                            .onFailure { snackbar.showSnackbar(it.message ?: context.getString(R.string.files_share_failed)) }
                                     }
                                 },
                                 onDownload = {
                                     scope.launch {
                                         runCatching { viewModel.downloadToCache(context, file) }
-                                            .onSuccess { snackbar.showSnackbar("Saved to cache: ${it.name}") }
-                                            .onFailure { snackbar.showSnackbar(it.message ?: "Download failed") }
+                                            .onSuccess { snackbar.showSnackbar(context.getString(R.string.files_saved_to_cache, it.name)) }
+                                            .onFailure { snackbar.showSnackbar(it.message ?: context.getString(R.string.files_download_failed)) }
                                     }
                                 },
                             )
@@ -347,9 +357,9 @@ fun FilesScreen(
 
     if (mkdirOpen) {
         TextFieldDialog(
-            title = "New folder",
-            label = "Folder name",
-            confirm = "Create",
+            title = stringResource(R.string.files_new_folder_title),
+            label = stringResource(R.string.files_new_folder_label),
+            confirm = stringResource(R.string.common_create),
             onConfirm = {
                 viewModel.mkdir(it)
                 mkdirOpen = false
@@ -360,10 +370,10 @@ fun FilesScreen(
 
     renameTarget?.let { file ->
         TextFieldDialog(
-            title = "Rename",
-            label = "New name",
+            title = stringResource(R.string.files_rename_title),
+            label = stringResource(R.string.files_rename_label),
             initial = file.name,
-            confirm = "Rename",
+            confirm = stringResource(R.string.action_rename),
             onConfirm = {
                 viewModel.rename(file, it)
                 renameTarget = null
@@ -375,16 +385,16 @@ fun FilesScreen(
     deleteTarget?.let { file ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Delete ${file.name}?") },
-            text = { Text("The file will be moved to trash.") },
+            title = { Text(stringResource(R.string.files_delete_title, file.name)) },
+            text = { Text(stringResource(R.string.files_delete_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(file)
                     deleteTarget = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("Cancel") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -413,11 +423,11 @@ private fun FavoritesDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Offline files") },
+        title = { Text(stringResource(R.string.offline_title)) },
         text = {
             if (favorites.isEmpty()) {
                 Text(
-                    "Nothing saved for offline use yet. Use a file's menu → Keep offline.",
+                    stringResource(R.string.offline_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
@@ -430,9 +440,13 @@ private fun FavoritesDialog(
                             },
                             supportingContent = {
                                 Text(
-                                    "${formatSize(entry.size)} · saved " +
-                                        java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT)
+                                    stringResource(
+                                        R.string.offline_saved_at,
+                                        formatSize(entry.size),
+                                        java.text.DateFormat
+                                            .getDateInstance(java.text.DateFormat.SHORT, CN_LOCALE)
                                             .format(java.util.Date(entry.savedAt)),
+                                    ),
                                     style = MaterialTheme.typography.labelMedium,
                                 )
                             },
@@ -441,14 +455,14 @@ private fun FavoritesDialog(
                                     IconButton(onClick = { onRefresh(entry) }) {
                                         Icon(
                                             Icons.Default.Refresh,
-                                            contentDescription = "Re-download",
+                                            contentDescription = stringResource(R.string.offline_redownload),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                     IconButton(onClick = { onRemove(entry) }) {
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "Remove",
+                                            contentDescription = stringResource(R.string.offline_remove),
                                             tint = MaterialTheme.colorScheme.error,
                                         )
                                     }
@@ -460,14 +474,16 @@ private fun FavoritesDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
         },
     )
 }
 
+@Composable
 private fun pathLabel(uri: String): String {
-    val path = uri.removePrefix(CrUri.MY_PREFIX).trim('/')
-    return if (path.isEmpty()) "My files" else "My files / ${java.net.URLDecoder.decode(path, "UTF-8")}"
+    val path = java.net.URLDecoder.decode(uri.removePrefix(CrUri.MY_PREFIX).trim('/'), "UTF-8")
+    return if (path.isEmpty()) stringResource(R.string.files_root_name)
+    else stringResource(R.string.files_path_in_root, path)
 }
 
 @Composable
@@ -487,9 +503,12 @@ private fun SearchResults(
         state.searchError != null -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.searchError ?: "Search failed", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        state.searchError ?: stringResource(R.string.files_search_failed),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                     TextButton(onClick = { viewModel.search(state.searchQuery ?: "") }) {
-                        Text("Retry")
+                        Text(stringResource(R.string.common_retry))
                     }
                 }
             }
@@ -497,7 +516,7 @@ private fun SearchResults(
         state.searchResults.isEmpty() -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "No results for \"${state.searchQuery}\"",
+                    stringResource(R.string.files_search_empty, state.searchQuery.orEmpty()),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -616,14 +635,14 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Backup & sync") },
+        title = { Text(stringResource(R.string.backup_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Back up new photos & videos", Modifier.weight(1f))
+                    Text(stringResource(R.string.backup_camera_switch), Modifier.weight(1f))
                     Switch(
                         checked = snap?.enabled == true,
                         onCheckedChange = { want ->
@@ -641,7 +660,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = folderText,
                     onValueChange = { folderText = it },
-                    label = { Text("Remote folder") },
+                    label = { Text(stringResource(R.string.backup_remote_folder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -649,7 +668,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Wi-Fi only", Modifier.weight(1f))
+                    Text(stringResource(R.string.backup_wifi_only), Modifier.weight(1f))
                     Switch(
                         checked = snap?.wifiOnly ?: true,
                         onCheckedChange = { wifiOnly ->
@@ -666,7 +685,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Include videos", Modifier.weight(1f))
+                    Text(stringResource(R.string.backup_include_videos), Modifier.weight(1f))
                     Switch(
                         checked = snap?.includeVideos ?: true,
                         onCheckedChange = { scope.launch { settings.setIncludeVideos(it) } },
@@ -674,9 +693,16 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                 }
                 snap?.lastSyncAt?.takeIf { it > 0 }?.let {
                     Text(
-                        "Last backup: " + java.text.DateFormat.getDateTimeInstance(
-                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
-                        ).format(java.util.Date(it)),
+                        stringResource(
+                            R.string.backup_last_backup,
+                            java.text.DateFormat
+                                .getDateTimeInstance(
+                                    java.text.DateFormat.SHORT,
+                                    java.text.DateFormat.SHORT,
+                                    CN_LOCALE,
+                                )
+                                .format(java.util.Date(it)),
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -686,7 +712,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Notify on finished tasks", Modifier.weight(1f))
+                    Text(stringResource(R.string.backup_notify_tasks), Modifier.weight(1f))
                     Switch(
                         checked = notifyEnabled,
                         onCheckedChange = { want ->
@@ -713,7 +739,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Mirror a local folder", Modifier.weight(1f))
+                    Text(stringResource(R.string.sync_mirror_switch), Modifier.weight(1f))
                     Switch(
                         checked = syncSnap?.enabled == true && syncSnap?.treeUri != null,
                         onCheckedChange = { want ->
@@ -730,7 +756,10 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                 }
                 syncSnap?.treeUri?.let {
                     Text(
-                        "Local: " + android.net.Uri.parse(it).lastPathSegment.orEmpty(),
+                        stringResource(
+                            R.string.sync_local_folder,
+                            android.net.Uri.parse(it).lastPathSegment.orEmpty(),
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -738,7 +767,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = syncFolderText,
                     onValueChange = { syncFolderText = it },
-                    label = { Text("Remote folder (sync)") },
+                    label = { Text(stringResource(R.string.sync_remote_folder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -746,7 +775,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Sync Wi-Fi only", Modifier.weight(1f))
+                    Text(stringResource(R.string.sync_wifi_only), Modifier.weight(1f))
                     Switch(
                         checked = syncSnap?.wifiOnly ?: true,
                         onCheckedChange = { wifiOnly ->
@@ -761,9 +790,16 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                 }
                 syncSnap?.lastSyncAt?.takeIf { it > 0 }?.let {
                     Text(
-                        "Last folder sync: " + java.text.DateFormat.getDateTimeInstance(
-                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
-                        ).format(java.util.Date(it)),
+                        stringResource(
+                            R.string.sync_last_sync,
+                            java.text.DateFormat
+                                .getDateTimeInstance(
+                                    java.text.DateFormat.SHORT,
+                                    java.text.DateFormat.SHORT,
+                                    CN_LOCALE,
+                                )
+                                .format(java.util.Date(it)),
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -780,7 +816,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                         SyncFolderWorker.syncNow(context, syncSnap?.wifiOnly ?: true)
                     }
                 }
-            }) { Text("Sync now") }
+            }) { Text(stringResource(R.string.sync_now)) }
         },
         dismissButton = {
             TextButton(onClick = {
@@ -789,7 +825,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                     syncSettings.setRemoteFolder(syncFolderText)
                 }
                 onDismiss()
-            }) { Text("Done") }
+            }) { Text(stringResource(R.string.common_done)) }
         },
     )
 }
@@ -843,7 +879,7 @@ private fun FileRow(
         headlineContent = { Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
-                if (file.isFolder) "Folder" else formatSize(file.size),
+                if (file.isFolder) stringResource(R.string.files_kind_folder) else formatSize(file.size),
                 style = MaterialTheme.typography.labelMedium,
             )
         },
@@ -867,17 +903,24 @@ private fun FileRow(
         trailingContent = {
             Box {
                 IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     if (!file.isFolder) {
                         DropdownMenuItem(
-                            text = { Text("Download") },
+                            text = { Text(stringResource(R.string.action_download)) },
                             leadingIcon = { Icon(Icons.Default.Download, null) },
                             onClick = { menuOpen = false; onDownload() },
                         )
                         DropdownMenuItem(
-                            text = { Text(if (isFavorite) "Remove offline copy" else "Keep offline") },
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (isFavorite) R.string.action_remove_offline
+                                        else R.string.action_keep_offline
+                                    )
+                                )
+                            },
                             leadingIcon = {
                                 Icon(
                                     if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
@@ -888,17 +931,17 @@ private fun FileRow(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Share") },
+                        text = { Text(stringResource(R.string.action_share)) },
                         leadingIcon = { Icon(Icons.Default.Share, null) },
                         onClick = { menuOpen = false; onShare() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Rename") },
+                        text = { Text(stringResource(R.string.action_rename)) },
                         leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, null) },
                         onClick = { menuOpen = false; onRename() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text(stringResource(R.string.action_delete)) },
                         leadingIcon = { Icon(Icons.Default.Delete, null) },
                         onClick = { menuOpen = false; onDelete() },
                     )
@@ -930,9 +973,11 @@ private fun TextFieldDialog(
             )
         },
         confirmButton = { TextButton(onClick = { onConfirm(value) }) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
+
+private val CN_LOCALE = java.util.Locale.SIMPLIFIED_CHINESE
 
 private fun formatSize(size: Long): String {
     if (size <= 0) return "0 B"

@@ -68,7 +68,7 @@ class CloudreveDocumentsProvider : DocumentsProvider() {
         if (documentId == ROOT_ID) {
             cursor.newRow().apply {
                 add(Document.COLUMN_DOCUMENT_ID, ROOT_ID)
-                add(Document.COLUMN_DISPLAY_NAME, "My files")
+                add(Document.COLUMN_DISPLAY_NAME, context!!.getString(R.string.documents_root_name))
                 add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR)
                 add(Document.COLUMN_FLAGS, 0)
             }
@@ -114,7 +114,7 @@ class CloudreveDocumentsProvider : DocumentsProvider() {
         signal: CancellationSignal?,
     ): ParcelFileDescriptor {
         if (mode.contains('w')) {
-            throw FileNotFoundException("Cloudreve documents are read-only here")
+            throw FileNotFoundException(context!!.getString(R.string.documents_read_only))
         }
         val local = fetchToCache(documentId)
         return ParcelFileDescriptor.open(local, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -127,7 +127,7 @@ class CloudreveDocumentsProvider : DocumentsProvider() {
     ): android.content.res.AssetFileDescriptor {
         val local = runBlocking(ioScope) {
             val url = repo.thumbUrl(documentId)
-                ?: throw FileNotFoundException("No thumbnail")
+                ?: throw FileNotFoundException(context!!.getString(R.string.documents_no_thumbnail))
             downloadTo(url, cacheFile("thumb", documentId))
         }
         val pfd = ParcelFileDescriptor.open(local, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -164,7 +164,7 @@ class CloudreveDocumentsProvider : DocumentsProvider() {
             page.files.firstOrNull { it.path == documentId }?.let { return@runBlocking it }
             token = page.pagination.nextToken
         } while (token != null)
-        throw FileNotFoundException("Not found: $documentId")
+        throw FileNotFoundException(context!!.getString(R.string.documents_not_found, documentId))
     }
 
     private fun fetchToCache(documentId: String): File = runBlocking(ioScope) {
@@ -176,7 +176,7 @@ class CloudreveDocumentsProvider : DocumentsProvider() {
         val resp = repo.download(url)
         if (!resp.isSuccessful) {
             resp.body()?.close()
-            throw FileNotFoundException("Download failed: HTTP ${resp.code()}")
+            throw FileNotFoundException(context!!.getString(R.string.error_download_http, resp.code()))
         }
         dest.parentFile?.mkdirs()
         resp.body()!!.byteStream().use { input ->
