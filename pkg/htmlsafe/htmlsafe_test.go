@@ -1,6 +1,7 @@
 package htmlsafe
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -157,6 +158,143 @@ func TestSanitizeIsIdempotent(t *testing.T) {
 		twice := Sanitize(once)
 		if once != twice {
 			t.Errorf("Sanitize not idempotent for %q: once=%q twice=%q", in, once, twice)
+		}
+	}
+}
+
+// TestSanitizeKeepsScopedStyle covers the announcement use case: a <style>
+// block is no longer discarded wholesale, it is scoped and re-emitted once.
+func TestSanitizeKeepsScopedStyle(t *testing.T) {
+	in := `<style>.card { color: #333; padding: 10px }</style><div class="card">内容</div>`
+	out := Sanitize(in)
+
+	if !strings.HasPrefix(out, "<style>") {
+		t.Fatalf("style block should lead the output, got %q", out)
+	}
+	if !strings.Contains(out, "[data-cr-announcement] .card{color:#333;padding:10px}") {
+		t.Errorf("scoped rule missing: %q", out)
+	}
+	if strings.Count(out, "<style") != 1 {
+		t.Errorf("expected exactly one <style>, got %q", out)
+	}
+	if !strings.Contains(out, `<div class="card">内容</div>`) {
+		t.Errorf("content lost: %q", out)
+	}
+}
+
+// TestSanitizePastWholeDocument reproduces the actual administrator workflow:
+// a saved HTML page pasted into the announcement box.
+func TestSanitizePastWholeDocument(t *testing.T) {
+	in := `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>公告</title>
+<style>body { background: #f4f6f8 } .card { border-top: 5px solid #0056b3 }</style>
+</head><body><div class="card">内容</div><script>alert(1)</script></body></html>`
+	out := Sanitize(in)
+
+	for _, bad := range []string{"<!DOCTYPE", "<html", "<head", "<title", "<meta", "<script", "alert(1)"} {
+		if strings.Contains(strings.ToLower(out), strings.ToLower(bad)) {
+			t.Errorf("Sanitize(%q) = %q, still contains %q", in, out, bad)
+		}
+	}
+	if !strings.Contains(out, "[data-cr-announcement]{background:#f4f6f8}") {
+		t.Errorf("body rule not mapped to the container: %q", out)
+	}
+	if !strings.Contains(out, "[data-cr-announcement] .card{border-top:5px solid #0056b3}") {
+		t.Errorf("class rule not scoped: %q", out)
+	}
+	if !strings.Contains(out, `<div class="card">内容</div>`) {
+		t.Errorf("content lost: %q", out)
+	}
+}
+
+// TestSanitizeFiltersStyleAttribute: inline styles are kept, but only for the
+// harmless property subset.
+func TestSanitizeFiltersStyleAttribute(t *testing.T) {
+	in := `<p style="color: #333; position: fixed; background: url(http://evil.example/x.png); min-height: 100vh">x</p>`
+	out := Sanitize(in)
+	if !strings.Contains(out, `style="color:#333"`) {
+		t.Errorf("safe declarations lost: %q", out)
+	}
+	for _, bad := range []string{"position", "url(", "vh"} {
+		if strings.Contains(strings.ToLower(out), bad) {
+			t.Errorf("Sanitize(%q) = %q, kept %q", in, out, bad)
+		}
+	}
+
+	// An attribute with nothing safe left is removed entirely.
+	if out := Sanitize(`<p style="position: fixed">x</p>`); strings.Contains(out, "style=") {
+		t.Errorf("empty style attribute should be dropped, got %q", out)
+	}
+}
+
+// TestSanitizeAnnouncementSample runs the acceptance baseline: the exact
+// document the administrator pasted must come out scoped, script-free and
+// layout-complete apart from the viewport-sizing declarations.
+func TestSanitizeAnnouncementSample(t *testing.T) {
+	raw, err := os.ReadFile("../../docs/announcement-css/sample.html")
+	if err != nil {
+		t.Fatalf("read sample: %v", err)
+	}
+	out := Sanitize(string(raw))
+
+	// Every authored class survives, scoped to the container.
+	for _, class := range []string{
+		".announcement-card", ".header", ".header h1", ".content", ".notice-box",
+		".notice-box strong", ".detail-list", ".detail-list li", ".label",
+		".status-badge", ".status-stop", ".status-normal", ".footer",
+	} {
+		if !strings.Contains(out, "[data-cr-announcement] "+class+"{") {
+			t.Errorf("rule for %q missing", class)
+		}
+	}
+
+	// The visual essentials are preserved.
+	for _, want := range []string{
+		"background-color:#ffffff",
+		"border-radius:8px",
+		"box-shadow:0 4px 12px rgba(0, 0, 0, 0.08)",
+		"border-top:5px solid #0056b3",
+		"background-color:#fff8e1",
+		"border-left:4px solid #ffc107",
+		"background-color:#ffebee",
+		"color:#c62828",
+		"background-color:#e8f5e9",
+		"color:#2e7d32",
+		"display:flex",
+		"justify-content:center",
+		"text-align:right",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("declaration %q missing from output", want)
+		}
+	}
+
+	// The viewport sizing is dropped, so the card cannot fill the page.
+	if strings.Contains(out, "100vh") {
+		t.Errorf("viewport unit survived: %q", out)
+	}
+
+	// Nothing executable or externally loaded.
+	for _, bad := range []string{"<script", "<title", "<meta", "<!DOCTYPE", "<html", "<head", "url(", "@import"} {
+		if strings.Contains(strings.ToLower(out), strings.ToLower(bad)) {
+			t.Errorf("payload %q survived", bad)
+		}
+	}
+}
+
+// TestSanitizeStyleIsIdempotent guards the write→read double sanitisation: the
+// stored value is sanitised again when it is read back for display.
+func TestSanitizeStyleIsIdempotent(t *testing.T) {
+	inputs := []string{
+		`<style>body{background:#f4f6f8;display:flex}.card{color:#333}</style><div class="card">x</div>`,
+		`<p style="color: red">x</p>`,
+		`<style>@media (max-width: 600px) { .card { padding: 10px } }</style><div class="card">x</div>`,
+	}
+	for _, in := range inputs {
+		once := Sanitize(in)
+		twice := Sanitize(once)
+		if once != twice {
+			t.Errorf("Sanitize not idempotent for %q:\n once=%q\ntwice=%q", in, once, twice)
 		}
 	}
 }

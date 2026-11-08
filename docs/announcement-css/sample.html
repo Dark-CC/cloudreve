@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统维护公告 - 全栈云盘</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .announcement-card {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border-top: 5px solid #0056b3;
+        }
+        .header {
+            padding: 24px 30px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #333333;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px;
+            color: #444444;
+            line-height: 1.6;
+        }
+        .notice-box {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .notice-box strong {
+            color: #d32f2f;
+        }
+        .detail-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .detail-list li {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .label {
+            font-weight: bold;
+            min-width: 80px;
+            color: #2c3e50;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-stop {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status-normal {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 15px 30px;
+            text-align: right;
+            font-size: 13px;
+            color: #888888;
+            border-top: 1px solid #eeeeee;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="announcement-card">
+        <div class="header">
+            <h1>关于美国存储节点暂停服务的维护公告</h1>
+        </div>
+        <div class="content">
+            <p>尊敬的全栈云盘用户：</p>
+            <p>您好！为了向您提供更稳定、高效的服务，我们将对系统进行例行升级维护。在此期间，部分服务将受到限制，具体安排如下：</p>
+
+            <div class="notice-box">
+                <strong>重要提示：</strong> 维护期间请勿尝试上传新文件至美国节点，以免数据丢失或上传失败。
+            </div>
+
+            <ul class="detail-list">
+                <li>
+                    <span class="label">维护时间：</span>
+                    <span>即日起至 <strong>2026年11月15日</strong></span>
+                </li>
+                <li>
+                    <span class="label">美国存储：</span>
+                    <span class="status-badge status-stop">暂停上传服务</span>
+                </li>
+                <li>
+                    <span class="label">香港存储：</span>
+                    <span class="status-badge status-normal">正常运行，不受影响</span>
+                </li>
+            </ul>
+
+            <p>建议您在此期间优先使用香港存储节点进行数据存取。维护结束后，美国节点将自动恢复服务，给您带来的不便，我们深表歉意。</p>
+            <p>感谢您的理解与支持！</p>
+        </div>
+        <div class="footer">
+            全栈云盘运营团队<br>
+            2026年11月8日
+        </div>
+    </div>
+
+</body>
+</html>
