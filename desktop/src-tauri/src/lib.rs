@@ -22,17 +22,25 @@ mod identity;
 #[macro_use]
 extern crate rust_i18n;
 
-i18n!("../locales", fallback = "en-US");
+i18n!("../locales", fallback = "zh-CN");
+
+/// UI language the app starts in when the user has not picked one.
+///
+/// The desktop client is Chinese-first: "auto" (no language stored in the
+/// config) resolves to Simplified Chinese instead of the system locale, and the
+/// webview URL carries this value as `?lng=` to the UI. An explicit language in
+/// the config still wins. See docs/ops/desktop-release-0.3.13.md.
+pub const DEFAULT_LOCALE: &str = "zh-CN";
 
 /// Normalize a raw locale string to one supported by the app.
 ///
 /// macOS may report locales like "zh-Hans-CN" which don't directly match our
 /// translation files ("zh-CN"). This strips script tags and falls back to the
-/// language code before giving up and returning "en-US".
+/// language code before giving up and returning [`DEFAULT_LOCALE`].
 fn normalize_locale(locale: &str) -> String {
     let locale = locale.trim();
     if locale.is_empty() {
-        return "en-US".to_string();
+        return DEFAULT_LOCALE.to_string();
     }
 
     let available = available_locales!();
@@ -67,28 +75,27 @@ fn normalize_locale(locale: &str) -> String {
         }
     }
 
-    "en-US".to_string()
+    DEFAULT_LOCALE.to_string()
 }
 
-/// Initialize i18n based on config setting or system locale
+/// Initialize i18n for the native shell (tray menu, notifications, dialogs).
+///
+/// Uses the language stored in the config, and [`DEFAULT_LOCALE`] when the user
+/// left the language on "auto" - the system locale is deliberately not used.
 fn init_i18n() {
     use rust_i18n::set_locale;
-    use sys_locale::get_locale;
 
-    // Try to get language from config, fallback to system locale
     let locale = ConfigManager::try_get()
         .and_then(|cm| cm.language())
-        .unwrap_or_else(|| get_locale().unwrap_or_else(|| String::from("en-US")));
+        .unwrap_or_else(|| DEFAULT_LOCALE.to_string());
     set_locale(normalize_locale(&locale).as_str());
 }
 
-/// Get the current effective locale (from config or system)
+/// Get the current effective locale (from config, or the app default)
 pub fn get_effective_locale() -> String {
-    use sys_locale::get_locale;
-
     let locale = ConfigManager::try_get()
         .and_then(|cm| cm.language())
-        .unwrap_or_else(|| get_locale().unwrap_or_else(|| String::from("en-US")));
+        .unwrap_or_else(|| DEFAULT_LOCALE.to_string());
     normalize_locale(&locale)
 }
 

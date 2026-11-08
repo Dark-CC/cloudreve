@@ -3,12 +3,20 @@ import { initReactI18next } from "react-i18next";
 import Backend from "i18next-http-backend";
 import LanguageDetector from "i18next-browser-languagedetector";
 
+// The desktop client is a Simplified-Chinese-first product: it starts in
+// zh-CN no matter what the system locale is. Only an explicit `?lng=` on the
+// webview URL (the native shell always appends the effective locale, and the
+// in-app language selector reloads the window with it) or a runtime
+// i18n.changeLanguage() call from that selector overrides the default.
+// See docs/ops/desktop-release-0.3.13.md.
+export const DEFAULT_LANGUAGE = "zh-CN";
+
 i18n
   .use(Backend)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: "en-US",
+    fallbackLng: DEFAULT_LANGUAGE,
     debug: import.meta.env.DEV,
     ns: ["common"],
     load: "currentOnly",
@@ -21,8 +29,10 @@ i18n
     },
     supportedLngs: ['en-US', 'zh-CN', 'zh-TW', 'ja', 'de', 'fr', 'es', 'ko', 'ru', 'pl', 'it'],
     detection: {
-      // Order of detection: URL query param first, then other methods
-      order: ['querystring', 'navigator', 'htmlTag'],
+      // Only the URL query param is honoured. `navigator` and `htmlTag` are
+      // intentionally left out so the system language never picks the UI
+      // language; without a `lng` value i18next falls back to zh-CN above.
+      order: ['querystring'],
       // Look for 'lng' in query string
       lookupQuerystring: 'lng',
       // Cache the detected language

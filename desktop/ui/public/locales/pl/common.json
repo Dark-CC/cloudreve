@@ -82,7 +82,7 @@
     "languageSettings": "Język",
     "language": "Język",
     "languageDescription": "Wybierz język wyświetlania aplikacji",
-    "languageAuto": "Domyślny systemowy",
+    "languageAuto": "Domyślny (chiński uproszczony)",
     "notificationSettings": "Powiadomienia",
     "notifyCredentialExpired": "Powiadomienie o wygaśnięciu danych uwierzytelniających",
     "notifyCredentialExpiredDescription": "Pokaż powiadomienie gdy dane uwierzytelniające dysku wygasną",

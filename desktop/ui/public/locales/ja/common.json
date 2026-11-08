@@ -82,7 +82,7 @@
     "languageSettings": "言語",
     "language": "言語",
     "languageDescription": "アプリケーションの表示言語を選択",
-    "languageAuto": "システムのデフォルト",
+    "languageAuto": "デフォルト（簡体字中国語）",
     "notificationSettings": "通知",
     "notifyCredentialExpired": "認証期限切れ通知",
     "notifyCredentialExpiredDescription": "ドライブの認証が期限切れになったときに通知を表示",

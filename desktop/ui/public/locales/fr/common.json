@@ -82,7 +82,7 @@
     "languageSettings": "Langue",
     "language": "Langue",
     "languageDescription": "Sélectionner la langue d'affichage de l'application",
-    "languageAuto": "Par défaut du système",
+    "languageAuto": "Par défaut (chinois simplifié)",
     "notificationSettings": "Notifications",
     "notifyCredentialExpired": "Notification d'expiration des identifiants",
     "notifyCredentialExpiredDescription": "Afficher une notification lorsque les identifiants du disque expirent",

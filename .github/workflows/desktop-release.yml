@@ -17,6 +17,14 @@ concurrency:
 
 jobs:
   bundle:
+    # Job-level env so the sparse-identity step can be skipped when the signing
+    # certificate is not configured: an `if:` conditional cannot read `secrets`
+    # directly, but it can read `env`. Without the secret the Windows installer
+    # simply ships without the package-identity msix (installer-hooks.nsh tolerates
+    # its absence); the rest of the bundle is unaffected.
+    env:
+      SPARSE_SIGNING_PFX_BASE64: ${{ secrets.SPARSE_SIGNING_PFX_BASE64 }}
+      SPARSE_SIGNING_PFX_PASSWORD: ${{ secrets.SPARSE_SIGNING_PFX_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -51,11 +59,8 @@ jobs:
       # Developer Mode. The msix + public cert land in package/ and the NSIS
       # hook (installer-hooks.nsh) files them into $INSTDIR when present.
       - name: Build signed sparse identity package
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.SPARSE_SIGNING_PFX_BASE64 != ''
         shell: pwsh
-        env:
-          SPARSE_SIGNING_PFX_BASE64: ${{ secrets.SPARSE_SIGNING_PFX_BASE64 }}
-          SPARSE_SIGNING_PFX_PASSWORD: ${{ secrets.SPARSE_SIGNING_PFX_PASSWORD }}
         run: |
           $ErrorActionPreference = 'Stop'
           $ver = (Select-String -Path desktop/src-tauri/Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
@@ -96,6 +101,18 @@ jobs:
           projectPath: desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'Cloudreve Desktop ${{ github.ref_name }}'
-          releaseBody: 'Cloudreve Desktop for Linux, macOS, and Windows.'
+          # 中文发版说明：用户看到的第一个说明，把「默认中文」和「没有商业
+          # 代码签名、可能被 SmartScreen / Gatekeeper 拦截」讲清楚。
+          releaseBody: |
+            Cloudreve 桌面客户端（Linux / macOS / Windows）。
+
+            - 界面默认简体中文，可在设置页切换其它语言；应用名称保持 Cloudreve。
+            - 本次起自动更新使用新的签名密钥：更早版本需手动安装一次本版，之后自动更新才可用。
+
+            安装提示：安装包未做商业代码签名，这是正常现象。
+            - Windows：SmartScreen 提示「已保护你的电脑」时，点「更多信息」→「仍要运行」。
+            - macOS：首次打开被拦时，到「系统设置 → 隐私与安全性」点「仍要打开」，
+              或执行：xattr -dr com.apple.quarantine /Applications/Cloudreve.app
+            - Linux：.deb 需要 fuse3 / libwebkit2gtk-4.1 等依赖（包内已声明）。
           releaseDraft: false
           prerelease: false
