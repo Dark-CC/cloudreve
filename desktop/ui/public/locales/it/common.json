@@ -82,7 +82,7 @@
     "languageSettings": "Lingua",
     "language": "Lingua",
     "languageDescription": "Seleziona la lingua di visualizzazione dell'applicazione",
-    "languageAuto": "Predefinito di sistema",
+    "languageAuto": "Predefinito (cinese semplificato)",
     "notificationSettings": "Notifiche",
     "notifyCredentialExpired": "Notifica scadenza credenziali",
     "notifyCredentialExpiredDescription": "Mostra notifica quando le credenziali dell'unità scadono",

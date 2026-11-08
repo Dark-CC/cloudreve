@@ -82,7 +82,7 @@
     "languageSettings": "Language",
     "language": "Language",
     "languageDescription": "Select the display language for the application",
-    "languageAuto": "System Default",
+    "languageAuto": "Default (Simplified Chinese)",
     "notificationSettings": "Notifications",
     "notifyCredentialExpired": "Credential expiry notification",
     "notifyCredentialExpiredDescription": "Show notification when drive credentials expire",

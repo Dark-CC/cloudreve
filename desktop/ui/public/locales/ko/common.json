@@ -82,7 +82,7 @@
     "languageSettings": "언어",
     "language": "언어",
     "languageDescription": "애플리케이션 표시 언어 선택",
-    "languageAuto": "시스템 기본값",
+    "languageAuto": "기본값(중국어 간체)",
     "notificationSettings": "알림",
     "notifyCredentialExpired": "자격 증명 만료 알림",
     "notifyCredentialExpiredDescription": "드라이브 자격 증명이 만료되면 알림 표시",

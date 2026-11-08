@@ -17,6 +17,14 @@ concurrency:
 
 jobs:
   bundle:
+    # Job-level env so the sparse-identity step can be skipped when the signing
+    # certificate is not configured: an `if:` conditional cannot read `secrets`
+    # directly, but it can read `env`. Without the secret the Windows installer
+    # simply ships without the package-identity msix (installer-hooks.nsh tolerates
+    # its absence); the rest of the bundle is unaffected.
+    env:
+      SPARSE_SIGNING_PFX_BASE64: ${{ secrets.SPARSE_SIGNING_PFX_BASE64 }}
+      SPARSE_SIGNING_PFX_PASSWORD: ${{ secrets.SPARSE_SIGNING_PFX_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -51,11 +59,8 @@ jobs:
       # Developer Mode. The msix + public cert land in package/ and the NSIS
       # hook (installer-hooks.nsh) files them into $INSTDIR when present.
       - name: Build signed sparse identity package
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.SPARSE_SIGNING_PFX_BASE64 != ''
         shell: pwsh
-        env:
-          SPARSE_SIGNING_PFX_BASE64: ${{ secrets.SPARSE_SIGNING_PFX_BASE64 }}
-          SPARSE_SIGNING_PFX_PASSWORD: ${{ secrets.SPARSE_SIGNING_PFX_PASSWORD }}
         run: |
           $ErrorActionPreference = 'Stop'
           $ver = (Select-String -Path desktop/src-tauri/Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value

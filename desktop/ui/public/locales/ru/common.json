@@ -82,7 +82,7 @@
     "languageSettings": "Язык",
     "language": "Язык",
     "languageDescription": "Выберите язык интерфейса приложения",
-    "languageAuto": "По умолчанию системы",
+    "languageAuto": "По умолчанию (упрощённый китайский)",
     "notificationSettings": "Уведомления",
     "notifyCredentialExpired": "Уведомление об истечении учётных данных",
     "notifyCredentialExpiredDescription": "Показывать уведомление при истечении учётных данных диска",

@@ -82,7 +82,7 @@
     "languageSettings": "Sprache",
     "language": "Sprache",
     "languageDescription": "Anzeigesprache der Anwendung auswählen",
-    "languageAuto": "Systemstandard",
+    "languageAuto": "Standard (vereinfachtes Chinesisch)",
     "notificationSettings": "Benachrichtigungen",
     "notifyCredentialExpired": "Benachrichtigung bei Anmeldedatenablauf",
     "notifyCredentialExpiredDescription": "Benachrichtigung anzeigen, wenn Laufwerksanmeldedaten ablaufen",
