@@ -24,7 +24,7 @@ sha2 = "0.10"
 image = "0.24"
 url = "2.5"
 cloudreve-api = { path = "../cloudreve-api" }
-nt-time = "0.8.0"
+nt-time = "0.15.0"
 widestring = "1.0.2"
 flagset = "0.4.5"
 memoffset = "0.9.1"
