@@ -816,12 +816,7 @@
   resolved "https://registry.yarnpkg.com/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.55.1.tgz#f79437939020b83057faf07e98365b1fa51c458b"
   integrity sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw==
 
-"@tauri-apps/api@^2.11.0", "@tauri-apps/api@^2.8.0":
-  version "2.11.0"
-  resolved "https://registry.npmmirror.com/@tauri-apps/api/-/api-2.11.0.tgz#00fb69996010178a5153798d4a84f6fe3a1e1182"
-  integrity sha512-7CinYODhky9lmO23xHnUFv0Xt43fbtWMyxZcLcRBlFkcgXKuEirBvHpmtJ89YMhyeGcq20Wuc47Fa4XjyniywA==
-
-"@tauri-apps/api@^2.12", "@tauri-apps/api@^2.12.0":
+"@tauri-apps/api@^2.11.0", "@tauri-apps/api@^2.12", "@tauri-apps/api@^2.12.0", "@tauri-apps/api@^2.8.0":
   version "2.12.4"
   resolved "https://registry.npmmirror.com/@tauri-apps/api/-/api-2.12.4.tgz#2bab72b87696ae8dcfb4f4db2119e46a87aeabe0"
   integrity sha512-pVmfis+4zT8H0Qhp3xPZx9Ju7kpzvA6rr/PSJPyuwfvucTQ8sVt61NYU9KMkK703UFlYadFmjKA4HhybOtN0gg==
@@ -833,12 +828,12 @@
   dependencies:
     "@tauri-apps/api" "^2.12.0"
 
-"@tauri-apps/plugin-dialog@^2.7.1":
-  version "2.7.1"
-  resolved "https://registry.npmmirror.com/@tauri-apps/plugin-dialog/-/plugin-dialog-2.7.1.tgz#fc83387de807c8d064d2b64b1b813b84e8286a12"
-  integrity sha512-OK1UBXYt+ojcmxMktzzuyonYIFta8CmAASpX+CA+DTGK24KlHjhYI6x2iOJ/TjZF4N7/ACK1oFmEOjIY9IhzOQ==
+"@tauri-apps/plugin-dialog@^2.8.3":
+  version "2.8.3"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-dialog/-/plugin-dialog-2.8.3.tgz#1ef5cbd8833d50c911dedc3b50b94c6ba7ec2db5"
+  integrity sha512-Hd/yBfk2R5v2MFrz/0VArSXeh8xKLLXGunqSiTtcHKn1zNZwaKujuA0VSwUvNfwC4hDoF1PveS+gBDNe3nHspw==
   dependencies:
-    "@tauri-apps/api" "^2.11.0"
+    "@tauri-apps/api" "^2.12.0"
 
 "@tauri-apps/plugin-http@^2.6.1":
   version "2.6.1"
