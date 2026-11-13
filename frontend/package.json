@@ -82,7 +82,7 @@
     "redux": "^5.0.0",
     "streamsaver": "^2.0.6",
     "styled-components": "^6.1.11",
-    "three": "^0.186.0",
+    "three": "^0.186.1",
     "timeago-react": "^3.0.6"
   },
   "devDependencies": {
