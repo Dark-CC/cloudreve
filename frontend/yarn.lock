@@ -8869,10 +8869,10 @@ randombytes@^2.1.0:
   dependencies:
     safe-buffer "^5.1.0"
 
-react-animate-height@^3.2.3:
-  version "3.2.3"
-  resolved "https://registry.yarnpkg.com/react-animate-height/-/react-animate-height-3.2.3.tgz#90929aadac1bd1851cb6a685acc105b50ccfda8c"
-  integrity sha512-R6DSvr7ud07oeCixScyvXWEMJY/Mt2+GyOWC1KMaRc69gOBw+SsCg4TJmrp4rKUM1hyd6p+YKw90brjPH93Y2A==
+react-animate-height@^3.2.4:
+  version "3.2.4"
+  resolved "https://registry.yarnpkg.com/react-animate-height/-/react-animate-height-3.2.4.tgz#aae8e6e796e64d22ae73b1a531653a02049392b6"
+  integrity sha512-wcT37yHsFWDx8DmNFMy0AqSrYgNPGAtU9dyEqwIq3kSUXW03DWSi5WqbhlOALvMXcowal8JWUJRXij6TexilGQ==
 
 react-async-script@^1.2.0:
   version "1.2.0"
