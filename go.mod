@@ -50,7 +50,7 @@ require (
 	github.com/samber/lo v1.38.1
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/spf13/cobra v1.7.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/stripe/stripe-go/v83 v83.0.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.54
